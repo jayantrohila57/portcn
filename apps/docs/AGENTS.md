@@ -13,3 +13,4 @@ This site is built with [Fumadocs](https://fumadocs.dev) on Next.js. The APIs an
 - Keep status and capability claims factual; update docs as working CLI functionality is added.
 - Keep formatting in the shared root Biome configuration; avoid app-specific lint or formatter configuration.
 - Use task branches from `dev` and target task PRs at `dev`. Docs-only changes do not trigger a CLI release; release-relevant behavior changes must use an appropriate Conventional Commit.
+- Every commit and PR title must be Conventional, including docs-only work (use `docs:`); do not use narrative subjects.

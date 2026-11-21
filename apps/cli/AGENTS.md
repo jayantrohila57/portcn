@@ -7,3 +7,4 @@
 - Add focused tests for command output, package imports, and behavior. Do not implement discovery, process management, Docker, or a TUI in the foundation.
 - Let the root Husky pre-push hook run workspace type checks and tests; CI independently runs the full validation suite.
 - Follow the root task branch lifecycle: branch from `dev`, target task PRs at `dev`, and use Conventional Commit titles for release-relevant changes.
+- Every commit and PR title must be Conventional; do not use narrative subjects.
