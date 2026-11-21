@@ -33,7 +33,7 @@ jobs:
 
             let allowed = false;
             if (base === 'dev') {
-              allowed = conventional.test(head) && sameRepo;
+              allowed = (conventional.test(head) || head === 'main-to-dev-sync') && sameRepo;
             } else if (base === 'main') {
               if (head === 'dev') {
                 allowed = sameRepo; // release promotion
