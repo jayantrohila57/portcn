@@ -11,3 +11,4 @@ This site is built with [Fumadocs](https://fumadocs.dev) on Next.js. The APIs an
 
 - Keep docs standalone from the CLI implementation and preserve Fumadocs navigation, search, metadata, and Solar theme tokens.
 - Keep status and capability claims factual; update docs as working CLI functionality is added.
+- Keep formatting in the shared root Biome configuration; avoid app-specific lint or formatter configuration.

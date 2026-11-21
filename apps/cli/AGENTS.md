@@ -5,3 +5,4 @@
 - Keep output predictable, errors actionable, exit codes meaningful, and permissions minimal. Avoid platform inspection or side effects until a feature explicitly requires them.
 - Keep workspace-only packages out of published runtime dependencies; verify the bundled package with `pnpm package:check`.
 - Add focused tests for command output, package imports, and behavior. Do not implement discovery, process management, Docker, or a TUI in the foundation.
+- Let the root Husky pre-push hook run workspace type checks and tests; CI independently runs the full validation suite.
