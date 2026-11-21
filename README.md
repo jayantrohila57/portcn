@@ -34,7 +34,7 @@ pnpm build
 node apps/cli/dist/index.js --help
 ```
 
-Dependency installation initializes Git hooks. Pre-commit checks staged files with Biome, commit-msg enforces Conventional Commits, and pre-push runs type checks and tests. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full validation and release workflow.
+Dependency installation initializes Git hooks. Pre-commit checks staged files with Biome, commit-msg accepts Conventional Commits and existing sentence-style subjects, and pre-push runs type checks and tests. Use Conventional Commits when Release Please should calculate a version bump. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 To work on the documentation site:
 
@@ -57,6 +57,7 @@ pnpm check-types
 pnpm test
 pnpm build
 pnpm package:check
+pnpm boundaries:check
 pnpm release:check
 ```
 

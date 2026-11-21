@@ -32,6 +32,7 @@ pnpm check-types
 pnpm test
 pnpm build
 pnpm package:check
+pnpm boundaries:check
 pnpm release:check
 ```
 
@@ -41,7 +42,7 @@ Git hooks enforce the same workflow locally: pre-commit runs Biome on staged sup
 
 ## Commits and pull requests
 
-Use [Conventional Commits](https://www.conventionalcommits.org/), for example `docs: clarify current project status` or `fix(docs): preserve search behavior`.
+Use [Conventional Commits](https://www.conventionalcommits.org/) for changes that need a Release Please version bump, for example `feat(cli): ...` or `fix(docs): preserve search behavior`. The commit hook also accepts existing sentence-style subjects such as `Refactor project structure and documentation.` for compatibility; these do not identify a release type to Release Please.
 
 Open a pull request against `main`. Describe the change, link relevant issues when available, and include verification results. Keep changes focused and do not claim unfinished features as implemented.
 

@@ -37,6 +37,9 @@ if (
 ) {
   throw new Error('The built CLI must include a Node.js shebang and source map.');
 }
+if (/(?:from\s*|import\s*\()\s*['"]@portcn\//.test(executable)) {
+  throw new Error('The built CLI must bundle private @portcn workspace dependencies.');
+}
 
 for (const [argument, expected] of [
   ['--help', 'p: portcn'],

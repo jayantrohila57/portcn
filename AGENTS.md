@@ -8,5 +8,6 @@
 - Install dependencies with the frozen lockfile; Husky runs staged Biome checks, Commitlint, and pre-push type/test checks locally. CI runs its checks directly with hooks disabled.
 - Preserve strict TypeScript, focused tests, the existing docs branding/theme, and clear errors. Do not claim functionality that is not implemented.
 - Update release metadata consistently for the CLI package, workspace root, and Release Please manifest; never edit versions outside Release Please.
+- Use Conventional Commit types for changes that need Release Please to calculate a version bump; existing sentence-style commit subjects remain accepted for compatibility.
 - Never push, publish, tag, or deploy without explicit authorization. Preserve existing tags.
 - Run the relevant lint, format, type, test, build, release, and package checks before proposing changes.
