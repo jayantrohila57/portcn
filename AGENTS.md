@@ -11,3 +11,8 @@
 - Use Conventional Commit types for changes that need Release Please to calculate a version bump; existing sentence-style commit subjects remain accepted for compatibility.
 - Never push, publish, tag, or deploy without explicit authorization. Preserve existing tags.
 - Run the relevant lint, format, type, test, build, release, and package checks before proposing changes.
+- Every task starts by reading applicable `AGENTS.md` files, checking the working tree, fetching `origin/dev`, and branching from `dev`; never work directly on `main` or `dev`.
+- Use `feat/*`, `fix/*`, `refactor/*`, `chore/*`, `docs/*`, `test/*`, `build/*`, `ci/*`, or `perf/*` task branches. Open PRs to `dev`; do not merge without authorization and passing required checks.
+- Releases promote `dev` to `main` after roughly four or five merged tasks or on explicit request. Keep task commits during promotion; Release Please runs only on `main` and is the sole version editor.
+- After release, synchronize `main` back to `dev` through the explicitly allowed sync PR. Never rewrite published history or move/delete tags.
+- Report current branch, task status, checks run, PR target, and remaining steps at completion.

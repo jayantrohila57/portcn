@@ -16,12 +16,19 @@
     { "type": "chore", "section": "Maintenance", "hidden": true }
   ],
   "packages": {
-    "apps/cli": {
+    ".": {
       "release-type": "node",
       "package-name": "portcn",
       "initial-version": "0.0.1",
       "component": "portcn",
+      "include-component-in-tag": false,
+      "paths": ["apps/cli", "packages/core"],
       "extra-files": [
+        {
+          "type": "json",
+          "path": "apps/cli/package.json",
+          "jsonpath": "$.version"
+        },
         {
           "type": "json",
           "path": "package.json",

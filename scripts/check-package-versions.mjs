@@ -60,29 +60,30 @@ for (const version of ['01.0.0', '1.02.0', '1.2.03', '1.2', '1.2.3-01', '1.2.3+'
 const root = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const manifest = JSON.parse(readFileSync(new URL('../.release-please-manifest.json', import.meta.url), 'utf8'));
 const config = JSON.parse(readFileSync(new URL('../release-please-config.json', import.meta.url), 'utf8'));
-const cliPath = 'apps/cli';
+const releasePath = '.';
 const cliManifestPath = new URL('../apps/cli/package.json', import.meta.url);
 
 if (!root.private || root.name !== '@portcn/workspace') {
   throw new Error('The root package must be private and named @portcn/workspace.');
 }
 
-if (!isValidSemver(manifest[cliPath])) {
-  throw new Error(`Release manifest must contain ${cliPath} with a valid SemVer version.`);
+if (!isValidSemver(manifest[releasePath])) {
+  throw new Error(`Release manifest must contain ${releasePath} with a valid SemVer version.`);
 }
 
-if (!config.packages[cliPath]) {
-  throw new Error(`Release Please must configure the ${cliPath} package.`);
+if (!config.packages[releasePath]) {
+  throw new Error(`Release Please must configure the ${releasePath} release unit.`);
 }
 if (Object.keys(config.packages).length !== 1) {
-  throw new Error('Release Please must be scoped only to apps/cli.');
+  throw new Error('Release Please must configure exactly one portcn release unit.');
 }
 
-const cliConfig = config.packages[cliPath];
+const cliConfig = config.packages[releasePath];
 if (
   cliConfig['release-type'] !== 'node' ||
   cliConfig['package-name'] !== 'portcn' ||
   cliConfig.component !== 'portcn' ||
+  JSON.stringify(cliConfig.paths) !== JSON.stringify(['apps/cli', 'packages/core']) ||
   cliConfig['initial-version'] !== '0.0.1' ||
   config['include-v-in-tag'] !== true ||
   config['include-component-in-tag'] !== false
@@ -116,14 +117,16 @@ if (existsSync(cliManifestPath)) {
   if (cli.name !== 'portcn') {
     throw new Error(`The future CLI package must use the unscoped npm name portcn; found ${cli.name}.`);
   }
-  if (!isValidSemver(cli.version) || cli.version !== manifest[cliPath]) {
-    throw new Error(`CLI package version ${cli.version} must be valid SemVer and match manifest ${manifest[cliPath]}.`);
+  if (!isValidSemver(cli.version) || cli.version !== manifest[releasePath]) {
+    throw new Error(
+      `CLI package version ${cli.version} must be valid SemVer and match manifest ${manifest[releasePath]}.`,
+    );
   }
 }
 
 const packageMetadata = JSON.parse(readFileSync(cliManifestPath, 'utf8'));
-if (packageMetadata.version !== manifest[cliPath] || root.version !== manifest[cliPath]) {
-  throw new Error(`CLI package version ${packageMetadata.version} must match manifest ${manifest[cliPath]}.`);
+if (packageMetadata.version !== manifest[releasePath] || root.version !== manifest[releasePath]) {
+  throw new Error(`CLI package version ${packageMetadata.version} must match manifest ${manifest[releasePath]}.`);
 }
 if (!isValidSemver(packageMetadata.version)) {
   throw new Error(`CLI package version ${packageMetadata.version} is not valid SemVer.`);
@@ -141,14 +144,14 @@ const latestTagVersion = tags[0]?.slice(1);
 if (latestTagVersion && !isValidSemver(latestTagVersion)) {
   throw new Error(`Latest release tag ${tags[0]} is not valid v-prefixed SemVer.`);
 }
-if (latestTagVersion && compareSemver(latestTagVersion, manifest[cliPath]) > 0) {
-  throw new Error(`Latest release tag v${latestTagVersion} is newer than manifest ${manifest[cliPath]}.`);
+if (latestTagVersion && compareSemver(latestTagVersion, manifest[releasePath]) > 0) {
+  throw new Error(`Latest release tag v${latestTagVersion} is newer than manifest ${manifest[releasePath]}.`);
 }
 
 console.log(`Root package ${root.name} is private and synchronized with portcn ${packageMetadata.version}.`);
-console.log(`Release scope is ${cliPath}, reserved for the unscoped npm package portcn.`);
+console.log('Release scope is the single portcn release unit with apps/cli and packages/core paths.');
 console.log(
   latestTagVersion
-    ? `Latest release tag is v${latestTagVersion}; manifest ${manifest[cliPath]}${latestTagVersion === manifest[cliPath] ? ' matches it' : ' is a valid release candidate'}.`
+    ? `Latest release tag is v${latestTagVersion}; manifest ${manifest[releasePath]}${latestTagVersion === manifest[releasePath] ? ' matches it' : ' is a valid release candidate'}.`
     : 'No CLI release tag exists yet; initial release version is 0.0.1.',
 );

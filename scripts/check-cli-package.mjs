@@ -20,7 +20,7 @@ if (
 ) {
   throw new Error('The workspace root and @portcn/core must remain private with their reserved package names.');
 }
-if (cliManifest.version !== rootManifest.version || cliManifest.version !== releaseManifest['apps/cli']) {
+if (cliManifest.version !== rootManifest.version || cliManifest.version !== releaseManifest['.']) {
   throw new Error('CLI, root workspace, and Release Please versions must match.');
 }
 if (cliManifest.bin.portcn !== './dist/index.js') {
