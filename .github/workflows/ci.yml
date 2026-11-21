@@ -2,6 +2,7 @@ name: CI
 
 on:
   pull_request:
+    branches: [dev, main]
   push:
     branches: [main]
 
@@ -9,6 +10,45 @@ permissions:
   contents: read
 
 jobs:
+  branch-policy:
+    name: branch-policy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.setFailed('This policy check requires a pull request event.');
+              return;
+            }
+            const base = pr.base.ref;
+            const head = pr.head.ref;
+            const sameRepo = pr.head.repo?.full_name === pr.base.repo?.full_name;
+            const actor = pr.user.login;
+            const bot = pr.user.type === 'Bot';
+            const conventional = /^(feat|fix|refactor|chore|docs|test|build|ci|perf|revert)\/[a-z0-9][a-z0-9-]*$/;
+
+            let allowed = false;
+            if (base === 'dev') {
+              allowed = conventional.test(head) && sameRepo;
+            } else if (base === 'main') {
+              if (head === 'dev') {
+                allowed = sameRepo; // release promotion
+              } else if (bot && actor === 'release-please[bot]' && head.startsWith('release-please--branches--main')) {
+                const { data: commits } = await github.rest.pulls.listCommits({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  per_page: 100,
+                });
+                allowed = sameRepo && commits.some(({ commit }) => /chore\(main\): release /i.test(commit.message.split('\n')[0]));
+              }
+            }
+            if (!allowed) core.setFailed(`Rejected PR route: ${pr.head.repo?.full_name}:${head} -> ${pr.base.repo?.full_name}:${base} (actor ${actor}, bot=${bot}).`);
+
   validate:
     runs-on: ubuntu-latest
     env:
