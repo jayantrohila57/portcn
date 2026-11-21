@@ -2,17 +2,19 @@
 
 **Your ports. Under control.**
 
-An open-source, developer-first CLI for discovering, inspecting, monitoring, and managing application ports and local services. portcn is planned as a Linux-first tool, starting with Ubuntu.
+An open-source, developer-first CLI foundation for local development. portcn is Linux-first, starting with Ubuntu.
 
 ## Development status
 
-Early development. The CLI and its port and service management features are not implemented. The repository currently provides the documentation site and project tooling; there is no CLI installation or executable yet.
+Early development. The CLI package and executable foundation are in place; port discovery and service management are not implemented yet.
 
 ## Implemented
 
 - Fumadocs documentation site with navigation, search, Markdown negotiation, LLM-friendly exports, and generated Open Graph images.
 - pnpm workspace and Turborepo task orchestration.
-- GitHub Actions validation and Release Please version/changelog workflow.
+- `portcn` CLI package with branded help/version output and a Node.js executable.
+- Private `@portcn/core` package for future shared functionality.
+- GitHub Actions validation and Release Please version/changelog workflow for `portcn`.
 
 ## Requirements and platform
 
@@ -22,12 +24,19 @@ Early development. The CLI and its port and service management features are not 
 
 ## Install and develop
 
-There is no installable CLI package yet. To work on the repository:
+To build and run the CLI foundation locally:
 
 ```sh
 git clone https://github.com/jayantrohila57/portcn.git
 cd portcn
 pnpm install --frozen-lockfile
+pnpm build
+node apps/cli/dist/index.js --help
+```
+
+To work on the documentation site:
+
+```sh
 pnpm dev
 ```
 
@@ -48,11 +57,13 @@ pnpm build
 pnpm release:check
 ```
 
-No application test suites exist yet; the workspace test command runs package test scripts when they are added.
+The CLI help, version, execution, and core import have minimal unit coverage.
 
 ## Repository structure
 
 - `apps/docs` — independent Fumadocs website.
+- `apps/cli` — standalone `portcn` command line package.
+- `packages/core` — private shared library for future CLI logic.
 - `.github` — CI, release automation, contribution templates, and Dependabot configuration.
 - `scripts` — version consistency checks.
 
@@ -60,7 +71,7 @@ No application test suites exist yet; the workspace test command runs package te
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for local development, checks, Conventional Commit messages, and pull request guidance.
 
-Release Please calculates SemVer from Conventional Commits and opens a release pull request. Before `1.0.0`, features and breaking changes advance the minor version, and fixes advance the patch version. Merging the release pull request updates versions and `CHANGELOG.md` and creates a `v`-prefixed GitHub Release. npm publishing is not configured; the CLI is not implemented.
+Release Please calculates SemVer from Conventional Commits and opens a release pull request. Before `1.0.0`, features and breaking changes advance the minor version, and fixes advance the patch version. Merging the release pull request updates the CLI and private root versions plus `CHANGELOG.md`, and creates a `v`-prefixed GitHub Release. npm publishing is not configured.
 
 ## License
 

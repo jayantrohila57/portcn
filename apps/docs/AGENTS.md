@@ -8,3 +8,6 @@ This site is built with [Fumadocs](https://fumadocs.dev) on Next.js. The APIs an
 - Changing the theme and colors: https://fumadocs.dev/docs/ui/theme.md
 - Upgrading Fumadocs: https://fumadocs.dev/docs/next/upgrade.md
 - Other tasks: https://fumadocs.dev/llms.txt lists every docs page.
+
+- Keep docs standalone from the CLI implementation and preserve Fumadocs navigation, search, metadata, and Solar theme tokens.
+- Keep status and capability claims factual; update docs as working CLI functionality is added.

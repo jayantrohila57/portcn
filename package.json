@@ -1,8 +1,8 @@
 {
-  "name": "@portcn/monorepo",
+  "name": "@portcn/workspace",
   "version": "0.0.1",
   "private": true,
-  "description": "An open-source, developer-first CLI for discovering, inspecting, monitoring, and managing application ports and local services.",
+  "description": "The portcn CLI monorepo workspace.",
   "license": "MIT",
   "scripts": {
     "build": "turbo run build",

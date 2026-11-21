@@ -1,0 +1,32 @@
+{
+  "name": "portcn",
+  "version": "0.0.1",
+  "description": "Know what's running.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "portcn": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "check-types": "tsc --noEmit",
+    "lint": "biome check .",
+    "test": "pnpm --filter @portcn/core build && pnpm build && vitest run"
+  },
+  "dependencies": {
+    "commander": "^14.0.3"
+  },
+  "devDependencies": {
+    "@portcn/core": "workspace:*",
+    "@types/node": "^24.10.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  }
+}

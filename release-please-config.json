@@ -21,7 +21,13 @@
       "package-name": "portcn",
       "initial-version": "0.0.1",
       "component": "portcn",
-      "exclude-paths": ["apps/docs", "packages"]
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "package.json",
+          "jsonpath": "$.version"
+        }
+      ]
     }
   }
 }
