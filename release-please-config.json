@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "release-type": "node",
   "include-v-in-tag": true,
+  "include-component-in-tag": false,
   "bump-minor-pre-major": true,
   "changelog-sections": [
     { "type": "feat", "section": "Features", "hidden": false },
@@ -16,15 +16,12 @@
     { "type": "chore", "section": "Maintenance", "hidden": true }
   ],
   "packages": {
-    ".": {
+    "apps/cli": {
+      "release-type": "node",
       "package-name": "portcn",
-      "extra-files": [
-        {
-          "type": "json",
-          "path": "apps/docs/package.json",
-          "jsonpath": "$.version"
-        }
-      ]
+      "initial-version": "0.0.1",
+      "component": "portcn",
+      "exclude-paths": ["apps/docs", "packages"]
     }
   }
 }

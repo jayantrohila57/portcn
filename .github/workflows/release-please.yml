@@ -16,6 +16,10 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      - name: Skip release until the CLI package exists
+        if: hashFiles('apps/cli/package.json') == ''
+        run: echo "Release Please is reserved for apps/cli; no CLI package exists yet."
       - uses: googleapis/release-please-action@v4
+        if: hashFiles('apps/cli/package.json') != ''
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

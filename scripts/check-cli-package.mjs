@@ -9,8 +9,10 @@ if (!existsSync(manifestPath)) {
   process.exitCode = 1;
 } else {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  if (manifest.name !== '@portcn/cli' || !manifest.bin) {
-    throw new Error('The CLI package must be named @portcn/cli and define at least one executable bin entry.');
+  if (manifest.name !== 'portcn' || !manifest.bin) {
+    throw new Error(
+      'The CLI package must use the unscoped npm name portcn and define at least one executable bin entry.',
+    );
   }
   console.log(`CLI package ${manifest.name} declares executable entry points.`);
 }

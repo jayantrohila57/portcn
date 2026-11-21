@@ -5,9 +5,12 @@ export const docsRoute = '/docs';
 export const docsImageRoute = '/og/docs';
 
 export const gitConfig = {
-  user: 'jayantrohila57',
+  owner: 'jayantrohila57',
   repo: 'portcn',
   branch: 'main',
+  get repositoryUrl() {
+    return `https://github.com/${this.owner}/${this.repo}`;
+  },
 };
 
 const getImageUrl = createGetUrl(docsImageRoute);

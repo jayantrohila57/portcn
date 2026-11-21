@@ -1,5 +1,5 @@
 {
-  "name": "portcn",
+  "name": "@portcn/monorepo",
   "version": "0.0.1",
   "private": true,
   "description": "An open-source, developer-first CLI for discovering, inspecting, monitoring, and managing application ports and local services.",
@@ -7,7 +7,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "turbo run lint",
+    "lint": "biome check package.json pnpm-workspace.yaml turbo.json biome.json .commitlintrc.json .release-please-manifest.json release-please-config.json scripts .github && turbo run lint",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "check-types": "turbo run check-types",
