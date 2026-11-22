@@ -12,6 +12,8 @@
 
 ### Fixes
 
+- dispatch GitHub Packages publication <!-- task:fix/release-package-dispatch -->
+
 - allow secure fork contributions <!-- task:fix/allow-fork-contributions -->
 
 - configure github packages authentication <!-- task:fix/github-packages-auth -->

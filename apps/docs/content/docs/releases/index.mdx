@@ -16,13 +16,13 @@ Before `1.0.0`, features and breaking changes advance the minor version; fixes a
 
 The [Contributing guide](https://github.com/jayantrohila57/portcn/blob/main/CONTRIBUTING.md) contains the full promotion procedure.
 
-A proposed version and pending release summary must reflect actual release-relevant commits and configured path exclusions. Release Please makes the authoritative calculation after promotion; a preview is not an official version. Merging the promotion or release PR, tagging, publishing, and public releases require explicit authorization. After Release Please reports a successful release, the release workflow publishes only `apps/cli` (`portcn`) through npm Trusted Publishing with provenance. The private workspace root and `@portcn/core` are never published.
+A proposed version and pending release summary must reflect actual release-relevant commits and configured path exclusions. Release Please makes the authoritative calculation after promotion; a preview is not an official version. Merging the promotion or release PR, tagging, publishing, and public releases require explicit authorization. After Release Please reports a successful release, the release workflow publishes only `apps/cli` (`portcn`) through npm Trusted Publishing with provenance, then dispatches the GitHub Packages workflow with the exact release tag. The private workspace root and `@portcn/core` are never published.
 
-## Proposed first release
+## Current first release
 
-The proposed `v0.0.1` release candidate is dev commit `d495d5b0ce3b0e9fd5f9b4df4aec0f9ab7d204ee`, which includes symlink-safe global CLI execution and passed CI build and package checks. It contains branded CLI help and version output, not port discovery or service management. No tag or GitHub Release exists yet. Verify the exact package version output and obtain explicit approval before creating the annotated tag or GitHub Release.
+The public `v0.0.1` release points to commit `d495d5b0ce3b0e9fd5f9b4df4aec0f9ab7d204ee`. It includes symlink-safe global CLI execution, branded CLI help and version output, and no port discovery or service management. The annotated tag and GitHub Release already exist; do not recreate or move them.
 
-The CLI package first appeared at `7b00ee09a51bdc5c7b3969dad837940b4469efd5`; the later main commit is proposed because it has validated integration and release configuration. The baseline and pending sections in the changelog remain proposals until release reconciliation is implemented.
+The CLI package first appeared at `7b00ee09a51bdc5c7b3969dad837940b4469efd5`; the released commit is the later validated integration point. Release reconciliation follow-up remains tracked in issue #13.
 
 Run `node scripts/release-preview.mjs` to inspect a provisional calculation from the current manifest and `origin/dev`. Fetch `origin/dev` first. Until `v0.0.1` exists, the command uses the proposed baseline; once a manifest version has a matching tag, it uses that tag. For `v0.0.1`, the preview rejects a tag pointing to a different commit. The preview follows the target branch first-parent history, including merge commits; it is not Release Please and does not create releases or update the changelog.
 
@@ -38,9 +38,9 @@ The changelog policy includes a tested reconciliation function that refuses to c
 
 ## npm publication
 
-The publish target is the unscoped `portcn` package from `apps/cli`; the private workspace package and `@portcn/core` are not publishable. Before the first release, confirm that `npm view portcn` returns `E404` (unclaimed), create the `v0.0.1` GitHub release through the approved Release Please flow, and configure npm Trusted Publishing for this repository's `Release Please` workflow. The workflow checks the Release Please version against `apps/cli/package.json`, verifies the packed files, and publishes with OIDC provenance only after Release Please reports `release_created`. A matching already-published version is treated as an idempotent retry; a conflicting registry version fails.
+The publish target is the unscoped `portcn` package from `apps/cli`; the private workspace package and `@portcn/core` are not publishable. For each release, the workflow checks the Release Please version against `apps/cli/package.json`, verifies the packed files, and publishes with OIDC provenance only after Release Please reports `release_created`. A matching already-published version is treated as an idempotent retry; a conflicting registry version fails.
 
-The first publication still requires explicit approval. After approval, verify `npm view portcn@0.0.1`, `npm install --global portcn`, `portcn --version`, and `portcn --help`. Future versions remain Release Please-authoritative and publish from the successful release output rather than a tag-only workflow.
+Verify each publication with `npm view portcn@VERSION`, a clean global installation, `portcn --version`, and `portcn --help`. Future versions remain Release Please-authoritative and publish from the successful release output rather than a tag-only workflow.
 
 ## GitHub Packages
 
