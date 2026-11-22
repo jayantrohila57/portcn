@@ -82,3 +82,11 @@ test('documentation policy accepts docs or a specific justification', () => {
     true,
   );
 });
+
+test('finish resumes cleanup from dev after interruption', () => {
+  const f = fixture({ branch: 'dev', prs: [pr({ state: 'MERGED', mergeCommit: { oid: 'merge-sha' } })] });
+  assert.throws(() => f.lifecycle.finish(), /supply the merged task branch/);
+  f.lifecycle.finish('feat/example');
+  assert(!f.calls.some((call) => call[1] === 'switch'));
+  assert(f.calls.some((call) => call.includes('-D')));
+});

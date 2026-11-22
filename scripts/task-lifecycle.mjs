@@ -97,9 +97,11 @@ export function createLifecycle(run) {
     if (!title) throw new Error('Usage: changelog <conventional-title>');
     return run('node', ['scripts/changelog.mjs', title]);
   }
-  function finish() {
+  function finish(retryBranch) {
     clean();
-    const branch = task();
+    const active = current();
+    const branch = active === 'dev' ? retryBranch : task();
+    if (!namePattern.test(branch ?? '')) throw new Error('On dev, supply the merged task branch to resume cleanup.');
     const pr = getPr(branch);
     if (!pr) throw new Error('No matching PR found; preserve the task branch.');
     validatePr(pr, branch);
@@ -108,7 +110,8 @@ export function createLifecycle(run) {
     run('git', ['fetch', 'origin', 'dev']);
     if (!pr.mergeCommit?.oid) throw new Error('Merged PR has no merge commit.');
     git('merge-base', '--is-ancestor', pr.mergeCommit.oid, 'origin/dev');
-    run('git', ['switch', 'dev']);
+    git('merge-base', '--is-ancestor', 'dev', 'origin/dev');
+    if (active !== 'dev') run('git', ['switch', 'dev']);
     run('git', ['merge', '--ff-only', 'origin/dev']);
     run('git', ['branch', '-D', branch]);
     const promotion = run('node', ['scripts/prepare-promotion.mjs']);
