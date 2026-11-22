@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { test } from 'node:test';
 
-const { update, validate } = createRequire(import.meta.url)('./changelog-policy.cjs');
+const { update, validate, validateRelease } = createRequire(import.meta.url)('./changelog-policy.cjs');
 const base = '# Changelog\n\n## Unreleased\n\n### Features\n\n- Previous feature\n\n## 0.0.1\n\nOld release\n';
 test('generates one deterministic entry and preserves versioned history', () => {
   const next = update(base, 'feat(cli): add example', 'feat/example');
@@ -21,4 +21,17 @@ test('rejects duplicate or changed task entries and supports breaking changes', 
     () => update(`${next}\n<!-- task:fix/example -->`, 'fix!: change behavior', 'fix/example'),
     /Duplicate/,
   );
+});
+
+test('release validation rejects unreconciled notes and missing version sections', () => {
+  assert.equal(
+    validateRelease('# Changelog\n\n## Unreleased\n\n- pending\n\n## 0.1.0\n\n- released\n', '0.1.0').allowed,
+    false,
+  );
+  assert.equal(
+    validateRelease('# Changelog\n\n## Unreleased\n\n## [0.1.0](https://example.test)\n\n- released\n', '0.1.0')
+      .allowed,
+    true,
+  );
+  assert.equal(validateRelease('# Changelog\n\n## Unreleased\n', '0.1.0').allowed, false);
 });

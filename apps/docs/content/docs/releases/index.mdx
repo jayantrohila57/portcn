@@ -31,3 +31,5 @@ For a task, run `node scripts/task-lifecycle.mjs changelog "feat(cli): describe 
 Release Please uses the proposed baseline as its `bootstrap-sha` to exclude earlier commits from the first generated release PR. This setting does not create the initial tag or release and does not prove that GitHub has recognized them.
 
 After `task-lifecycle.mjs finish`, the helper runs `node scripts/prepare-promotion.mjs`. It checks merged task PRs since `main` and creates or updates a `dev` to `main` PR after three tasks. The PR contains the current Unreleased text and a provisional version; review its scope and CI before approving any merge. If preparation fails, local cleanup has already completed; retry the preparation command on `dev`.
+
+Release PR validation rejects an Unreleased section containing entries and requires a matching version section. Release Please reconciliation is not yet automated, so this check can block a release PR until the notes are reconciled.

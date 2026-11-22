@@ -58,4 +58,18 @@ function validate(base, head, title, branch) {
     return { allowed: false, reason: error.message };
   }
 }
-module.exports = { entry, update, validate };
+function validateRelease(source, version) {
+  if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version))
+    return { allowed: false, reason: 'Invalid release version.' };
+  const unreleased = source.match(/^## Unreleased\s*\n([\s\S]*?)(?=^## |$(?![\s\S]))/m)?.[1] ?? '';
+  if (/^\s*[-*]\s+/m.test(unreleased))
+    return {
+      allowed: false,
+      reason: 'Release changelog still contains Unreleased entries; reconcile them before release.',
+    };
+  const escaped = version.replaceAll('.', '\\.');
+  if (!new RegExp(`^#{2,3} (?:\\[)?v?${escaped}(?:\\]|[ \n]|$)`, 'm').test(source))
+    return { allowed: false, reason: `Missing release changelog section for ${version}.` };
+  return { allowed: true };
+}
+module.exports = { entry, update, validate, validateRelease };
