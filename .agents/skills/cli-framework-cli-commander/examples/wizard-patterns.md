@@ -14,11 +14,11 @@ Implement complex multi-step flows with a state machine pattern for back navigat
 
 ```typescript
 // Navigation sentinel values
-const BACK_VALUE = "__back__";
-const CONTINUE_VALUE = "__continue__";
+const BACK_VALUE = '__back__';
+const CONTINUE_VALUE = '__continue__';
 
 // State machine step types
-type WizardStep = "approach" | "selection" | "review" | "confirm";
+type WizardStep = 'approach' | 'selection' | 'review' | 'confirm';
 ```
 
 #### State Interface
@@ -33,7 +33,7 @@ interface WizardState {
 
 function createInitialState(): WizardState {
   return {
-    currentStep: "approach",
+    currentStep: 'approach',
     selectedItems: [],
     history: [],
     lastSelectedItem: null,
@@ -44,8 +44,8 @@ function createInitialState(): WizardState {
 #### State Machine Implementation
 
 ```typescript
-import * as p from "@clack/prompts";
-import pc from "picocolors";
+import * as p from '@clack/prompts';
+import pc from 'picocolors';
 
 interface WizardResult {
   selectedItems: string[];
@@ -58,23 +58,23 @@ export async function runWizard(): Promise<WizardResult | null> {
   // Main wizard loop
   while (true) {
     switch (state.currentStep) {
-      case "approach": {
+      case 'approach': {
         const result = await stepApproach(state);
 
         if (p.isCancel(result)) {
           return null; // User cancelled
         }
 
-        if (result === "scratch") {
+        if (result === 'scratch') {
           pushHistory(state);
-          state.currentStep = "selection";
-        } else if (result === "template") {
+          state.currentStep = 'selection';
+        } else if (result === 'template') {
           // Handle template selection...
         }
         break;
       }
 
-      case "selection": {
+      case 'selection': {
         const result = await stepSelection(state);
 
         if (p.isCancel(result)) {
@@ -82,13 +82,13 @@ export async function runWizard(): Promise<WizardResult | null> {
         }
 
         if (result === BACK_VALUE) {
-          state.currentStep = popHistory(state) || "approach";
+          state.currentStep = popHistory(state) || 'approach';
           break;
         }
 
         if (result === CONTINUE_VALUE) {
           pushHistory(state);
-          state.currentStep = "confirm";
+          state.currentStep = 'confirm';
           break;
         }
 
@@ -97,7 +97,7 @@ export async function runWizard(): Promise<WizardResult | null> {
         break;
       }
 
-      case "confirm": {
+      case 'confirm': {
         const result = await stepConfirm(state);
 
         if (p.isCancel(result)) {
@@ -105,11 +105,11 @@ export async function runWizard(): Promise<WizardResult | null> {
         }
 
         if (result === BACK_VALUE) {
-          state.currentStep = popHistory(state) || "selection";
+          state.currentStep = popHistory(state) || 'selection';
           break;
         }
 
-        if (result === "confirm") {
+        if (result === 'confirm') {
           return {
             selectedItems: state.selectedItems,
             confirmed: true,
@@ -151,21 +151,21 @@ Implement config resolution with clear precedence chain: flag > env > project > 
 
 ```typescript
 // src/cli/lib/config.ts
-import path from "path";
-import os from "os";
-import { parse as parseYaml } from "yaml";
+import path from 'path';
+import os from 'os';
+import { parse as parseYaml } from 'yaml';
 
 // Config locations
-export const GLOBAL_CONFIG_DIR = path.join(os.homedir(), ".myapp");
-export const GLOBAL_CONFIG_FILE = "config.yaml";
-const PROJECT_CONFIG_DIR = ".myapp";
-const PROJECT_CONFIG_FILE = "config.yaml";
+export const GLOBAL_CONFIG_DIR = path.join(os.homedir(), '.myapp');
+export const GLOBAL_CONFIG_FILE = 'config.yaml';
+const PROJECT_CONFIG_DIR = '.myapp';
+const PROJECT_CONFIG_FILE = 'config.yaml';
 
 // Environment variable name
-export const SOURCE_ENV_VAR = "MYAPP_SOURCE";
+export const SOURCE_ENV_VAR = 'MYAPP_SOURCE';
 
 // Default value
-export const DEFAULT_SOURCE = "github:myorg/default-repo";
+export const DEFAULT_SOURCE = 'github:myorg/default-repo';
 
 export interface GlobalConfig {
   source?: string;
@@ -178,7 +178,7 @@ export interface ProjectConfig {
 
 export interface ResolvedConfig {
   source: string;
-  sourceOrigin: "flag" | "env" | "project" | "global" | "default";
+  sourceOrigin: 'flag' | 'env' | 'project' | 'global' | 'default';
 }
 
 /**
@@ -189,56 +189,51 @@ export interface ResolvedConfig {
  * 4. Global config (~/.myapp/config.yaml)
  * 5. Default value
  */
-export async function resolveSource(
-  flagValue?: string,
-  projectDir?: string,
-): Promise<ResolvedConfig> {
+export async function resolveSource(flagValue?: string, projectDir?: string): Promise<ResolvedConfig> {
   // 1. CLI flag takes highest priority
   if (flagValue !== undefined) {
-    if (flagValue.trim() === "") {
-      throw new Error("--source flag cannot be empty");
+    if (flagValue.trim() === '') {
+      throw new Error('--source flag cannot be empty');
     }
-    return { source: flagValue, sourceOrigin: "flag" };
+    return { source: flagValue, sourceOrigin: 'flag' };
   }
 
   // 2. Environment variable
   const envValue = process.env[SOURCE_ENV_VAR];
   if (envValue) {
-    return { source: envValue, sourceOrigin: "env" };
+    return { source: envValue, sourceOrigin: 'env' };
   }
 
   // 3. Project config
   if (projectDir) {
     const projectConfig = await loadProjectConfig(projectDir);
     if (projectConfig?.source) {
-      return { source: projectConfig.source, sourceOrigin: "project" };
+      return { source: projectConfig.source, sourceOrigin: 'project' };
     }
   }
 
   // 4. Global config
   const globalConfig = await loadGlobalConfig();
   if (globalConfig?.source) {
-    return { source: globalConfig.source, sourceOrigin: "global" };
+    return { source: globalConfig.source, sourceOrigin: 'global' };
   }
 
   // 5. Default
-  return { source: DEFAULT_SOURCE, sourceOrigin: "default" };
+  return { source: DEFAULT_SOURCE, sourceOrigin: 'default' };
 }
 
-export function formatSourceOrigin(
-  origin: ResolvedConfig["sourceOrigin"],
-): string {
+export function formatSourceOrigin(origin: ResolvedConfig['sourceOrigin']): string {
   switch (origin) {
-    case "flag":
-      return "--source flag";
-    case "env":
+    case 'flag':
+      return '--source flag';
+    case 'env':
       return `${SOURCE_ENV_VAR} environment variable`;
-    case "project":
-      return "project config (.myapp/config.yaml)";
-    case "global":
-      return "global config (~/.myapp/config.yaml)";
-    case "default":
-      return "default";
+    case 'project':
+      return 'project config (.myapp/config.yaml)';
+    case 'global':
+      return 'global config (~/.myapp/config.yaml)';
+    case 'default':
+      return 'default';
   }
 }
 ```
@@ -252,23 +247,23 @@ export function formatSourceOrigin(
 Implement preview functionality for destructive operations.
 
 ```typescript
-import * as p from "@clack/prompts";
-import pc from "picocolors";
+import * as p from '@clack/prompts';
+import pc from 'picocolors';
 
 export async function executeWithDryRun(
   dryRun: boolean,
   operations: Array<{ description: string; execute: () => Promise<void> }>,
 ): Promise<void> {
   if (dryRun) {
-    p.log.info(pc.yellow("[dry-run] Preview mode - no changes will be made"));
-    console.log("");
+    p.log.info(pc.yellow('[dry-run] Preview mode - no changes will be made'));
+    console.log('');
 
     for (const op of operations) {
       console.log(pc.yellow(`[dry-run] Would: ${op.description}`));
     }
 
-    console.log("");
-    p.outro(pc.green("[dry-run] Preview complete"));
+    console.log('');
+    p.outro(pc.green('[dry-run] Preview complete'));
     return;
   }
 

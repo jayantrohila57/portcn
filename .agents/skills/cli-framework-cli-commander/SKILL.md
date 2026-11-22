@@ -1,4 +1,5 @@
 ---
+
 name: cli-framework-cli-commander
 description: Node.js CLI development with Commander.js and @clack/prompts - command structure, interactive prompts, wizard state machines, config hierarchies, exit codes, cancellation handling
 ---
@@ -99,8 +100,8 @@ Register commands, handle SIGINT, use `parseAsync()` for async error propagation
 
 ```typescript
 // Handle Ctrl+C gracefully
-process.on("SIGINT", () => {
-  console.log(pc.yellow("\nCancelled"));
+process.on('SIGINT', () => {
+  console.log(pc.yellow('\nCancelled'));
   process.exit(EXIT_CODES.CANCELLED);
 });
 
@@ -145,10 +146,10 @@ The one value that is wrong everywhere is `0`. Cancellation is not success: `0` 
 Structure commands with typed options, descriptions for help text, and global option access. See [examples/core.md](examples/core.md#pattern-3-command-definition-with-options) for full implementation.
 
 ```typescript
-export const initCommand = new Command("init")
-  .description("Initialize the project")
-  .option("--source <url>", "Source URL")
-  .option("-f, --force", "Overwrite existing files", false)
+export const initCommand = new Command('init')
+  .description('Initialize the project')
+  .option('--source <url>', 'Source URL')
+  .option('-f, --force', 'Overwrite existing files', false)
   .action(async (options, command) => {
     const globalOpts = command.optsWithGlobals();
     // ...
@@ -163,16 +164,16 @@ Every @clack/prompts call must be followed by `p.isCancel()`. See [examples/core
 
 ```typescript
 const result = await p.select({
-  message: "Select a framework:",
+  message: 'Select a framework:',
   options: [
-    { value: "react", label: "React", hint: "recommended" },
-    { value: "vue", label: "Vue" },
+    { value: 'react', label: 'React', hint: 'recommended' },
+    { value: 'vue', label: 'Vue' },
   ],
 });
 
 // CRITICAL: Always check for cancellation
 if (p.isCancel(result)) {
-  p.cancel("Setup cancelled");
+  p.cancel('Setup cancelled');
   process.exit(EXIT_CODES.CANCELLED);
 }
 ```
@@ -184,21 +185,19 @@ if (p.isCancel(result)) {
 Group related commands under parent commands. See [examples/core.md](examples/core.md#pattern-5-subcommand-organization) for full implementation.
 
 ```typescript
-export const configCommand = new Command("config").description(
-  "Manage configuration",
-);
+export const configCommand = new Command('config').description('Manage configuration');
 
 configCommand
-  .command("show")
-  .description("Show current effective configuration")
+  .command('show')
+  .description('Show current effective configuration')
   .action(async () => {
     /* ... */
   });
 
 configCommand
-  .command("set")
-  .argument("<key>", "Configuration key")
-  .argument("<value>", "Configuration value")
+  .command('set')
+  .argument('<key>', 'Configuration key')
+  .argument('<value>', 'Configuration value')
   .action(async (key, value) => {
     /* ... */
   });
@@ -241,15 +240,11 @@ while (true) {
 Resolve config values with clear precedence: flag > env > project > global > default. See [examples/wizard-patterns.md](examples/wizard-patterns.md#pattern-7-configuration-hierarchy) for full implementation.
 
 ```typescript
-export async function resolveSource(
-  flagValue?: string,
-  projectDir?: string,
-): Promise<ResolvedConfig> {
-  if (flagValue !== undefined)
-    return { source: flagValue, sourceOrigin: "flag" };
+export async function resolveSource(flagValue?: string, projectDir?: string): Promise<ResolvedConfig> {
+  if (flagValue !== undefined) return { source: flagValue, sourceOrigin: 'flag' };
 
   const envValue = process.env[SOURCE_ENV_VAR];
-  if (envValue) return { source: envValue, sourceOrigin: "env" };
+  if (envValue) return { source: envValue, sourceOrigin: 'env' };
 
   // ... project config, global config, default
 }

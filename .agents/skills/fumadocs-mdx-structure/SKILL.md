@@ -1,4 +1,5 @@
 ---
+
 name: fumadocs-mdx-structure
 description: Create MDX documentation files with proper frontmatter, imports, and component integration. Apply when creating or updating Fumadocs documentation pages in content/docs/.
 ---
@@ -62,19 +63,19 @@ Wrap component examples:
 
 ### Usage Section
 
-```mdx
+````mdx
 ## Usage
 
 ---
 
 ```tsx
 import { ComponentName } from "@/components/ui/8bit/component-name"
-```
+````
 
 ```tsx
-<ComponentName variant="outline">Example</ComponentName>
+<ComponentName variant="outline">Example</ComponentName>;
 ```
-```
+````
 
 ### Complete Example
 
@@ -112,12 +113,12 @@ import ComponentPreview from "@/components/component-preview";
 
 ```tsx
 import { Button } from "@/components/ui/8bit/button"
-```
+````
 
 ```tsx
-<Button variant="outline">Button</Button>
+<Button variant="outline">Button</Button>;
 ```
-```
+````
 
 ### Key Principles
 
@@ -134,3 +135,4 @@ import { Button } from "@/components/ui/8bit/button"
 Place documentation files in:
 - `content/docs/components/component-name.mdx` for components
 - `content/docs/blocks/category/block-name.mdx` for blocks
+````
