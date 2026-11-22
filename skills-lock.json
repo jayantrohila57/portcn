@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "skills": {
+    "cli-framework-cli-commander": {
+      "source": "agents-inc/skills",
+      "commit": "845a1f2833eedc494bb82e3172710c06cab547a1",
+      "sourceType": "github",
+      "skillPath": "src/skills/cli-framework-cli-commander/SKILL.md",
+      "computedHash": "529388a5cece7a9626b614a5e53e69d6190c1576e2a40acc3b6941e6da88bcb5"
+    },
+    "documentation": {
+      "source": "anthropics/knowledge-work-plugins",
+      "commit": "0e0fcacddcc892eb92a1b7873ff9d68159c47571",
+      "sourceType": "github",
+      "skillPath": "engineering/skills/documentation/SKILL.md",
+      "computedHash": "d401429502dcfb37aadfbeddcc3577a9618c393555d305c56821800570dcd1ed"
+    },
+    "fumadocs-mdx-structure": {
+      "source": "TheOrcDev/8bitcn-ui",
+      "commit": "9642217f41d66d5410cc3fb54a4d582c14bd8d18",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/fumadocs-mdx-structure/SKILL.md",
+      "computedHash": "5d21d1c85091a01956770d4d7dc19338d3ba4f9762e165d506236e676c3fa3c8"
+    }
+  }
+}

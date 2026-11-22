@@ -6,6 +6,8 @@
 - Keep the root package private and named `@portcn/workspace`. Reserve the unscoped npm package name `portcn` for `apps/cli`.
 - Use existing pnpm, Turborepo, Biome, TypeScript, and Vitest configuration. Avoid duplicate tools and dependencies.
 - Install dependencies with the frozen lockfile; Husky runs staged Biome checks, Commitlint, and pre-push type/test checks locally. CI runs its checks directly with hooks disabled.
+- For local CLI work, use Docker Compose for CLI execution, unit/integration tests, and validation. Use `pnpm docker:cli`, `pnpm docker:test`, `pnpm docker:build`, and `pnpm docker:clean`; do not install `portcn` globally on the host. CI runs its checks directly on GitHub Actions with hooks disabled.
+- Container CLI runs initially observe only their own PID, network, and mount namespaces. Do not add privileged mode, host PID/network namespaces, or Docker socket mounts by default.
 - Preserve strict TypeScript, focused tests, the existing docs branding/theme, and clear errors. Do not claim functionality that is not implemented.
 - Update release metadata consistently for the CLI package, workspace root, and Release Please manifest; never edit versions outside Release Please.
 - Use Conventional Commits for every commit and PR title; do not add compatibility exceptions for narrative subjects. Use Conventional squash titles for task PRs and `chore(main): ...` for promotions and synchronizations.
@@ -17,3 +19,6 @@
 - After release, synchronize `main` back to `dev` through the explicitly allowed sync PR. Never rewrite published history or move/delete tags.
 - Report current branch, task status, checks run, PR target, and remaining steps at completion.
 - Branch policy runs only for PR events. Full validation also runs on pushes to both `dev` and `main`.
+- Documentation is a required deliverable in the same task and PR for every change that affects users, contributors, architecture, dependencies, configuration, workflows, security, or development. Before coding, identify affected docs; update them alongside implementation and verify examples against code. If none apply, explain why in the PR. Never mark work complete while required docs are missing or inaccurate.
+- Every PR description must summarize documentation changes by page, or justify `No documentation change required`. CI checks MDX builds, practical internal links, and objective CLI reference consistency; reviewers assess semantic completeness and accuracy.
+- When authoring Fumadocs MDX, use the centrally registered components documented in `apps/docs/content/docs/development/mdx-components.mdx` where they improve the content: Steps for sequential procedures, Tabs for equivalent alternatives, Callouts for important context, Cards for navigation, Accordions for optional troubleshooting, Files for real repository structure, TypeTable for real types/options, and highlighted fenced code for verified commands.

@@ -1,0 +1,143 @@
+---
+title: MDX components
+description: Use the Fumadocs components registered for Portcn documentation pages.
+---
+
+The docs app exposes reusable Fumadocs UI components to every page through `apps/docs/components/mdx.tsx`. Content authors can use them directly in MDX without repeating imports. Default Fumadocs components, relative links, Shiki syntax highlighting, code copying, search, table of contents, and Markdown exports remain enabled.
+
+## Available components
+
+| Component | Use it for |
+| --- | --- |
+| `Cards`, `Card` | A small set of related navigation choices. |
+| `Callout` | A relevant note, warning, limitation, or success state. |
+| `Steps`, `Step` | An ordered procedure whose sequence matters. |
+| `Tabs`, `Tab` | Equivalent commands or instructions for distinct environments. |
+| `Accordions`, `Accordion` | Optional troubleshooting details or FAQs. |
+| `Files`, `Folder`, `File` | A repository or package structure. |
+| `TypeTable` | Properties, options, or typed API fields with descriptions. |
+| Fenced code blocks | Copyable, syntax-highlighted commands and examples. |
+
+`Cards`, `Card`, and `Callout` come from Fumadocs' default MDX component set. The other components are registered centrally in the docs app. Prefer normal Markdown for prose and tables when an interactive component adds no value.
+
+## Examples
+
+### Callout
+
+````mdx
+<Callout title="Current limitation" type="warn">
+Port discovery is not implemented yet.
+</Callout>
+````
+
+Supported callout types include `info`, `warn`, `error`, `success`, and `idea`.
+
+### Steps
+
+````mdx
+<Steps>
+  <Step>
+
+### Install dependencies
+
+```sh
+pnpm install --frozen-lockfile
+```
+
+  </Step>
+  <Step>
+
+### Build the workspace
+
+```sh
+pnpm build
+```
+
+  </Step>
+</Steps>
+````
+
+Use actual, sequential actions and include expected outcomes when useful. For simple ordered lists, use Markdown instead.
+
+### Tabs
+
+````mdx
+<Tabs items={['Source checkout', 'Docker']}>
+  <Tab value="Source checkout">
+
+```sh
+pnpm build
+node apps/cli/dist/index.js --help
+```
+
+  </Tab>
+  <Tab value="Docker">
+
+```sh
+docker compose -f infra/docker/compose.yaml --profile cli run --rm cli --help
+```
+
+  </Tab>
+</Tabs>
+````
+
+Use tabs only for alternatives that serve the same purpose. Keep tab values stable and explicit.
+
+### Accordions
+
+````mdx
+<Accordions type="single">
+  <Accordion title="Why did the build fail?">
+    Check that dependencies were installed from the repository root.
+  </Accordion>
+</Accordions>
+````
+
+Reserve accordions for optional detail; keep required instructions visible in the page flow.
+
+### Files
+
+````mdx
+<Files>
+  <Folder name="apps" defaultOpen>
+    <Folder name="docs">
+      <File name="components/mdx.tsx" />
+    </Folder>
+  </Folder>
+</Files>
+````
+
+Only document real paths. Update structure examples when packages or responsibilities change.
+
+### Type tables
+
+````mdx
+<TypeTable
+  type={{
+    "--version": {
+      description: "Print the CLI package version and exit.",
+      type: "boolean",
+      default: false,
+    },
+  }}
+/>
+````
+
+Type tables are most useful for real options and exported API shapes. Verify names, types, defaults, and descriptions against implementation.
+
+### Code blocks
+
+Fenced code blocks are highlighted with Shiki and receive Fumadocs' copy control:
+
+````md
+```sh title="Build and show help"
+pnpm build
+node apps/cli/dist/index.js --help
+```
+````
+
+Set the correct language and show commands that work from the stated directory. Do not present planned features as working examples.
+
+## Documentation rules
+
+Before coding a feature, command, package, configuration, workflow, or architectural change, identify relevant documentation pages. Update those pages in the same PR and check every example against code. The PR summary must list changed pages or explain `No documentation change required`. Preserve canonical community files by linking to them rather than copying their policies into docs pages.

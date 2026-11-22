@@ -47,18 +47,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/biome
-            ~/.cache/turbo
-          key: ${{ runner.os }}-tooling-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-tooling-
+          cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm branch-policy:check
-      - run: pnpm exec commitlint --from "$PR_BASE_SHA" --to "$PR_HEAD_SHA"
+      - name: Validate commit messages
         if: github.event_name == 'pull_request'
+        run: pnpm exec commitlint --from "$PR_BASE_SHA" --to "$PR_HEAD_SHA"
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -70,3 +63,4 @@ jobs:
       - run: pnpm package:check
       - run: pnpm boundaries:check
       - run: pnpm release:check
+      - run: pnpm docs:check

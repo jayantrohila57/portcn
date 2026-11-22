@@ -1,0 +1,29 @@
+---
+title: Architecture
+description: Portcn workspace responsibilities, dependency direction, and current execution flow.
+---
+
+## Workspace layout
+
+<Files>
+  <Folder name="apps" defaultOpen>
+    <Folder name="cli"><File name="src/index.ts" /><File name="package.json" /></Folder>
+    <Folder name="docs"><File name="content/docs" /><File name="components/mdx.tsx" /></Folder>
+  </Folder>
+  <Folder name="packages" defaultOpen>
+    <Folder name="core"><File name="src/index.ts" /><File name="package.json" /></Folder>
+  </Folder>
+  <Folder name=".github"><File name="workflows/ci.yml" /><File name="workflows/release-please.yml" /></Folder>
+</Files>
+
+- `apps/cli` owns the executable, command parsing, and user-facing output.
+- `apps/docs` owns the independent Fumadocs website and its content.
+- `packages/core` contains reusable, platform-independent domain logic.
+
+## Dependency boundaries
+
+Applications can depend on workspace packages. Packages must not depend on apps. Core must not import CLI presentation, operating-system process inspection, or Linux APIs. These boundaries are checked by `pnpm boundaries:check`.
+
+## Current CLI flow
+
+The executable entry point creates a Commander root program, sets its package version, and parses arguments only when invoked as the process entry point. The current root handles help and version; it does not inspect the host or open network sockets.

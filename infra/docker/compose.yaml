@@ -1,0 +1,66 @@
+services:
+  cli:
+    profiles: [cli]
+    image: portcn-cli:local
+    build:
+      context: ../..
+      dockerfile: infra/docker/cli.Dockerfile
+      target: cli-runtime
+
+  test:
+    profiles: [test]
+    image: portcn-test:local
+    build:
+      context: ../..
+      dockerfile: infra/docker/cli.Dockerfile
+      target: monorepo-test
+    environment:
+      PR_BASE_SHA: ${PR_BASE_SHA:-}
+      PR_HEAD_SHA: ${PR_HEAD_SHA:-}
+    volumes:
+      - type: bind
+        source: ../../.git
+        target: /workspace/.git
+        read_only: true
+
+  lint-staged:
+    profiles: [hooks]
+    image: portcn-test:local
+    build:
+      context: ../..
+      dockerfile: infra/docker/cli.Dockerfile
+      target: monorepo-test
+    user: ${LOCAL_UID:-1000}:${LOCAL_GID:-1000}
+    environment:
+      HOME: /tmp
+    command: [pnpm, exec, lint-staged]
+    volumes:
+      - type: bind
+        source: ../..
+        target: /workspace
+      - type: volume
+        target: /workspace/node_modules
+      - type: volume
+        target: /workspace/apps/cli/node_modules
+      - type: volume
+        target: /workspace/apps/docs/node_modules
+      - type: volume
+        target: /workspace/packages/core/node_modules
+
+  commitlint:
+    profiles: [hooks]
+    image: portcn-test:local
+    build:
+      context: ../..
+      dockerfile: infra/docker/cli.Dockerfile
+      target: monorepo-test
+    volumes:
+      - type: bind
+        source: ../../.git
+        target: /workspace/.git
+        read_only: true
+
+# Future port-discovery integration tests can add fixture services under a
+# dedicated profile and private bridge network. No fixture services are needed
+# until discovery is implemented. Defaults intentionally use Compose isolation:
+# no host PID namespace, host networking, privileges, or Docker socket mounts.
