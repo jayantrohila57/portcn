@@ -4,11 +4,15 @@
 
 ### Features
 
+- publish cli to github packages <!-- task:feat/github-packages-publishing -->
+
 - publish cli through release please <!-- task:feat/npm-trusted-publishing -->
 
 - Add default CLI output and support invocation through a global symlink. [#9](https://github.com/jayantrohila57/portcn/pull/9)
 
 ### Fixes
+
+- configure github packages authentication <!-- task:fix/github-packages-auth -->
 
 - correct initial release candidate <!-- task:fix/release-candidate-baseline -->
 

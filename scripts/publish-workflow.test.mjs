@@ -3,11 +3,30 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 const workflow = readFileSync(new URL('../.github/workflows/release-please.yml', import.meta.url), 'utf8');
+const githubWorkflow = readFileSync(new URL('../.github/workflows/github-packages.yml', import.meta.url), 'utf8');
 
 test('publishes only after Release Please creates a release', () => {
   assert.match(workflow, /id: release/);
   assert.match(workflow, /if: steps\.release\.outputs\.release_created == 'true'/);
   assert.match(workflow, /ref: \$\{\{ steps\.release\.outputs\.tag_name \}\}/);
+});
+
+test('GitHub Packages workflow publishes only the scoped CLI from a verified release tag', () => {
+  assert.match(githubWorkflow, /types: \[published\]/);
+  assert.match(githubWorkflow, /workflow_dispatch:/);
+  assert.match(githubWorkflow, /contents: read/);
+  assert.match(githubWorkflow, /packages: write/);
+  assert.match(githubWorkflow, /test "\$\(git cat-file -t "refs\/tags\/\$RELEASE_TAG"\)" = tag/);
+  assert.match(
+    githubWorkflow,
+    /test "\$\(git rev-parse "refs\/tags\/\$RELEASE_TAG\^\{commit\}"\)" = "\$\(git rev-parse HEAD\)"/,
+  );
+  assert.match(githubWorkflow, /PACKAGE_NAME: ["']@jayantrohila57\/portcn["']/);
+  assert.match(githubWorkflow, /npm\.pkg\.github\.com/);
+  assert.match(githubWorkflow, /registry-url: https:\/\/npm\.pkg\.github\.com/);
+  assert.match(githubWorkflow, /scope: ['"]@jayantrohila57['"]/);
+  assert.match(githubWorkflow, /NODE_AUTH_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/);
+  assert.match(githubWorkflow, /already exists; skipping duplicate publication/);
 });
 
 test('uses npm trusted publishing and verifies the released CLI version', () => {
