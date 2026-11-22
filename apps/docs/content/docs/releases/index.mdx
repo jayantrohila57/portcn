@@ -24,7 +24,7 @@ The proposed `v0.0.1` baseline is main commit `846b45801d808bd728161ccc0e3bf4941
 
 The CLI package first appeared at `7b00ee09a51bdc5c7b3969dad837940b4469efd5`; the later main commit is proposed because it has validated integration and release configuration. The baseline and pending sections in the changelog remain proposals until release reconciliation is implemented.
 
-Run `node scripts/release-preview.mjs` to inspect a provisional calculation from the current manifest and `origin/dev`. Fetch `origin/dev` first. Until `v0.0.1` exists, the command uses the proposed baseline; once a manifest version has a matching tag, it uses that tag. The preview follows the target branch first-parent history, including merge commits; it is not Release Please and does not create releases or update the changelog.
+Run `node scripts/release-preview.mjs` to inspect a provisional calculation from the current manifest and `origin/dev`. Fetch `origin/dev` first. Until `v0.0.1` exists, the command uses the proposed baseline; once a manifest version has a matching tag, it uses that tag. For `v0.0.1`, the preview rejects a tag pointing to a different commit. The preview follows the target branch first-parent history, including merge commits; it is not Release Please and does not create releases or update the changelog.
 
 For a task, run `node scripts/task-lifecycle.mjs changelog "feat(cli): describe the change"` before committing to add an idempotent Unreleased entry. CI and task submission require the matching entry; release reconciliation remains unfinished; do not treat this as a completed release process.
 

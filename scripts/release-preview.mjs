@@ -3,6 +3,10 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 export const initialBaseline = '846b45801d808bd728161ccc0e3bf4941c5d6756';
+export function validateBaseline(version, baseline) {
+  if (version === '0.0.1' && baseline !== initialBaseline)
+    throw new Error('v0.0.1 does not point to the proposed bootstrap commit.');
+}
 export function calculateNextVersion(version, changes) {
   const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.exec(version);
   if (!match) throw new Error('Expected a stable SemVer version.');
@@ -48,6 +52,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       if (version !== '0.0.1') throw new Error(`Missing release tag ${tag}; cannot determine the release boundary.`);
       baseline = initialBaseline;
     }
+    validateBaseline(version, baseline);
     git('merge-base', '--is-ancestor', baseline, target);
     const hashes = git('rev-list', '--reverse', '--first-parent', `${baseline}..${target}`).split('\n').filter(Boolean);
     const commits = hashes.map((sha) => ({
