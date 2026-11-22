@@ -10,6 +10,8 @@
 
 ### Fixes
 
+- harden npm publication workflow <!-- task:fix/npm-publish-workflow -->
+
 - Run the full workspace validation suite before commits and validate commit messages with Commitlint. [#11](https://github.com/jayantrohila57/portcn/pull/11)
 
 ### Improvements
