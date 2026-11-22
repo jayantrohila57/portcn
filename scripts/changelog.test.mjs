@@ -47,3 +47,8 @@ test('reconciliation preserves versioned notes and refuses unrepresented pending
   assert.throws(() => reconcileRelease(source.replace('- add example\n', '- other\n'), '0.1.0'), /do not contain/);
   assert.throws(() => reconcileRelease(source, '0.2.0'), /missing/);
 });
+
+test('reconciliation does not accept a pending entry as a substring of another entry', () => {
+  const source = '# Changelog\n\n## Unreleased\n\n- fix issue\n\n## 0.1.0\n\n- fix issues\n';
+  assert.throws(() => reconcileRelease(source, '0.1.0'), /do not contain/);
+});

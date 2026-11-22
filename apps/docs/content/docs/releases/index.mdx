@@ -34,4 +34,4 @@ After `task-lifecycle.mjs finish`, the helper runs `node scripts/prepare-promoti
 
 Release PR validation rejects an Unreleased section containing entries and requires a matching version section. Release Please reconciliation is not yet automated, so this check can block a release PR until the notes are reconciled.
 
-The changelog policy includes a tested reconciliation function that refuses to clear an entry unless the versioned notes contain it. It is not yet connected to the Release Please workflow.
+The changelog policy includes a tested reconciliation function that refuses to clear an entry unless the versioned notes contain an exact matching bullet. It is not yet connected to the Release Please workflow.

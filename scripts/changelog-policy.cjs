@@ -80,7 +80,10 @@ function reconcileRelease(source, version) {
   const releaseStart = header.index;
   const nextHeader = source.slice(releaseStart + 1).search(/^## /m);
   const releaseEnd = nextHeader < 0 ? source.length : releaseStart + 1 + nextHeader;
-  const releaseText = source.slice(releaseStart, releaseEnd).toLowerCase();
+  const releaseLines = source
+    .slice(releaseStart, releaseEnd)
+    .split('\n')
+    .map((line) => line.trim().toLowerCase());
   const start = source.indexOf('## Unreleased\n');
   if (start < 0) return source;
   const end = source.indexOf('\n## ', start + 1);
@@ -94,7 +97,8 @@ function reconcileRelease(source, version) {
       .slice(2)
       .trim()
       .toLowerCase();
-    if (!text || !releaseText.includes(text)) throw new Error(`Release notes do not contain pending entry: ${text}`);
+    if (!text || !releaseLines.some((line) => line === `- ${text}` || line === `* ${text}`))
+      throw new Error(`Release notes do not contain pending entry: ${text}`);
   }
   return `${source.slice(0, start)}## Unreleased\n${source.slice(actualEnd)}`;
 }
