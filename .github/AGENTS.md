@@ -1,7 +1,7 @@
 # GitHub automation guidance
 
 - Preserve least-privilege workflow permissions and keep CI checks aligned with the root pnpm scripts.
-- CI must run lint, format, types, tests, build, package, boundaries, and release checks through the Docker Compose test service; build and smoke-test the packaged CLI runtime image as well. Do not rely on Husky hooks in Actions.
+- CI must run lint, format, types, tests, build, package, boundaries, release, and documentation checks directly on the GitHub Actions runner with hooks disabled. Docker Compose is for local CLI builds and checks; CI does not need to run Docker.
 - Release Please treats the workspace as one `portcn` release unit. Its supported `exclude-paths` filters docs, workflows, and maintenance scripts; changes under `apps/cli` and `packages/core` remain release-relevant. Use v-prefixed, uncomponentized tags.
 - Before `1.0.0`, features and breaking changes advance minor versions and fixes advance patch versions. Keep `0.0.1` as the configured bootstrap version and let Release Please calculate the first release from unreleased commits.
 - CI validates release metadata and npm packaging; do not publish to npm or create/move tags from CI without an explicit release design and authorization.

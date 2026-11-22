@@ -44,7 +44,7 @@ pnpm docker:clean
 
 The test service installs the monorepo with the frozen pnpm lockfile and runs Biome, TypeScript, Vitest, Turborepo builds, package integrity, workspace boundaries, and release checks. It tests the CLI by building and installing a packed npm artifact inside the container. Compose rebuilds the runtime artifact from current source before CLI runs. Containers start with their own namespaces and cannot inspect host processes or ports. Do not add privileged mode, host PID/network namespaces, or Docker socket mounts by default.
 
-Husky runs staged Biome and Conventional Commit checks through Docker Compose; pre-push runs the container test service. CI uses the same Docker Compose validation and smoke-tests the runtime CLI image.
+Husky runs staged Biome and Conventional Commit checks through Docker Compose; pre-push runs the container test service. GitHub Actions runs the workspace checks directly on its runner with hooks disabled; it does not build or run Docker images.
 
 ## Promotion and releases
 

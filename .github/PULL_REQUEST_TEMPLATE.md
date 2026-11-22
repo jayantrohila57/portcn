@@ -12,11 +12,9 @@
 
 ## Verification
 
-- [ ] `pnpm lint`
-- [ ] `pnpm format:check`
-- [ ] `pnpm check-types`
-- [ ] `pnpm test`
-- [ ] `pnpm build`
+- [ ] `pnpm docker:test` (local CLI checks)
+- [ ] `pnpm docker:build` (local packaged runtime)
+- [ ] `pnpm docs:check`
 
 ## Checklist
 

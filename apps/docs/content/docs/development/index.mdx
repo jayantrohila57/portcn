@@ -20,19 +20,9 @@ This starts workspace development tasks configured by Turborepo. The Fumadocs ap
 
 ## Validate changes
 
-```sh
-pnpm lint
-pnpm format:check
-pnpm check-types
-pnpm test
-pnpm build
-pnpm package:check
-pnpm boundaries:check
-pnpm release:check
-pnpm docs:check
-```
+For local CLI checks, use the Docker Compose commands in [Docker](/docs/docker). GitHub Actions runs lint, format, type, test, build, package, boundary, release, and docs checks directly on its runner with hooks disabled.
 
-`pnpm docs:check` checks documentation links and CLI reference consistency; `pnpm build` compiles MDX as part of the Fumadocs production build. CI runs these without Git hooks. Docker Compose also provides the full repository check image; see [Docker](/docs/docker).
+`pnpm docs:check` checks documentation links and CLI reference consistency; `pnpm build` compiles MDX as part of the Fumadocs production build. For docs-only development, install dependencies with the frozen lockfile and run `pnpm dev`.
 
 <Callout title="Docs are part of the change" type="info">
 Identify affected pages before coding. Update technical documentation in the same task and list those pages in the PR, or explain why no documentation change is required.
