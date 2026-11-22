@@ -1,0 +1,82 @@
+name: GitHub Packages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Git tag to publish (for example v0.0.1)
+        required: true
+        type: string
+
+concurrency:
+  group: github-packages-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      REGISTRY: https://npm.pkg.github.com
+      PACKAGE_NAME: "@jayantrohila57/portcn"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.3.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Verify release tag and install dependencies
+        env:
+          HUSKY: "0"
+        run: |
+          set -euo pipefail
+          test "${RELEASE_TAG#v}" != "$RELEASE_TAG"
+          test "$(git cat-file -t "refs/tags/$RELEASE_TAG")" = tag
+          test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$(git rev-parse HEAD)"
+          pnpm install --frozen-lockfile
+      - name: Build and validate CLI
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          test "$(node -p "require('./apps/cli/package.json').version")" = "$version"
+          pnpm --filter portcn build
+          node scripts/check-cli-package.mjs
+      - name: Stage scoped GitHub package
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$(mktemp -d)"
+          cp -R apps/cli/. "$stage/"
+          cd "$stage"
+          npm pkg set name="$PACKAGE_NAME" publishConfig.registry="$REGISTRY"
+          npm pkg delete devDependencies
+          npm pack --json > /tmp/github-package.json
+          archive="$(node -p "JSON.parse(require('fs').readFileSync('/tmp/github-package.json','utf8'))[0].filename")"
+          echo "archive=$stage/$archive" >> "$GITHUB_OUTPUT"
+          node -e "const p=require('./package.json'); if (p.name !== process.env.PACKAGE_NAME || p.version !== process.env.RELEASE_TAG.slice(1)) process.exit(1)"
+      - name: Publish scoped package idempotently
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          if existing="$(npm view "$PACKAGE_NAME@$version" version --registry="$REGISTRY" --json 2>/tmp/gh-pkg-error)"; then
+            test "${existing//\"/}" = "$version"
+            echo "$PACKAGE_NAME@$version already exists; skipping duplicate publication."
+          else
+            grep -q 'E404' /tmp/gh-pkg-error || { cat /tmp/gh-pkg-error >&2; exit 1; }
+            npm publish "${{ steps.package.outputs.archive }}" --registry="$REGISTRY"
+          fi
