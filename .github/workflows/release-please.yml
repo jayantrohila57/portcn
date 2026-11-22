@@ -70,10 +70,10 @@ jobs:
               exit 1
             fi
             npm publish "$package_path" --access public --provenance
+          fi
       - name: Dispatch GitHub Packages publication
         if: steps.release.outputs.release_created == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
         run: gh workflow run github-packages.yml --ref main -f tag="$RELEASE_TAG"
-          fi
