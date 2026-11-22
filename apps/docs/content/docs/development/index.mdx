@@ -34,7 +34,7 @@ pnpm release:check
 pnpm docs:check
 ```
 
-`pnpm docs:check` checks documentation links and CLI reference consistency; `pnpm build` compiles MDX as part of the Fumadocs production build. Git hooks and GitHub Actions also run their checks with pnpm, without Docker.
+`pnpm docs:check` checks documentation links and CLI reference consistency; `pnpm build` compiles MDX as part of the Fumadocs production build. Before each commit, Git hooks run the full workspace checks and validate the commit message with pnpm. GitHub Actions runs its checks independently without Docker.
 
 <Callout title="Docs are part of the change" type="info">
 Identify affected pages before coding. Update technical documentation in the same task and list those pages in the PR, or explain why no documentation change is required.

@@ -39,7 +39,7 @@ Optional Docker Compose commands build and run the packaged CLI image. For examp
 
 Containers use their normal PID, network, and mount namespaces. The CLI can initially observe only the processes and ports in its own container; host discovery is not enabled. No service uses privileged mode, host networking, host PID, or a Docker socket mount.
 
-Git hooks run staged Biome checks, Conventional Commit validation, and pre-push type/test checks with pnpm on the host. CI runs its checks directly on GitHub Actions without Docker. For local Fumadocs development, run `pnpm dev`. See the [Portcn documentation](apps/docs/content/docs/index.mdx) for setup and reference, and [CONTRIBUTING.md](CONTRIBUTING.md) for the contributor policy.
+Before each commit, Git hooks run staged Biome checks, Conventional Commit validation, and the full workspace validation suite with pnpm on the host. Pushes do not run local checks; CI runs its checks directly on GitHub Actions without Docker. For local Fumadocs development, run `pnpm dev`. See the [Portcn documentation](apps/docs/content/docs/index.mdx) for setup and reference, and [CONTRIBUTING.md](CONTRIBUTING.md) for the contributor policy.
 
 Running `pnpm docker:cli` without arguments currently displays help and foundation status. Port discovery and service management are not implemented yet. Use Conventional Commits when Release Please should calculate a version bump.
 

@@ -5,7 +5,7 @@
 - Put shared domain rules in `@portcn/core`; keep CLI presentation and future Linux-specific integrations outside the core package.
 - Keep the root package private and named `@portcn/workspace`. Reserve the unscoped npm package name `portcn` for `apps/cli`.
 - Use existing pnpm, Turborepo, Biome, TypeScript, and Vitest configuration. Avoid duplicate tools and dependencies.
-- Install dependencies with the frozen lockfile; Husky runs staged Biome checks, Commitlint, and pre-push type/test checks locally. CI runs its checks directly with hooks disabled.
+- Install dependencies with the frozen lockfile; Husky runs staged Biome and Commitlint checks, then the full workspace validation suite before each commit. CI runs its checks directly with hooks disabled.
 - Run Git hooks and workspace checks with the regular pnpm scripts; CI runs checks directly on GitHub Actions with hooks disabled. Docker Compose remains available for optional packaged CLI image checks (`pnpm docker:cli`, `pnpm docker:build`, `pnpm docker:clean`).
 - Container CLI runs initially observe only their own PID, network, and mount namespaces. Do not add privileged mode, host PID/network namespaces, or Docker socket mounts by default.
 - Preserve strict TypeScript, focused tests, the existing docs branding/theme, and clear errors. Do not claim functionality that is not implemented.

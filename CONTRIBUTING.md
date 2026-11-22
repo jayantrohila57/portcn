@@ -50,7 +50,7 @@ pnpm docs:check
 
 These commands run directly in the workspace. Optional Docker Compose commands build and smoke-test the packaged CLI image; CI does not use Docker.
 
-Husky runs staged Biome and Conventional Commit checks through pnpm; pre-push runs type checks and tests through pnpm. GitHub Actions runs the workspace checks directly on its runner with hooks disabled.
+Husky runs staged Biome checks and the full workspace suite before a commit; Commitlint validates the message before the commit is created. Pushes do not run a local validation hook. GitHub Actions runs the workspace checks directly on its runner with hooks disabled.
 
 ## Promotion and releases
 
