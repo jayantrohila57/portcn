@@ -38,6 +38,14 @@ function compareSemver(left, right) {
   return 0;
 }
 
+function nextSemver(current, change, breaking = false) {
+  const [major, minor, patch] = current.split('.').map(Number);
+  if (breaking) return major === 0 ? `0.${minor + 1}.0` : `${major + 1}.0.0`;
+  if (change === 'feat') return major === 0 ? `0.${minor + 1}.0` : `${major}.${minor + 1}.0`;
+  if (change === 'fix' || change === 'perf') return `${major}.${minor}.${patch + 1}`;
+  return current;
+}
+
 for (const [left, right, expected] of [
   ['0.0.1', '0.0.2', -1],
   ['0.0.1', '0.1.0', -1],
@@ -55,6 +63,24 @@ for (const version of ['0.0.1', '1.2.3-alpha.1', '2.0.0+build.5', '3.4.5-rc.2+bu
 
 for (const version of ['01.0.0', '1.02.0', '1.2.03', '1.2', '1.2.3-01', '1.2.3+', 'v1.2.3']) {
   if (isValidSemver(version)) throw new Error(`SemVer validator accepted invalid version ${version}.`);
+}
+
+for (const [current, change, breaking, expected] of [
+  ['0.0.1', 'fix', false, '0.0.2'],
+  ['0.0.1', 'feat', false, '0.1.0'],
+  ['0.0.1', 'feat', true, '0.1.0'],
+  ['0.0.1', 'docs', false, '0.0.1'],
+  ['0.0.1', 'chore', false, '0.0.1'],
+  ['0.1.0', 'fix', false, '0.1.1'],
+  ['0.1.0', 'feat', false, '0.2.0'],
+  ['0.1.0', 'fix', true, '0.2.0'],
+  ['1.0.0', 'fix', false, '1.0.1'],
+  ['1.0.0', 'feat', false, '1.1.0'],
+  ['1.0.0', 'fix', true, '2.0.0'],
+]) {
+  if (nextSemver(current, change, breaking) !== expected) {
+    throw new Error(`SemVer bump for ${current} (${change}, breaking=${breaking}) must be ${expected}.`);
+  }
 }
 
 const root = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
@@ -83,7 +109,7 @@ if (
   cliConfig['release-type'] !== 'node' ||
   cliConfig['package-name'] !== 'portcn' ||
   cliConfig.component !== 'portcn' ||
-  JSON.stringify(cliConfig.paths) !== JSON.stringify(['apps/cli', 'packages/core']) ||
+  JSON.stringify(cliConfig['exclude-paths']) !== JSON.stringify(['apps/docs', '.github', 'docs', 'scripts']) ||
   cliConfig['initial-version'] !== '0.0.1' ||
   config['include-v-in-tag'] !== true ||
   config['include-component-in-tag'] !== false
@@ -91,6 +117,35 @@ if (
   throw new Error(
     'Release Please CLI package scope, bootstrap version, name, or v-prefixed tag configuration is invalid.',
   );
+}
+
+const changelogSections = new Map(
+  config['changelog-sections'].map(({ type, section, hidden }) => [type, { section, hidden }]),
+);
+for (const [type, section] of [
+  ['feat', 'Features'],
+  ['fix', 'Fixes'],
+  ['perf', 'Performance'],
+  ['refactor', 'Improvements'],
+  ['docs', 'Documentation'],
+]) {
+  if (changelogSections.get(type)?.section !== section || changelogSections.get(type)?.hidden !== false) {
+    throw new Error(`Release changelog must show ${type} commits under ${section}.`);
+  }
+}
+if (changelogSections.get('chore')?.hidden !== true) {
+  throw new Error('Chore commits must stay out of user-facing release notes.');
+}
+if (
+  'paths' in cliConfig ||
+  !cliConfig['exclude-paths'].includes('apps/docs') ||
+  !cliConfig['exclude-paths'].includes('docs')
+) {
+  throw new Error('Release Please must use supported exclude-paths for documentation-only changes.');
+}
+const extraVersionFiles = new Set(cliConfig['extra-files'].map(({ path }) => path));
+for (const path of ['package.json', 'apps/cli/package.json']) {
+  if (!extraVersionFiles.has(path)) throw new Error(`Release Please must update ${path}.`);
 }
 
 if (
@@ -149,7 +204,7 @@ if (latestTagVersion && compareSemver(latestTagVersion, manifest[releasePath]) >
 }
 
 console.log(`Root package ${root.name} is private and synchronized with portcn ${packageMetadata.version}.`);
-console.log('Release scope is the single portcn release unit with apps/cli and packages/core paths.');
+console.log('Release scope is the single portcn release unit; docs, workflows, and scripts are excluded.');
 console.log(
   latestTagVersion
     ? `Latest release tag is v${latestTagVersion}; manifest ${manifest[releasePath]}${latestTagVersion === manifest[releasePath] ? ' matches it' : ' is a valid release candidate'}.`

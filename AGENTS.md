@@ -8,7 +8,7 @@
 - Install dependencies with the frozen lockfile; Husky runs staged Biome checks, Commitlint, and pre-push type/test checks locally. CI runs its checks directly with hooks disabled.
 - Preserve strict TypeScript, focused tests, the existing docs branding/theme, and clear errors. Do not claim functionality that is not implemented.
 - Update release metadata consistently for the CLI package, workspace root, and Release Please manifest; never edit versions outside Release Please.
-- Use Conventional Commit types for changes that need Release Please to calculate a version bump; existing sentence-style commit subjects remain accepted for compatibility.
+- Use Conventional Commits for every commit and PR title; do not add compatibility exceptions for narrative subjects. Use Conventional squash titles for task PRs and `chore(main): ...` for promotions and synchronizations.
 - Never push, publish, tag, or deploy without explicit authorization. Preserve existing tags.
 - Run the relevant lint, format, type, test, build, release, and package checks before proposing changes.
 - Every task starts by reading applicable `AGENTS.md` files, checking the working tree, fetching `origin/dev`, and branching from `dev`; never work directly on `main` or `dev`.
@@ -16,3 +16,4 @@
 - Releases promote `dev` to `main` after roughly four or five merged tasks or on explicit request. Keep task commits during promotion; Release Please runs only on `main` and is the sole version editor.
 - After release, synchronize `main` back to `dev` through the explicitly allowed sync PR. Never rewrite published history or move/delete tags.
 - Report current branch, task status, checks run, PR target, and remaining steps at completion.
+- Branch policy runs only for PR events. Full validation also runs on pushes to both `dev` and `main`.
