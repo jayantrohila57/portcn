@@ -71,6 +71,16 @@ jobs:
             fi
             npm publish "$package_path" --access public --provenance
           fi
+      - name: Verify changelog reconciliation
+        if: steps.release.outputs.release_created == 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const { reconcileRelease } = require("./scripts/changelog-policy.cjs");
+            reconcileRelease(fs.readFileSync("CHANGELOG.md", "utf8"), process.env.RELEASE_VERSION);
+          '
       - name: Dispatch GitHub Packages publication
         if: steps.release.outputs.release_created == 'true'
         env:

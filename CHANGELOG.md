@@ -12,6 +12,8 @@
 
 ### Fixes
 
+- verify changelog reconciliation <!-- task:fix/release-changelog-verification -->
+
 - validate release workflow shell <!-- task:fix/release-workflow-validation -->
 
 - dispatch GitHub Packages publication <!-- task:fix/release-package-dispatch -->
