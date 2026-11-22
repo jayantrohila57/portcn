@@ -32,7 +32,7 @@ export function createLifecycle(run) {
       '--limit',
       '100',
       '--json',
-      'number,state,baseRefName,headRefName,isCrossRepository,isDraft,mergeable,mergeStateStatus,statusCheckRollup,mergeCommit,url',
+      'number,title,state,baseRefName,headRefName,isCrossRepository,isDraft,mergeable,mergeStateStatus,statusCheckRollup,mergeCommit,url',
     );
   const getPr = (branch) => {
     const found = prs(branch);
@@ -72,6 +72,8 @@ export function createLifecycle(run) {
     if (pr) {
       validatePr(pr, branch);
       if (pr.isDraft) throw new Error('PR is a draft; preserve it for review.');
+      if (pr.title !== title)
+        throw new Error('Existing PR title differs from the supplied title; reconcile it before retrying.');
     }
     run('git', ['push', '-u', 'origin', branch]);
     if (!pr) {

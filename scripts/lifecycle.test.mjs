@@ -29,6 +29,7 @@ function fixture(overrides = {}) {
 function pr(overrides = {}) {
   return {
     number: 1,
+    title: 'feat(cli): example',
     state: 'OPEN',
     baseRefName: 'dev',
     headRefName: 'feat/example',
@@ -58,7 +59,7 @@ test('submit refuses draft, conflicts, failed checks and duplicate PRs', () => {
     [[pr({ statusCheckRollup: [{ conclusion: 'FAILURE' }] })], /failing/],
     [[pr(), pr({ number: 2 })], /Multiple/],
   ]) {
-    assert.throws(() => fixture({ prs }).lifecycle.submit('feat: example', 'body.md'), pattern);
+    assert.throws(() => fixture({ prs }).lifecycle.submit('feat(cli): example', 'body.md'), pattern);
   }
 });
 test('finish requires verified merge including squash merge', () => {
@@ -102,4 +103,11 @@ test('finish retries promotion after local branch was already deleted', () => {
   f.lifecycle.finish('feat/example');
   assert(!f.calls.some((call) => call.includes('-D')));
   assert(f.calls.some((call) => call.includes('scripts/prepare-promotion.mjs')));
+});
+
+test('submit rejects a matching PR with a different title', () => {
+  assert.throws(
+    () => fixture({ prs: [pr({ title: 'feat: different' })] }).lifecycle.submit('feat(cli): example', 'body.md'),
+    /title differs/,
+  );
 });
