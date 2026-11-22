@@ -52,3 +52,12 @@ test('reconciliation does not accept a pending entry as a substring of another e
   const source = '# Changelog\n\n## Unreleased\n\n- fix issue\n\n## 0.1.0\n\n- fix issues\n';
   assert.throws(() => reconcileRelease(source, '0.1.0'), /do not contain/);
 });
+
+test('reconciliation refuses to discard prose or unsupported list entries', () => {
+  const source = '# Changelog\n\n## Unreleased\n\nPending context\n\n## 0.1.0\n\n- item\n';
+  assert.throws(() => reconcileRelease(source, '0.1.0'), /cannot be safely reconciled/);
+  assert.throws(
+    () => reconcileRelease(source.replace('Pending context', '* item'), '0.1.0'),
+    /cannot be safely reconciled/,
+  );
+});

@@ -89,7 +89,11 @@ function reconcileRelease(source, version) {
   const end = source.indexOf('\n## ', start + 1);
   const actualEnd = end < 0 ? source.length : end;
   const section = source.slice(start, actualEnd);
-  const lines = section.split('\n').filter((line) => /^- /.test(line));
+  const sectionLines = section.split('\n').slice(1);
+  if (sectionLines.some((line) => line.trim() && !/^### /.test(line) && !/^- /.test(line))) {
+    throw new Error('Unreleased section contains content that cannot be safely reconciled.');
+  }
+  const lines = sectionLines.filter((line) => /^- /.test(line));
   for (const line of lines) {
     const text = line
       .replace(/\s*<!-- task:[^>]+ -->/g, '')
