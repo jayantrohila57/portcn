@@ -72,4 +72,30 @@ function validateRelease(source, version) {
     return { allowed: false, reason: `Missing release changelog section for ${version}.` };
   return { allowed: true };
 }
-module.exports = { entry, update, validate, validateRelease };
+function reconcileRelease(source, version) {
+  if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) throw new Error('Invalid release version.');
+  const escaped = version.replaceAll('.', '\\.');
+  const header = new RegExp(`^#{2,3} (?:\\[)?v?${escaped}(?:\\]|[ \n]|$)`, 'm').exec(source);
+  if (!header) throw new Error('Matching Release Please version section is missing.');
+  const releaseStart = header.index;
+  const nextHeader = source.slice(releaseStart + 1).search(/^## /m);
+  const releaseEnd = nextHeader < 0 ? source.length : releaseStart + 1 + nextHeader;
+  const releaseText = source.slice(releaseStart, releaseEnd).toLowerCase();
+  const start = source.indexOf('## Unreleased\n');
+  if (start < 0) return source;
+  const end = source.indexOf('\n## ', start + 1);
+  const actualEnd = end < 0 ? source.length : end;
+  const section = source.slice(start, actualEnd);
+  const lines = section.split('\n').filter((line) => /^- /.test(line));
+  for (const line of lines) {
+    const text = line
+      .replace(/\s*<!-- task:[^>]+ -->/g, '')
+      .replace(/\s*\[#\d+\]\([^)]+\)/g, '')
+      .slice(2)
+      .trim()
+      .toLowerCase();
+    if (!text || !releaseText.includes(text)) throw new Error(`Release notes do not contain pending entry: ${text}`);
+  }
+  return `${source.slice(0, start)}## Unreleased\n${source.slice(actualEnd)}`;
+}
+module.exports = { entry, update, validate, validateRelease, reconcileRelease };
