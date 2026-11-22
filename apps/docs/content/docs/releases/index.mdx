@@ -3,7 +3,7 @@ title: Releases
 description: Release Please, SemVer, changelog, and promotion process for Portcn.
 ---
 
-The repository's [CHANGELOG.md](https://github.com/jayantrohila57/portcn/blob/main/CHANGELOG.md) records pending work in an Unreleased section. Release Please owns official versioned notes and product versions. Automated maintenance and release reconciliation of the pending section are not yet implemented.
+The repository's [CHANGELOG.md](https://github.com/jayantrohila57/portcn/blob/main/CHANGELOG.md) records pending work in an Unreleased section. Release Please owns official versioned notes and product versions. Automatic reconciliation of the pending section remains tracked in issue #13.
 
 ## Release flow
 
@@ -16,7 +16,7 @@ Before `1.0.0`, features and breaking changes advance the minor version; fixes a
 
 The [Contributing guide](https://github.com/jayantrohila57/portcn/blob/main/CONTRIBUTING.md) contains the full promotion procedure.
 
-A proposed version and pending release summary must reflect actual release-relevant commits and configured path exclusions. Release Please makes the authoritative calculation after promotion; a preview is not an official version. Merging the promotion or release PR, tagging, publishing, and public releases require explicit authorization.
+A proposed version and pending release summary must reflect actual release-relevant commits and configured path exclusions. Release Please makes the authoritative calculation after promotion; a preview is not an official version. Merging the promotion or release PR, tagging, publishing, and public releases require explicit authorization. After Release Please reports a successful release, the release workflow publishes only `apps/cli` (`portcn`) through npm Trusted Publishing with provenance. The private workspace root and `@portcn/core` are never published.
 
 ## Proposed first release
 
@@ -34,4 +34,10 @@ After `task-lifecycle.mjs finish`, the helper runs `node scripts/prepare-promoti
 
 Release PR validation requires a valid version and matching version section. Release Please may retain the pending `Unreleased` section while its release PR is open; automatic reconciliation of those entries is follow-up work tracked in issue #13.
 
-The changelog policy includes a tested reconciliation function that refuses to clear an entry unless the versioned notes contain an exact matching bullet; unsupported prose or list formats stop reconciliation. It is not yet connected to the Release Please workflow.
+The changelog policy includes a tested reconciliation function that refuses to clear an entry unless the versioned notes contain an exact matching bullet; unsupported prose or list formats stop reconciliation. Connecting that function to Release Please remains issue #13 work.
+
+## npm publication
+
+The publish target is the unscoped `portcn` package from `apps/cli`; the private workspace package and `@portcn/core` are not publishable. Before the first release, confirm that `npm view portcn` returns `E404` (unclaimed), create the `v0.0.1` GitHub release through the approved Release Please flow, and configure npm Trusted Publishing for this repository's `Release Please` workflow. The workflow checks the Release Please version against `apps/cli/package.json`, verifies the packed files, and publishes with OIDC provenance only after Release Please reports `release_created`. A matching already-published version is treated as an idempotent retry; a conflicting registry version fails.
+
+The first publication still requires explicit approval. After approval, verify `npm view portcn@0.0.1`, `npm install --global portcn`, `portcn --version`, and `portcn --help`. Future versions remain Release Please-authoritative and publish from the successful release output rather than a tag-only workflow.
