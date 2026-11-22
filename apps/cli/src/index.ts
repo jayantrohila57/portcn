@@ -19,10 +19,7 @@ export function createProgram(): Command {
 
 const program = createProgram();
 
-if (
-  process.argv[1] &&
-  fileURLToPath(import.meta.url) === realpathSync(resolve(process.argv[1]))
-) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(resolve(process.argv[1]))) {
   if (process.argv.length === 2) {
     program.outputHelp();
   } else {
