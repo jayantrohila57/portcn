@@ -15,6 +15,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      actions: write
       id-token: write
     steps:
       - id: release
@@ -69,4 +70,10 @@ jobs:
               exit 1
             fi
             npm publish "$package_path" --access public --provenance
+      - name: Dispatch GitHub Packages publication
+        if: steps.release.outputs.release_created == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+        run: gh workflow run github-packages.yml --ref main -f tag="$RELEASE_TAG"
           fi
