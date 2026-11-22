@@ -99,6 +99,12 @@ describe('portcn CLI foundation', () => {
     }
   });
 
+  it('prints useful default output without arguments', () => {
+    const result = run(process.execPath, [executable]);
+    expect(result.status).toBe(0);
+    expectBrandedHelp(result.stdout);
+  });
+
   it('imports shared core validation through the workspace package', () => {
     expect(isValidPortNumber(8080)).toBe(true);
     expect(isValidPortNumber(65_536)).toBe(false);

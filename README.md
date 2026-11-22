@@ -12,7 +12,7 @@ Early development. The CLI package and executable foundation are in place; port 
 
 - Fumadocs documentation site with navigation, search, Markdown negotiation, LLM-friendly exports, and generated Open Graph images.
 - pnpm workspace and Turborepo task orchestration.
-- `portcn` CLI package with branded help/version output and a Node.js executable.
+- `portcn` CLI package with branded default/help/version output and a Node.js executable.
 - Private `@portcn/core` package for future shared functionality.
 - GitHub Actions validation and Release Please version/changelog workflow for `portcn`.
 
@@ -31,8 +31,12 @@ git clone https://github.com/jayantrohila57/portcn.git
 cd portcn
 pnpm install --frozen-lockfile
 pnpm build
+node apps/cli/dist/index.js
 node apps/cli/dist/index.js --help
+node apps/cli/dist/index.js --version
 ```
+
+Running `portcn` without arguments currently displays its help and foundation status. Port discovery and service management are not implemented yet.
 
 Dependency installation initializes Git hooks. Pre-commit checks staged files with Biome, commit-msg accepts Conventional Commits and existing sentence-style subjects, and pre-push runs type checks and tests. Use Conventional Commits when Release Please should calculate a version bump. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
@@ -61,7 +65,7 @@ pnpm boundaries:check
 pnpm release:check
 ```
 
-The CLI help, version, execution, and core import have minimal unit coverage.
+The CLI default output, help, version, executable package contents, and core import have focused coverage.
 
 ## Repository structure
 
