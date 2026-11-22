@@ -11,11 +11,11 @@
 - Preserve strict TypeScript, focused tests, the existing docs branding/theme, and clear errors. Do not claim functionality that is not implemented.
 - Update release metadata consistently for the CLI package, workspace root, and Release Please manifest; never edit versions outside Release Please.
 - Use Conventional Commits for every commit and PR title; do not add compatibility exceptions for narrative subjects. Use Conventional squash titles for task PRs and `chore(main): ...` for promotions and synchronizations.
-- Never push, publish, tag, or deploy without explicit authorization. Preserve existing tags.
+- Routine task pushes, PR creation and merging into dev are authorized when required checks pass. Never merge to main, publish, tag, or deploy without explicit authorization. Preserve existing tags.
 - Run the relevant lint, format, type, test, build, release, and package checks before proposing changes.
-- Every task starts by reading applicable `AGENTS.md` files, checking the working tree, fetching `origin/dev`, and branching from `dev`; never work directly on `main` or `dev`.
-- Use `feat/*`, `fix/*`, `refactor/*`, `chore/*`, `docs/*`, `test/*`, `build/*`, `ci/*`, or `perf/*` task branches. Open PRs to `dev`; do not merge without authorization and passing required checks.
-- Releases promote `dev` to `main` after roughly four or five merged tasks or on explicit request. Keep task commits during promotion; Release Please runs only on `main` and is the sole version editor.
+- Use only this existing repository directory: no additional worktrees, clones, or parallel coding tasks. Check the working tree and existing branches/PRs, preserve uncommitted work, read applicable guidance, fetch `origin/dev`, and create one task branch from updated `dev`. Never edit directly on `main` or `dev`. `node scripts/task-lifecycle.mjs start <type/name>` performs the clean start checks.
+- Use `feat/*`, `fix/*`, `refactor/*`, `chore/*`, `docs/*`, `test/*`, `build/*`, `ci/*`, or `perf/*` task branches. Open PRs to `dev` and integrate automatically after required checks pass. Use GitHub auto-merge when eligible; never bypass protections. Preserve the branch and report blockers. After merge use `node scripts/task-lifecycle.mjs finish` to verify the merged PR and return to updated `dev`.
+- Releases promote `dev` to `main` after roughly three to five merged tasks or on explicit request; prepare the promotion PR without merging it. Keep task commits during promotion; Release Please runs only on `main` and is the sole version editor.
 - After release, synchronize `main` back to `dev` through the explicitly allowed sync PR. Never rewrite published history or move/delete tags.
 - Report current branch, task status, checks run, PR target, and remaining steps at completion.
 - Branch policy runs only for PR events. Full validation also runs on pushes to both `dev` and `main`.

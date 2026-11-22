@@ -8,10 +8,12 @@ The repository's [CHANGELOG.md](https://github.com/jayantrohila57/portcn/blob/ma
 ## Release flow
 
 1. Task PRs merge to `dev` with Conventional Commit titles.
-2. After several validated tasks, an authorized promotion PR moves `dev` to `main` while preserving task commits.
+2. After approximately three to five validated tasks, prepare a promotion PR; an authorized merge moves `dev` to `main` while preserving task commits.
 3. Release Please runs on `main`, calculates the version, and opens the release PR. It updates the CLI and root package versions, manifest, changelog, and release metadata.
 4. After an authorized release PR merge, synchronize `main` back to `dev` through the approved sync PR.
 
 Before `1.0.0`, features and breaking changes advance the minor version; fixes advance the patch version. Release Please owns version edits and tag/release creation. Do not publish or deploy without authorization.
 
 The [Contributing guide](https://github.com/jayantrohila57/portcn/blob/main/CONTRIBUTING.md) contains the full promotion procedure.
+
+A proposed version and pending release summary must reflect actual release-relevant commits and configured path exclusions. Release Please makes the authoritative calculation after promotion; a preview is not an official version. Merging the promotion or release PR, tagging, publishing, and public releases require explicit authorization.

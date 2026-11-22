@@ -12,8 +12,8 @@
 
 ## Verification
 
-- [ ] `pnpm docker:test` (local CLI checks)
-- [ ] `pnpm docker:build` (local packaged runtime)
+- [ ] `pnpm precommit:check`
+- [ ] Optional Docker image checks, if relevant
 - [ ] `pnpm docs:check`
 
 ## Checklist
