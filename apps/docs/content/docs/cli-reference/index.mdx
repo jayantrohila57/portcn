@@ -1,0 +1,42 @@
+---
+title: CLI reference
+description: Implemented Portcn CLI options, output, and behavior.
+---
+
+Portcn currently has no subcommands. Invoke it with the options below. The examples use the built executable from the repository root.
+
+```sh title="Help"
+node apps/cli/dist/index.js --help
+```
+
+## Root options
+
+<TypeTable
+  type={{
+    "-h, --help": {
+      description: "Display help for the root command.",
+      type: "boolean",
+      default: false,
+    },
+    "-V, --version": {
+      description: "Print the version from the CLI package manifest and exit.",
+      type: "boolean",
+      default: false,
+    },
+  }}
+/>
+
+## Output and errors
+
+Help prints the `p: portcn — Know what's running.` brand, root usage, and registered options. The version option prints the CLI package version followed by a newline. Both successful options exit with status `0`.
+
+There are no implemented domain commands or command-specific errors yet. Commander reports unsupported options and exits unsuccessfully; exact wording can vary by Commander version.
+
+## Examples
+
+```sh
+node apps/cli/dist/index.js --help
+node apps/cli/dist/index.js -V
+```
+
+The workspace build is described in [Getting Started](/docs/getting-started).

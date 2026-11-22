@@ -4,6 +4,7 @@ Thanks for helping improve portcn. The CLI foundation is in place; port discover
 
 ## Requirements and setup
 
+- Docker Engine with the Compose plugin
 - Node.js 24 or later
 - pnpm 12.3.4 (`corepack enable` can provide pnpm)
 - Linux is the initial target for future CLI functionality; the docs app can be developed on supported Node.js platforms.
@@ -12,19 +13,21 @@ Thanks for helping improve portcn. The CLI foundation is in place; port discover
 git clone https://github.com/jayantrohila57/portcn.git
 cd portcn
 git switch dev
-pnpm install --frozen-lockfile
-pnpm dev
+pnpm docker:build
+pnpm docker:test
 ```
 
-The docs app runs on `http://localhost:3000`. Read the applicable `AGENTS.md` files before editing.
+Run CLI commands through `pnpm docker:cli -- <args>`; for example, `pnpm docker:cli -- --help`. Docker rebuilds and packages the current CLI source before runtime image creation. Do not globally install Portcn on the host. Read the applicable `AGENTS.md` files before editing.
+
+For Fumadocs-only work, install workspace dependencies with `pnpm install --frozen-lockfile` and use `pnpm dev`; the docs app runs at `http://localhost:3000`. CLI execution, CLI tests, and validation still run in Docker containers.
 
 ## Required task lifecycle
 
 1. Check `git status`, fetch `origin/dev`, and update the local integration branch. Never start work on `main` or `dev`.
 2. Create a task branch from `dev`: `feat/<name>`, `fix/<name>`, `refactor/<name>`, `chore/<name>`, `docs/<name>`, `test/<name>`, `build/<name>`, `ci/<name>`, or `perf/<name>`.
-3. Implement the focused change, update tests and documentation, and run the checks below. Do not bypass failures or rewrite published history.
+3. Before coding, identify affected documentation. Documentation is required in the same task and PR for changes to features, fixes, refactors, architecture, dependencies, configuration, commands, packages, Docker, workflows, security, or contributor processes. Update Fumadocs alongside the change and verify examples against actual code and commands. If no docs apply, justify `No documentation change required` in the PR. Do not bypass failures or rewrite published history.
 4. Use Conventional Commits for every commit and PR title, e.g. `feat(cli): discover listening ports`, `fix(core): reject invalid ports`, `perf(cli): reduce scan overhead`, or `docs: clarify setup`. Add `!` or a `BREAKING CHANGE:` footer for breaking changes. Do not use narrative subjects. Add release-note categories to PR descriptions: Features, Fixes, Improvements, Performance, Breaking changes, or Documentation; identify affected packages. `feat` and breaking changes advance the minor version before 1.0.0; `fix` and `perf` advance patch unless marked breaking. Non-release types do not bump versions.
-5. Open the task PR to `dev`, with a summary, affected packages, release-note category, and checks. Use the Conventional PR title as the squash commit title. Merge only after required checks pass and the authorized owner approves. Delete the merged branch when appropriate.
+5. Open the task PR to `dev`, with a summary, affected packages, release-note category, documentation summary listing changed pages (or justified `No documentation change required`), and checks. Use the Conventional PR title as the squash commit title. Merge only after required checks pass and the authorized owner approves. Delete the merged branch when appropriate.
 6. Report current branch, status, checks, PR target, and remaining steps.
 
 Ordinary PR branches must belong to this repository. The `main-to-dev-sync` branch targets `dev`. The only PR routes to `main` are a `dev` promotion and a verified Release Please PR created by `github-actions[bot]` from the configured release branch. CI validates actual base/head repositories and branches, Conventional PR titles and commit headers, plus bot identity; titles do not grant a route exception. Branch policy runs on PR events only; pushes to `dev` and `main` still run full validation.
@@ -32,17 +35,16 @@ Ordinary PR branches must belong to this repository. The `main-to-dev-sync` bran
 ## Checks
 
 ```sh
-pnpm lint
-pnpm format:check
-pnpm check-types
-pnpm test
-pnpm build
-pnpm package:check
-pnpm boundaries:check
-pnpm release:check
+pnpm docker:build
+pnpm docker:test
+pnpm docker:cli -- --help
+pnpm docker:cli -- --version
+pnpm docker:clean
 ```
 
-Husky runs staged Biome checks, Conventional Commit validation, and pre-push type/test checks. CI runs the full suite directly with hooks disabled.
+The test service installs the monorepo with the frozen pnpm lockfile and runs Biome, TypeScript, Vitest, Turborepo builds, package integrity, workspace boundaries, and release checks. It tests the CLI by building and installing a packed npm artifact inside the container. Compose rebuilds the runtime artifact from current source before CLI runs. Containers start with their own namespaces and cannot inspect host processes or ports. Do not add privileged mode, host PID/network namespaces, or Docker socket mounts by default.
+
+Husky runs staged Biome and Conventional Commit checks through Docker Compose; pre-push runs the container test service. CI uses the same Docker Compose validation and smoke-tests the runtime CLI image.
 
 ## Promotion and releases
 
