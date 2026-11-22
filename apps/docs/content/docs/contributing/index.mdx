@@ -21,7 +21,7 @@ For changes to behavior, commands, packages, dependencies, architecture, securit
 
 ### Run checks and open a PR [step]
 
-Use the repository scripts and include a documentation summary naming changed pages or a justified `No documentation change required`. Use a Conventional Commit title. Routine task pushes and merges into `dev` are authorized after required checks pass. Once merged, run `node scripts/task-lifecycle.mjs finish` from the clean task branch. Preserve the branch if checks or merge are blocked.
+Use the repository scripts and include a documentation summary naming changed pages or a justified `No documentation change required`. Use a Conventional Commit title. Run `node scripts/task-lifecycle.mjs submit "feat(cli): describe the change" /path/to/pr-body.md` after committing and checking your changes. It creates or reuses the PR and requests auto-merge. CI requires an updated Fumadocs page or `No documentation change required:` followed by a specific explanation. Routine task pushes and merges into `dev` are authorized after required checks pass. Once merged, run `node scripts/task-lifecycle.mjs finish` from the clean task branch. Preserve the branch if checks or merge are blocked.
 
 ## Canonical community files
 

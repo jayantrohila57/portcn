@@ -8,7 +8,7 @@
 
 ## Documentation
 
-<!-- List updated Fumadocs pages and summarize their coverage, or justify: No documentation change required. -->
+<!-- List updated Fumadocs pages and summarize their coverage, or write: No documentation change required: <specific explanation>. -->
 
 ## Verification
 
