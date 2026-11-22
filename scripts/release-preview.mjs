@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-export const initialBaseline = '846b45801d808bd728161ccc0e3bf4941c5d6756';
+export const initialBaseline = 'd495d5b0ce3b0e9fd5f9b4df4aec0f9ab7d204ee';
 export function validateBaseline(version, baseline) {
   if (version === '0.0.1' && baseline !== initialBaseline)
     throw new Error('v0.0.1 does not point to the proposed bootstrap commit.');

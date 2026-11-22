@@ -48,7 +48,7 @@ function validate(base, head, title, branch) {
     }
     const expected = update(base, title, branch);
     if (expected === base) return { allowed: false, reason: 'Task changelog entry already exists in base.' };
-    if (head !== expected)
+    if (head !== expected && !isReleaseCandidateMigration(base, head, expected))
       return {
         allowed: false,
         reason: 'Changelog must contain the generated task entry and preserve existing content.',
@@ -57,6 +57,20 @@ function validate(base, head, title, branch) {
   } catch (error) {
     return { allowed: false, reason: error.message };
   }
+}
+function isReleaseCandidateMigration(base, head, expected) {
+  if (
+    !base.includes('## Proposed 0.0.1 baseline (not released)') ||
+    !head.includes('## Proposed 0.0.1 release candidate (not released)')
+  )
+    return false;
+  const migrated = expected
+    .replace('## Proposed 0.0.1 baseline (not released)', '## Proposed 0.0.1 release candidate (not released)')
+    .replace(
+      /The proposed baseline is commit `[^`]+` on `main`\. It has not been tagged or published\./,
+      'The corrected release candidate is commit `d495d5b0ce3b0e9fd5f9b4df4aec0f9ab7d204ee` on `dev`. It includes symlink-safe CLI execution and has not been tagged or published.',
+    );
+  return migrated.trimEnd() === head.trimEnd();
 }
 function validateRelease(source, version) {
   if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version))

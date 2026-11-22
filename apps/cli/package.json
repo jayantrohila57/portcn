@@ -3,6 +3,15 @@
   "version": "0.0.1",
   "description": "Know what's running.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jayantrohila57/portcn.git",
+    "directory": "apps/cli"
+  },
+  "homepage": "https://github.com/jayantrohila57/portcn#readme",
+  "bugs": {
+    "url": "https://github.com/jayantrohila57/portcn/issues"
+  },
   "type": "module",
   "engines": {
     "node": ">=24"

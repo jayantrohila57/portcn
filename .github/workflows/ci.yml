@@ -76,7 +76,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Validate commit messages
         if: github.event_name == 'pull_request'
-        run: pnpm exec commitlint --from "$PR_BASE_SHA" --to "$PR_HEAD_SHA"
+        run: node scripts/check-commit-messages.mjs "$PR_BASE_SHA" "$PR_HEAD_SHA"
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}

@@ -10,6 +10,8 @@
 
 ### Fixes
 
+- correct initial release candidate <!-- task:fix/release-candidate-baseline -->
+
 - harden npm publication workflow <!-- task:fix/npm-publish-workflow -->
 
 - Run the full workspace validation suite before commits and validate commit messages with Commitlint. [#11](https://github.com/jayantrohila57/portcn/pull/11)
@@ -27,9 +29,9 @@
 
 - establish single-checkout task safeguards <!-- task:chore/automate-development-lifecycle -->
 
-## Proposed 0.0.1 baseline (not released)
+## Proposed 0.0.1 release candidate (not released)
 
-The proposed baseline is commit `846b45801d808bd728161ccc0e3bf4941c5d6756` on `main`. It has not been tagged or published.
+The corrected release candidate is commit `d495d5b0ce3b0e9fd5f9b4df4aec0f9ab7d204ee` on `dev`. It includes symlink-safe CLI execution and has not been tagged or published.
 
 - Provide the `portcn` CLI foundation with branded help and version output; port discovery and service management are not implemented.
 - Provide private `@portcn/core` port-number validation and a Fumadocs site.

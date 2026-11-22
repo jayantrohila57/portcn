@@ -13,6 +13,14 @@ if (cliManifest.name !== 'portcn' || !cliManifest.bin?.portcn || cliManifest.pri
   throw new Error('The public CLI package must use the unscoped npm name portcn and declare its executable.');
 }
 if (
+  cliManifest.repository?.url !== 'git+https://github.com/jayantrohila57/portcn.git' ||
+  cliManifest.repository?.directory !== 'apps/cli' ||
+  cliManifest.homepage !== 'https://github.com/jayantrohila57/portcn#readme' ||
+  cliManifest.bugs?.url !== 'https://github.com/jayantrohila57/portcn/issues'
+) {
+  throw new Error('The public CLI package must identify the Portcn repository and issue tracker.');
+}
+if (
   rootManifest.name !== '@portcn/workspace' ||
   !rootManifest.private ||
   coreManifest.name !== '@portcn/core' ||
