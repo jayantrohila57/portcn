@@ -1,0 +1,40 @@
+---
+title: Docker
+description: Build and run the Portcn CLI image or execute repository checks with Docker Compose.
+---
+
+Docker support is a development and packaging workflow. The CLI image contains the currently implemented help/version foundation; it does not add port discovery or service management.
+
+## Build the CLI image
+
+From the repository root:
+
+```sh
+docker compose -f infra/docker/compose.yaml --profile cli build cli
+docker compose -f infra/docker/compose.yaml --profile cli run --rm cli --help
+```
+
+The image uses Node.js 24, builds the CLI and core packages, packs the CLI package, and installs that package into a small runtime image.
+
+## Run repository checks
+
+```sh
+docker compose -f infra/docker/compose.yaml --profile test run --build --rm test
+```
+
+The test image installs the frozen workspace lockfile and runs branch policy, lint, format, types, tests, build, package, workspace boundary, release metadata, and documentation checks. To validate commit headers as well, set `PR_BASE_SHA` and `PR_HEAD_SHA` in the Compose environment.
+
+<Callout title="Docker requirements" type="info">
+Install Docker Engine with the Compose plugin. The test profile mounts `.git` read-only so branch policy and optional commit checks can inspect repository history. It does not mount the Docker socket into the container.
+</Callout>
+
+## Troubleshooting
+
+<Accordions type="single">
+  <Accordion title="The CLI image build cannot find a package">
+    Run Compose from the repository root and keep the build context at the repository root. The configured Dockerfile relies on workspace manifests and the frozen lockfile.
+  </Accordion>
+  <Accordion title="The test profile rejects my branch">
+    Branch policy is designed for pull requests targeting `dev` or approved integration routes. Local-only branches may not meet PR policy. Use the local checks that apply to your task, and let CI evaluate the actual PR route.
+  </Accordion>
+</Accordions>

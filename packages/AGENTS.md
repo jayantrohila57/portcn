@@ -4,3 +4,4 @@
 - Keep `@portcn/core` platform-independent: domain models, types, validation, interfaces, and deterministic domain rules only. It must not depend on Linux APIs, Commander.js, React, Ink, or Next.js.
 - Add `linux`, `terminal`, or `tui` only when real implementation needs that separate responsibility; do not add placeholders or move docs-site code into packages.
 - Declare workspace dependencies in each package manifest, expose supported APIs through package exports, and test behavior within its owning package.
+- Before coding, identify architecture, API, and contributor documentation impact. Update relevant Fumadocs pages in the same task and verify examples against package exports and behavior. PRs must list changed docs or justify `No documentation change required`.

@@ -1,0 +1,16 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "getting-started",
+    "cli-reference",
+    "guides",
+    "architecture",
+    "development",
+    "docker",
+    "contributing",
+    "releases",
+    "security",
+    "open-source"
+  ]
+}
