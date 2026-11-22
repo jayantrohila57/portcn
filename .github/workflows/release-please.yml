@@ -15,7 +15,39 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      id-token: write
     steps:
-      - uses: googleapis/release-please-action@v4
+      - id: release
+        uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check out released source
+        if: steps.release.outputs.release_created == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.release.outputs.tag_name }}
+          fetch-depth: 1
+      - name: Set up Node for npm Trusted Publishing
+        if: steps.release.outputs.release_created == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Verify and publish CLI package
+        if: steps.release.outputs.release_created == 'true'
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          node -e "const p=require('./apps/cli/package.json'); if (p.version !== process.env.RELEASE_VERSION) { throw new Error('CLI version '+p.version+' does not match Release Please '+process.env.RELEASE_VERSION); }"
+          pnpm --filter portcn build
+          package_path="$(pnpm --filter portcn pack --pack-destination /tmp/portcn-release | tail -n 1)"
+          test -f "$package_path"
+          node scripts/check-cli-package.mjs
+          if published="$(npm view "portcn@${RELEASE_VERSION}" version --json 2>/dev/null)"; then
+            test "${published//\"/}" = "$RELEASE_VERSION" || { echo "Registry has conflicting portcn@$published" >&2; exit 1; }
+            echo "portcn@$RELEASE_VERSION is already published; skipping duplicate publication."
+          else
+            npm publish "$package_path" --access public --provenance
+          fi
