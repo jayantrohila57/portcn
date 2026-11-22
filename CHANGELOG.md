@@ -12,6 +12,8 @@
 
 ### Fixes
 
+- allow secure fork contributions <!-- task:fix/allow-fork-contributions -->
+
 - configure github packages authentication <!-- task:fix/github-packages-auth -->
 
 - correct initial release candidate <!-- task:fix/release-candidate-baseline -->

@@ -51,13 +51,13 @@ const cases = [
     false,
   ],
   [
-    'reject fork task PR',
+    'allow fork task PR to dev',
     {
       eventName: 'pull_request',
       pullRequest: pr({ base: 'dev', head: 'fix/port-validation', headRepository: 'contributor/portcn' }),
       commits: commit('fix(core): correct port validation'),
     },
-    false,
+    true,
   ],
   [
     'reject non Conventional PR title',
