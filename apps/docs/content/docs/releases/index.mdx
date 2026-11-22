@@ -32,6 +32,6 @@ Release Please uses the proposed baseline as its `bootstrap-sha` to exclude earl
 
 After `task-lifecycle.mjs finish`, the helper runs `node scripts/prepare-promotion.mjs`. It checks merged task PRs since `main` and creates or updates a `dev` to `main` PR after three tasks. The PR contains the current Unreleased text and a provisional version; review its scope and CI before approving any merge. If preparation fails, local cleanup has already completed; retry the preparation command on `dev`.
 
-Release PR validation rejects an Unreleased section containing entries and requires a matching version section. Release Please reconciliation is not yet automated, so this check can block a release PR until the notes are reconciled.
+Release PR validation requires a valid version and matching version section. Release Please may retain the pending `Unreleased` section while its release PR is open; automatic reconciliation of those entries is follow-up work tracked in issue #13.
 
 The changelog policy includes a tested reconciliation function that refuses to clear an entry unless the versioned notes contain an exact matching bullet; unsupported prose or list formats stop reconciliation. It is not yet connected to the Release Please workflow.

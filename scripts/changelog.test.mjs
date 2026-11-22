@@ -25,10 +25,10 @@ test('rejects duplicate or changed task entries and supports breaking changes', 
   );
 });
 
-test('release validation rejects unreconciled notes and missing version sections', () => {
+test('release validation accepts pending notes and requires a version section', () => {
   assert.equal(
     validateRelease('# Changelog\n\n## Unreleased\n\n- pending\n\n## 0.1.0\n\n- released\n', '0.1.0').allowed,
-    false,
+    true,
   );
   assert.equal(
     validateRelease('# Changelog\n\n## Unreleased\n\n## [0.1.0](https://example.test)\n\n- released\n', '0.1.0')
