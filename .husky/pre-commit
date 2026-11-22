@@ -1,1 +1,1 @@
-pnpm docker:lint
+pnpm exec lint-staged

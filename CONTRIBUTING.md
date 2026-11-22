@@ -4,22 +4,24 @@ Thanks for helping improve portcn. The CLI foundation is in place; port discover
 
 ## Requirements and setup
 
-- Docker Engine with the Compose plugin
 - Node.js 24 or later
 - pnpm 12.3.4 (`corepack enable` can provide pnpm)
+- Docker Engine with the Compose plugin (optional, for packaged CLI image checks)
 - Linux is the initial target for future CLI functionality; the docs app can be developed on supported Node.js platforms.
 
 ```sh
 git clone https://github.com/jayantrohila57/portcn.git
 cd portcn
 git switch dev
-pnpm docker:build
-pnpm docker:test
+pnpm install --frozen-lockfile
+pnpm build
+pnpm test
+node apps/cli/dist/index.js --help
 ```
 
-Run CLI commands through `pnpm docker:cli -- <args>`; for example, `pnpm docker:cli -- --help`. Docker rebuilds and packages the current CLI source before runtime image creation. Do not globally install Portcn on the host. Read the applicable `AGENTS.md` files before editing.
+Run CLI commands with Node from the build output, or use the optional Docker image workflow. Read the applicable `AGENTS.md` files before editing.
 
-For Fumadocs-only work, install workspace dependencies with `pnpm install --frozen-lockfile` and use `pnpm dev`; the docs app runs at `http://localhost:3000`. CLI execution, CLI tests, and validation still run in Docker containers.
+For Fumadocs-only work, use `pnpm dev`; the docs app runs at `http://localhost:3000`.
 
 ## Required task lifecycle
 
@@ -35,16 +37,20 @@ Ordinary PR branches must belong to this repository. The `main-to-dev-sync` bran
 ## Checks
 
 ```sh
-pnpm docker:build
-pnpm docker:test
-pnpm docker:cli -- --help
-pnpm docker:cli -- --version
-pnpm docker:clean
+pnpm lint
+pnpm format:check
+pnpm check-types
+pnpm test
+pnpm build
+pnpm package:check
+pnpm boundaries:check
+pnpm release:check
+pnpm docs:check
 ```
 
-The test service installs the monorepo with the frozen pnpm lockfile and runs Biome, TypeScript, Vitest, Turborepo builds, package integrity, workspace boundaries, and release checks. It tests the CLI by building and installing a packed npm artifact inside the container. Compose rebuilds the runtime artifact from current source before CLI runs. Containers start with their own namespaces and cannot inspect host processes or ports. Do not add privileged mode, host PID/network namespaces, or Docker socket mounts by default.
+These commands run directly in the workspace. Optional Docker Compose commands build and smoke-test the packaged CLI image; CI does not use Docker.
 
-Husky runs staged Biome and Conventional Commit checks through Docker Compose; pre-push runs the container test service. GitHub Actions runs the workspace checks directly on its runner with hooks disabled; it does not build or run Docker images.
+Husky runs staged Biome and Conventional Commit checks through pnpm; pre-push runs type checks and tests through pnpm. GitHub Actions runs the workspace checks directly on its runner with hooks disabled.
 
 ## Promotion and releases
 
