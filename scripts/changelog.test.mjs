@@ -38,6 +38,23 @@ test('release validation accepts pending notes and requires a version section', 
   assert.equal(validateRelease('# Changelog\n\n## Unreleased\n', '0.1.0').allowed, false);
 });
 
+test('task validation permits only the corrected initial release-candidate block migration', () => {
+  const previous = `${base}\n## Proposed 0.0.1 baseline (not released)\n\nThe proposed baseline is commit \`old\` on \`main\`. It has not been tagged or published.\n`;
+  const current = update(
+    previous,
+    'fix(release): correct initial release candidate',
+    'fix/release-candidate-baseline',
+  ).replace(
+    '## Proposed 0.0.1 baseline (not released)\n\nThe proposed baseline is commit `old` on `main`. It has not been tagged or published.',
+    '## Proposed 0.0.1 release candidate (not released)\n\nThe corrected release candidate is commit `d495d5b0ce3b0e9fd5f9b4df4aec0f9ab7d204ee` on `dev`. It includes symlink-safe CLI execution and has not been tagged or published.',
+  );
+  assert.equal(
+    validate(previous, current, 'fix(release): correct initial release candidate', 'fix/release-candidate-baseline')
+      .allowed,
+    true,
+  );
+});
+
 test('reconciliation preserves versioned notes and refuses unrepresented pending notes', () => {
   const source =
     '# Changelog\n\n## Unreleased\n\n### Features\n\n- add example <!-- task:feat/example -->\n\n## [0.1.0](https://example.test)\n\n### Features\n\n- add example\n';
