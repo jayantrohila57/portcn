@@ -87,6 +87,11 @@ export function createLifecycle(run) {
     run('gh', ['pr', 'merge', String(pr.number), '--auto', '--squash']);
     return 'Auto-merge requested; run finish after GitHub reports the PR merged.';
   }
+  function changelog(title) {
+    task();
+    if (!title) throw new Error('Usage: changelog <conventional-title>');
+    return run('node', ['scripts/changelog.mjs', title]);
+  }
   function finish() {
     clean();
     const branch = task();
@@ -103,7 +108,7 @@ export function createLifecycle(run) {
     run('git', ['branch', '-D', branch]);
     return 'Merged task verified and local dev updated.';
   }
-  return { start, submit, finish };
+  return { start, changelog, submit, finish };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -113,7 +118,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const lifecycle = createLifecycle(run);
     const [action, ...args] = process.argv.slice(2);
     if (!Object.hasOwn(lifecycle, action))
-      throw new Error('Usage: task-lifecycle.mjs start <branch> | submit <title> <body-file> | finish');
+      throw new Error(
+        'Usage: task-lifecycle.mjs start <branch> | changelog <title> | submit <title> <body-file> | finish',
+      );
     console.log(lifecycle[action](...args) ?? 'Task branch created.');
   } catch (error) {
     console.error(`Task lifecycle stopped: ${error.message}`);

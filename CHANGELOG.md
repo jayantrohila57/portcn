@@ -19,6 +19,10 @@
 
 - Add Fumadocs guides for getting started, the CLI, architecture, development, Docker, contributing, releases, security, and open source. [#9](https://github.com/jayantrohila57/portcn/pull/9)
 
+### Maintenance
+
+- establish single-checkout task safeguards <!-- task:chore/automate-development-lifecycle -->
+
 ## Proposed 0.0.1 baseline (not released)
 
 The proposed baseline is commit `846b45801d808bd728161ccc0e3bf4941c5d6756` on `main`. It has not been tagged or published.
