@@ -12,6 +12,8 @@
 
 ### Fixes
 
+- validate release workflow shell <!-- task:fix/release-workflow-validation -->
+
 - dispatch GitHub Packages publication <!-- task:fix/release-package-dispatch -->
 
 - allow secure fork contributions <!-- task:fix/allow-fork-contributions -->
