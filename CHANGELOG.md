@@ -12,6 +12,8 @@
 
 ### Fixes
 
+- configure github packages authentication <!-- task:fix/github-packages-auth -->
+
 - correct initial release candidate <!-- task:fix/release-candidate-baseline -->
 
 - harden npm publication workflow <!-- task:fix/npm-publish-workflow -->
