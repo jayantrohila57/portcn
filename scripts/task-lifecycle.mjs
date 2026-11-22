@@ -113,7 +113,7 @@ export function createLifecycle(run) {
     git('merge-base', '--is-ancestor', 'dev', 'origin/dev');
     if (active !== 'dev') run('git', ['switch', 'dev']);
     run('git', ['merge', '--ff-only', 'origin/dev']);
-    run('git', ['branch', '-D', branch]);
+    if (git('branch', '--list', branch)) run('git', ['branch', '-D', branch]);
     const promotion = run('node', ['scripts/prepare-promotion.mjs']);
     return `Merged task verified and local dev updated. ${promotion}`;
   }

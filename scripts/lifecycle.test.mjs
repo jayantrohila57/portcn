@@ -13,6 +13,8 @@ function fixture(overrides = {}) {
     if (cmd === 'git' && args[0] === 'status') return state.dirty ? ' M file' : '';
     if (cmd === 'git' && args[0] === 'branch' && args[1] === '--show-current') return state.branch;
     if (cmd === 'git' && args[0] === 'for-each-ref') return state.branches ?? '';
+    if (cmd === 'git' && args[0] === 'branch' && args[1] === '--list')
+      return state.branchDeleted ? '' : '  feat/example';
     if (cmd === 'git' && args[0] === 'log') return 'abc';
     if (cmd === 'git' && args[0] === 'show')
       return args[1].startsWith('origin/')
@@ -89,4 +91,15 @@ test('finish resumes cleanup from dev after interruption', () => {
   f.lifecycle.finish('feat/example');
   assert(!f.calls.some((call) => call[1] === 'switch'));
   assert(f.calls.some((call) => call.includes('-D')));
+});
+
+test('finish retries promotion after local branch was already deleted', () => {
+  const f = fixture({
+    branch: 'dev',
+    branchDeleted: true,
+    prs: [pr({ state: 'MERGED', mergeCommit: { oid: 'merge-sha' } })],
+  });
+  f.lifecycle.finish('feat/example');
+  assert(!f.calls.some((call) => call.includes('-D')));
+  assert(f.calls.some((call) => call.includes('scripts/prepare-promotion.mjs')));
 });
