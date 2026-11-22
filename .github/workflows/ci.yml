@@ -39,6 +39,15 @@ jobs:
             });
             const docs = checkDocumentation({ files: files.map(file => file.filename), body: pr.body, base: pr.base.ref, head: pr.head.ref });
             if (!docs.allowed) core.setFailed(docs.reason);
+            if (pr.base.ref === 'dev' && pr.head.ref !== 'main-to-dev-sync') {
+              const { validate } = require('./scripts/changelog-policy.cjs');
+              const content = async ref => {
+                const result = await github.rest.repos.getContent({ owner: context.repo.owner, repo: context.repo.repo, path: 'CHANGELOG.md', ref });
+                return Buffer.from(result.data.content, 'base64').toString('utf8');
+              };
+              const check = validate(await content(pr.base.sha), await content(pr.head.sha), pr.title, pr.head.ref);
+              if (!check.allowed) core.setFailed(check.reason);
+            }
 
   validate:
     runs-on: ubuntu-latest

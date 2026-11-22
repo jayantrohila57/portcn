@@ -1,5 +1,8 @@
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
+
+const { validate } = createRequire(import.meta.url)('./changelog-policy.cjs');
 
 export const namePattern = /^(feat|fix|refactor|chore|docs|test|build|ci|perf)\/[a-z0-9][a-z0-9-]*$/;
 export function createLifecycle(run) {
@@ -62,6 +65,8 @@ export function createLifecycle(run) {
     run('git', ['fetch', 'origin', 'dev']);
     git('merge-base', '--is-ancestor', 'origin/dev', 'HEAD');
     if (!git('log', '--format=%H', 'origin/dev..HEAD')) throw new Error('No task commits to submit.');
+    const check = validate(git('show', 'origin/dev:CHANGELOG.md'), git('show', 'HEAD:CHANGELOG.md'), title, branch);
+    if (!check.allowed) throw new Error(check.reason);
     let pr = getPr(branch);
     if (pr?.state === 'MERGED') throw new Error('Branch already merged; run finish.');
     if (pr) {

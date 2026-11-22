@@ -39,6 +39,13 @@ function update(source, title, branch) {
 }
 function validate(base, head, title, branch) {
   try {
+    if (!base.includes('## Unreleased\n')) {
+      const { line } = entry(title, branch);
+      const section = head.split('## Unreleased\n')[1]?.split(/\n## /)[0];
+      if (section?.split(line).length !== 2)
+        return { allowed: false, reason: 'Initial backfill must include exactly one matching task entry.' };
+      return { allowed: true };
+    }
     const expected = update(base, title, branch);
     if (expected === base) return { allowed: false, reason: 'Task changelog entry already exists in base.' };
     if (head !== expected)

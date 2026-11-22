@@ -14,6 +14,10 @@ function fixture(overrides = {}) {
     if (cmd === 'git' && args[0] === 'branch' && args[1] === '--show-current') return state.branch;
     if (cmd === 'git' && args[0] === 'for-each-ref') return state.branches ?? '';
     if (cmd === 'git' && args[0] === 'log') return 'abc';
+    if (cmd === 'git' && args[0] === 'show')
+      return args[1].startsWith('origin/')
+        ? '# Changelog\n\n## Unreleased\n'
+        : '# Changelog\n\n## Unreleased\n\n### Features\n\n- example <!-- task:feat/example -->\n';
     if (cmd === 'gh' && args[0] === 'pr' && args[1] === 'list') return JSON.stringify(state.prs);
     if (cmd === 'gh' && args[1] === 'create') state.prs = [pr()];
     return '';

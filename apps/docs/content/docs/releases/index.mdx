@@ -26,4 +26,4 @@ The CLI package first appeared at `7b00ee09a51bdc5c7b3969dad837940b4469efd5`; th
 
 Run `node scripts/release-preview.mjs` to inspect a provisional calculation from the current manifest and `origin/dev`. Fetch `origin/dev` first. Until `v0.0.1` exists, the command uses the proposed baseline; once a manifest version has a matching tag, it uses that tag. This preview is not Release Please and does not create releases or update the changelog.
 
-For a task, run `node scripts/task-lifecycle.mjs changelog "feat(cli): describe the change"` before committing to add an idempotent Unreleased entry. CI does not yet enforce this entry, and release reconciliation remains unfinished; do not treat this as a completed release process.
+For a task, run `node scripts/task-lifecycle.mjs changelog "feat(cli): describe the change"` before committing to add an idempotent Unreleased entry. CI and task submission require the matching entry; release reconciliation remains unfinished; do not treat this as a completed release process.
