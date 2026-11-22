@@ -87,7 +87,7 @@ The searchable [project documentation](apps/docs/content/docs/index.mdx) in `app
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for local development, checks, Conventional Commit messages, and pull request guidance.
 
-Release Please calculates SemVer from Conventional Commits and opens a release pull request. Before `1.0.0`, features and breaking changes advance the minor version, and fixes advance the patch version. Merging the release pull request updates the CLI and private root versions plus `CHANGELOG.md`, and creates a `v`-prefixed GitHub Release. npm publishing is not configured.
+Release Please calculates SemVer from Conventional Commits and opens a release pull request. Before `1.0.0`, features and breaking changes advance the minor version, and fixes advance the patch version. Merging the release pull request updates the CLI and private root versions plus `CHANGELOG.md`, and creates a `v`-prefixed GitHub Release. The release workflow publishes the unscoped `portcn` package to npmjs.com with Trusted Publishing; the published release workflow also publishes the scoped `@jayantrohila57/portcn` package to GitHub Packages. Both workflows verify the release version and skip an already-published matching version.
 
 ## License
 

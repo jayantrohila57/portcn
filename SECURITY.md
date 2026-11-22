@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-There are no released CLI versions yet. Security fixes are applied to the current `main` branch. The documentation app is maintained as part of the same repository.
+The current public CLI release is maintained on `main`; security fixes are applied to the current `main` branch. The documentation app is maintained as part of the same repository. Package distribution is handled by the protected release workflows and is not a channel for reporting vulnerabilities.
 
 ## Reporting a vulnerability
 
