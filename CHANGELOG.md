@@ -12,6 +12,8 @@
 
 ### Fixes
 
+- gate publication on reconciliation <!-- task:fix/release-reconciliation-order -->
+
 - verify changelog reconciliation <!-- task:fix/release-changelog-verification -->
 
 - validate release workflow shell <!-- task:fix/release-workflow-validation -->
