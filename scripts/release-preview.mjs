@@ -49,11 +49,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       baseline = initialBaseline;
     }
     git('merge-base', '--is-ancestor', baseline, target);
-    const hashes = git('rev-list', '--reverse', '--no-merges', `${baseline}..${target}`).split('\n').filter(Boolean);
+    const hashes = git('rev-list', '--reverse', '--first-parent', `${baseline}..${target}`).split('\n').filter(Boolean);
     const commits = hashes.map((sha) => ({
       sha,
       message: git('show', '-s', '--format=%B', sha),
-      files: git('diff-tree', '--root', '--no-commit-id', '--name-only', '-r', sha).split('\n').filter(Boolean),
+      files: git('diff-tree', '--first-parent', '--root', '--no-commit-id', '--name-only', '-r', '-m', sha)
+        .split('\n')
+        .filter(Boolean),
     }));
     console.log(JSON.stringify({ baseline, ...preview({ version, commits }) }, null, 2));
   } catch (error) {
