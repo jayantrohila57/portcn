@@ -1,0 +1,31 @@
+---
+title: Contributing
+description: Repository workflow and documentation requirements for Portcn changes.
+---
+
+The repository's [CONTRIBUTING.md](https://github.com/jayantrohila57/portcn/blob/main/CONTRIBUTING.md) is the canonical contributor policy. This page summarizes the development path and links to it rather than maintaining a competing copy.
+
+## Task workflow
+
+### Read instructions and inspect the checkout [step]
+
+Read the root and nearest scoped `AGENTS.md`, check the working tree, fetch `origin/dev`, and preserve existing work.
+
+### Create a task branch [step]
+
+Branch from the latest `dev` using a permitted prefix such as `docs/`, `feat/`, `fix/`, or `ci/`. Task PRs target `dev`.
+
+### Identify documentation impact before coding [step]
+
+For changes to behavior, commands, packages, dependencies, architecture, security, configuration, tooling, or contributor workflows, identify affected documentation first. Update the Fumadocs pages in the same task and verify examples against implementation. If no docs apply, explain why in the PR.
+
+### Run checks and open a PR [step]
+
+Use the repository scripts and include a documentation summary naming changed pages or a justified `No documentation change required`. Use a Conventional Commit title. Do not push or merge without authorization.
+
+## Canonical community files
+
+- [Contribution process](https://github.com/jayantrohila57/portcn/blob/main/CONTRIBUTING.md)
+- [Security reporting](https://github.com/jayantrohila57/portcn/blob/main/SECURITY.md)
+- [Bug report template](https://github.com/jayantrohila57/portcn/blob/main/.github/ISSUE_TEMPLATE/bug_report.yml)
+- [Feature request template](https://github.com/jayantrohila57/portcn/blob/main/.github/ISSUE_TEMPLATE/feature_request.yml)

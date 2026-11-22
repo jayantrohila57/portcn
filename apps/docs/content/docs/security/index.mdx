@@ -1,0 +1,14 @@
+---
+title: Security
+description: Current execution boundaries and vulnerability reporting for Portcn.
+---
+
+The [SECURITY.md policy](https://github.com/jayantrohila57/portcn/blob/main/SECURITY.md) is the canonical vulnerability reporting process. Do not report vulnerabilities in public issues; use GitHub's private vulnerability reporting when available.
+
+## Current execution behavior
+
+The CLI currently parses arguments and prints help or version output. It does not scan ports, inspect or terminate processes, elevate privileges, or access the Docker socket. The Docker test workflow mounts Git metadata read-only and does not expose the Docker socket.
+
+<Callout title="Report privately" type="warn">
+Include a clear impact and reproduction steps in a private report. Do not include credentials, tokens, or unrelated personal data.
+</Callout>

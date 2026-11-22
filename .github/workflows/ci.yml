@@ -44,29 +44,19 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: 12.3.4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/biome
-            ~/.cache/turbo
-          key: ${{ runner.os }}-tooling-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-tooling-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm branch-policy:check
-      - run: pnpm exec commitlint --from "$PR_BASE_SHA" --to "$PR_HEAD_SHA"
-        if: github.event_name == 'pull_request'
+      - name: Run monorepo validation in Docker
+        run: pnpm docker:test
         env:
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-      - run: pnpm lint
-      - run: pnpm format:check
-      - run: pnpm check-types
-      - run: pnpm test
-      - run: pnpm build
-      - run: pnpm package:check
-      - run: pnpm boundaries:check
-      - run: pnpm release:check
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
+      - name: Build packaged CLI runtime image
+        run: pnpm docker:build
+      - name: Smoke-test default CLI output
+        run: pnpm docker:cli
+      - name: Smoke-test CLI help
+        run: pnpm docker:cli -- --help
+      - name: Smoke-test CLI version
+        run: test "$(pnpm docker:cli -- --version)" = "0.0.1"
+      - name: Clean local Compose resources
+        if: always()
+        run: pnpm docker:clean

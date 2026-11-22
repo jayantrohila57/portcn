@@ -1,0 +1,39 @@
+---
+title: Development
+description: Local pnpm, Turborepo, lint, type, test, and build workflow.
+---
+
+## Install dependencies
+
+```sh
+corepack enable
+pnpm install --frozen-lockfile
+```
+
+## Run the workspace
+
+```sh
+pnpm dev
+```
+
+This starts workspace development tasks configured by Turborepo. The Fumadocs app is available at `http://localhost:3000/docs`.
+
+## Validate changes
+
+```sh
+pnpm lint
+pnpm format:check
+pnpm check-types
+pnpm test
+pnpm build
+pnpm package:check
+pnpm boundaries:check
+pnpm release:check
+pnpm docs:check
+```
+
+`pnpm docs:check` checks documentation links and CLI reference consistency; `pnpm build` compiles MDX as part of the Fumadocs production build. CI runs these without Git hooks. Docker Compose also provides the full repository check image; see [Docker](/docs/docker).
+
+<Callout title="Docs are part of the change" type="info">
+Identify affected pages before coding. Update technical documentation in the same task and list those pages in the PR, or explain why no documentation change is required.
+</Callout>

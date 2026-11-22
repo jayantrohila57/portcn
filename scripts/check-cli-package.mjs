@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const cliDirectory = fileURLToPath(new URL('../apps/cli/', import.meta.url));
@@ -33,20 +33,24 @@ if (!existsSync(executablePath)) {
 const executable = readFileSync(executablePath, 'utf8');
 if (
   !executable.startsWith('#!/usr/bin/env node') ||
-  !existsSync(new URL('../apps/cli/dist/index.js.map', import.meta.url))
+  !existsSync(new URL('../apps/cli/dist/index.js.map', import.meta.url)) ||
+  (statSync(executablePath).mode & 0o111) === 0
 ) {
-  throw new Error('The built CLI must include a Node.js shebang and source map.');
+  throw new Error('The built CLI must be executable and include a Node.js shebang and source map.');
 }
 if (/(?:from\s*|import\s*\()\s*['"]@portcn\//.test(executable)) {
   throw new Error('The built CLI must bundle private @portcn workspace dependencies.');
 }
 
 for (const [argument, expected] of [
+  ['', 'Usage: portcn'],
   ['--help', 'p: portcn'],
   ['--version', cliManifest.version],
 ]) {
-  const stdout = execFileSync(process.execPath, [fileURLToPath(executablePath), argument], { encoding: 'utf8' });
-  if (!stdout.includes(expected)) throw new Error(`The built CLI did not print the expected ${argument} output.`);
+  const args = argument ? [argument] : [];
+  const stdout = execFileSync(process.execPath, [fileURLToPath(executablePath), ...args], { encoding: 'utf8' });
+  if (!stdout.includes(expected))
+    throw new Error(`The built CLI did not print the expected ${argument || 'default'} output.`);
 }
 
 const packed = JSON.parse(
