@@ -1,3 +1,4 @@
+import { chmodSync } from 'node:fs';
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
@@ -11,5 +12,8 @@ export default defineConfig({
   clean: true,
   banner: {
     js: '#!/usr/bin/env node',
+  },
+  onSuccess: async () => {
+    chmodSync('dist/index.js', 0o755);
   },
 });
