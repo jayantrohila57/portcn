@@ -6,3 +6,4 @@
 - Keep the package private until there is an explicit decision to publish it independently.
 - Add tests for shared behavior; root pre-push runs all workspace type checks and available tests.
 - Core behavior used by the CLI participates in the single `portcn` release; describe user-visible effects with `feat`, `fix`, or `perf` commits and follow the root branch lifecycle.
+- Every commit and PR title must be Conventional; use `feat`, `fix`, `perf`, or `!`/`BREAKING CHANGE` to express SemVer impact.

@@ -16,7 +16,7 @@
 
 ## Checklist
 
-- [ ] I used a Conventional Commit title.
+- [ ] The PR title is Conventional Commit format and matches the intended squash commit title.
 - [ ] Documentation reflects the current implementation.
 - [ ] This task PR targets `dev` (or this is an authorized `dev` → `main` promotion, release-bot PR, or post-release sync).
 - [ ] I reported my branch, task status, checks, PR target, and remaining steps.

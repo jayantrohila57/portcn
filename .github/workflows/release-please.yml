@@ -4,10 +4,6 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: write
-  pull-requests: write
-
 concurrency:
   group: release-please-${{ github.ref }}
   cancel-in-progress: false
@@ -15,6 +11,10 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     steps:
       - uses: googleapis/release-please-action@v4
         with:
