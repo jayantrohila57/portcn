@@ -1,0 +1,87 @@
+---
+title: Getting started
+description: Install Portcn's development workspace and run the implemented CLI foundation.
+---
+
+Portcn is under active development. This guide runs the CLI from a source checkout; it does not describe a published npm installation.
+
+<Callout title="Current capabilities" type="info">
+The CLI currently supports `--help` and `--version`. Port discovery, process inspection, and service management are not implemented.
+</Callout>
+
+## Requirements
+
+- Node.js 24 or later
+- pnpm 12.3.4 (the repository pins this version through Corepack)
+- Git
+
+## Build and run Portcn
+
+<Tabs items={['Source checkout', 'Docker']}>
+  <Tab value="Source checkout">
+
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+node apps/cli/dist/index.js --help
+```
+
+  </Tab>
+  <Tab value="Docker">
+
+```sh
+docker compose -f infra/docker/compose.yaml --profile cli run --build --rm cli --help
+```
+
+  </Tab>
+</Tabs>
+
+For a source checkout, use these steps:
+
+<Steps>
+  <Step>
+
+### Clone and install
+
+```sh
+git clone https://github.com/jayantrohila57/portcn.git
+cd portcn
+corepack enable
+pnpm install --frozen-lockfile
+```
+
+  </Step>
+  <Step>
+
+### Build the workspace
+
+```sh
+pnpm build
+```
+
+  </Step>
+  <Step>
+
+### Run the CLI
+
+```sh
+node apps/cli/dist/index.js --help
+node apps/cli/dist/index.js --version
+```
+
+  </Step>
+</Steps>
+
+## Run the documentation site
+
+```sh
+pnpm dev
+```
+
+Open `http://localhost:3000/docs`. For another port:
+
+```sh
+pnpm --filter @portcn/docs exec next dev --port 3001
+```
+
+See [CLI Reference](/docs/cli-reference), [Development](/docs/development), and [Docker](/docs/docker).

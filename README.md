@@ -12,19 +12,19 @@ Early development. The CLI package and executable foundation are in place; port 
 
 - Fumadocs documentation site with navigation, search, Markdown negotiation, LLM-friendly exports, and generated Open Graph images.
 - pnpm workspace and Turborepo task orchestration.
-- `portcn` CLI package with branded help/version output and a Node.js executable.
+- `portcn` CLI package with branded default/help/version output and a Node.js executable.
 - Private `@portcn/core` package for future shared functionality.
 - GitHub Actions validation and Release Please version/changelog workflow for `portcn`.
 
 ## Requirements and platform
 
-- Node.js 24 or later
-- pnpm 12.3.4
+- Node.js 24 or later and pnpm 12.3.4
+- Docker Engine with the Compose plugin (optional, for packaged CLI image checks)
 - The future CLI targets Linux first, beginning with Ubuntu. The documentation site runs anywhere supported by Next.js.
 
 ## Install and develop
 
-To build and run the CLI foundation locally:
+Install dependencies and build the workspace locally:
 
 ```sh
 git clone https://github.com/jayantrohila57/portcn.git
@@ -32,9 +32,16 @@ cd portcn
 pnpm install --frozen-lockfile
 pnpm build
 node apps/cli/dist/index.js --help
+pnpm test
 ```
 
-Dependency installation initializes Git hooks. Pre-commit checks staged files with Biome, commit-msg accepts Conventional Commits and existing sentence-style subjects, and pre-push runs type checks and tests. Use Conventional Commits when Release Please should calculate a version bump. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+Optional Docker Compose commands build and run the packaged CLI image. For example, `pnpm docker:cli -- --version` rebuilds the current artifact before running it. Unit tests and package checks run with the regular pnpm scripts.
+
+Containers use their normal PID, network, and mount namespaces. The CLI can initially observe only the processes and ports in its own container; host discovery is not enabled. No service uses privileged mode, host networking, host PID, or a Docker socket mount.
+
+Before each commit, Git hooks run staged Biome checks, Conventional Commit validation, and the full workspace validation suite with pnpm on the host. Pushes do not run local checks; CI runs its checks directly on GitHub Actions without Docker. For local Fumadocs development, run `pnpm dev`. See the [Portcn documentation](apps/docs/content/docs/index.mdx) for setup and reference, and [CONTRIBUTING.md](CONTRIBUTING.md) for the contributor policy.
+
+Running `pnpm docker:cli` without arguments currently displays help and foundation status. Port discovery and service management are not implemented yet. Use Conventional Commits when Release Please should calculate a version bump.
 
 To work on the documentation site:
 
@@ -42,7 +49,7 @@ To work on the documentation site:
 pnpm dev
 ```
 
-The docs app runs at `http://localhost:3000`. To select another port, invoke Next.js directly:
+The docs app runs at `http://localhost:3000`; open `/docs` for the searchable project guide. To select another port, invoke Next.js directly:
 
 ```sh
 pnpm --filter @portcn/docs exec next dev --port 3001
@@ -59,9 +66,14 @@ pnpm build
 pnpm package:check
 pnpm boundaries:check
 pnpm release:check
+pnpm docs:check
 ```
 
-The CLI help, version, execution, and core import have minimal unit coverage.
+Docker Compose packaged-image checks are optional and are documented in [Docker](apps/docs/content/docs/docker/index.mdx).
+
+## Project documentation
+
+The searchable [project documentation](apps/docs/content/docs/index.mdx) in `apps/docs` covers getting started, CLI behavior, architecture, development, Docker, contributing, releases, security, and open source. Community policies remain in the canonical root and GitHub files.
 
 ## Repository structure
 

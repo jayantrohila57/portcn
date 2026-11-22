@@ -1,19 +1,60 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "d495d5b0ce3b0e9fd5f9b4df4aec0f9ab7d204ee",
   "include-v-in-tag": true,
   "include-component-in-tag": false,
   "bump-minor-pre-major": true,
   "changelog-sections": [
-    { "type": "feat", "section": "Features", "hidden": false },
-    { "type": "fix", "section": "Fixes", "hidden": false },
-    { "type": "perf", "section": "Performance", "hidden": false },
-    { "type": "revert", "section": "Reverts", "hidden": false },
-    { "type": "docs", "section": "Documentation", "hidden": false },
-    { "type": "refactor", "section": "Improvements", "hidden": false },
-    { "type": "build", "section": "Build system", "hidden": false },
-    { "type": "ci", "section": "CI", "hidden": false },
-    { "type": "test", "section": "Tests", "hidden": false },
-    { "type": "chore", "section": "Maintenance", "hidden": true }
+    {
+      "type": "feat",
+      "section": "Features",
+      "hidden": false
+    },
+    {
+      "type": "fix",
+      "section": "Fixes",
+      "hidden": false
+    },
+    {
+      "type": "perf",
+      "section": "Performance",
+      "hidden": false
+    },
+    {
+      "type": "revert",
+      "section": "Reverts",
+      "hidden": false
+    },
+    {
+      "type": "docs",
+      "section": "Documentation",
+      "hidden": false
+    },
+    {
+      "type": "refactor",
+      "section": "Improvements",
+      "hidden": false
+    },
+    {
+      "type": "build",
+      "section": "Build system",
+      "hidden": false
+    },
+    {
+      "type": "ci",
+      "section": "CI",
+      "hidden": false
+    },
+    {
+      "type": "test",
+      "section": "Tests",
+      "hidden": false
+    },
+    {
+      "type": "chore",
+      "section": "Maintenance",
+      "hidden": true
+    }
   ],
   "packages": {
     ".": {

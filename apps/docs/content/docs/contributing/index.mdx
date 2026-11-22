@@ -1,0 +1,35 @@
+---
+title: Contributing
+description: Repository workflow and documentation requirements for Portcn changes.
+---
+
+The repository's [CONTRIBUTING.md](https://github.com/jayantrohila57/portcn/blob/main/CONTRIBUTING.md) is the canonical contributor policy. This page summarizes the development path and links to it rather than maintaining a competing copy.
+
+## Task workflow
+
+### Read instructions and inspect the checkout [step]
+
+Read the root and nearest scoped `AGENTS.md`, check the working tree, fetch `origin/dev`, and preserve existing work.
+
+### Create a task branch [step]
+
+Use the existing checkout for one task at a time. From a clean `dev`, run `node scripts/task-lifecycle.mjs start feat/example` to fetch and create a task branch. Task PRs target `dev`.
+
+### Identify documentation impact before coding [step]
+
+For changes to behavior, commands, packages, dependencies, architecture, security, configuration, tooling, or contributor workflows, identify affected documentation first. Update the Fumadocs pages in the same task and verify examples against implementation. If no docs apply, explain why in the PR.
+
+### Run checks and open a PR [step]
+
+Use the repository scripts and include a documentation summary naming changed pages or a justified `No documentation change required`. Use a Conventional Commit title. Run `node scripts/task-lifecycle.mjs submit "feat(cli): describe the change" /path/to/pr-body.md` after committing and checking your changes. It creates or reuses the PR and requests auto-merge. CI requires an updated Fumadocs page or `No documentation change required:` followed by a specific explanation. Routine task pushes and merges into `dev` are authorized after required checks pass. Once merged, run `node scripts/task-lifecycle.mjs finish` from the clean task branch. Preserve the branch if checks or merge are blocked.
+
+## Canonical community files
+
+- [Contribution process](https://github.com/jayantrohila57/portcn/blob/main/CONTRIBUTING.md)
+- [Security reporting](https://github.com/jayantrohila57/portcn/blob/main/SECURITY.md)
+- [Bug report template](https://github.com/jayantrohila57/portcn/blob/main/.github/ISSUE_TEMPLATE/bug_report.yml)
+- [Feature request template](https://github.com/jayantrohila57/portcn/blob/main/.github/ISSUE_TEMPLATE/feature_request.yml)
+
+If cleanup was interrupted after switching to `dev`, run `node scripts/task-lifecycle.mjs finish feat/example` with the merged task branch name to resume verification and cleanup, including when the local branch was already deleted but promotion preparation failed.
+
+When resuming an existing task PR, use its exact Conventional title for submission and the changelog entry. A title mismatch stops submission for reconciliation.

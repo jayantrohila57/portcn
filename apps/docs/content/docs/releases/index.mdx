@@ -1,0 +1,43 @@
+---
+title: Releases
+description: Release Please, SemVer, changelog, and promotion process for Portcn.
+---
+
+The repository's [CHANGELOG.md](https://github.com/jayantrohila57/portcn/blob/main/CHANGELOG.md) records pending work in an Unreleased section. Release Please owns official versioned notes and product versions. Automatic reconciliation of the pending section remains tracked in issue #13.
+
+## Release flow
+
+1. Task PRs merge to `dev` with Conventional Commit titles.
+2. After approximately three to five validated tasks, prepare a promotion PR; an authorized merge moves `dev` to `main` while preserving task commits.
+3. Release Please runs on `main`, calculates the version, and opens the release PR. It updates the CLI and root package versions, manifest, changelog, and release metadata.
+4. After an authorized release PR merge, synchronize `main` back to `dev` through the approved sync PR.
+
+Before `1.0.0`, features and breaking changes advance the minor version; fixes advance the patch version. Release Please owns version edits and tag/release creation. Do not publish or deploy without authorization.
+
+The [Contributing guide](https://github.com/jayantrohila57/portcn/blob/main/CONTRIBUTING.md) contains the full promotion procedure.
+
+A proposed version and pending release summary must reflect actual release-relevant commits and configured path exclusions. Release Please makes the authoritative calculation after promotion; a preview is not an official version. Merging the promotion or release PR, tagging, publishing, and public releases require explicit authorization. After Release Please reports a successful release, the release workflow publishes only `apps/cli` (`portcn`) through npm Trusted Publishing with provenance. The private workspace root and `@portcn/core` are never published.
+
+## Proposed first release
+
+The proposed `v0.0.1` release candidate is dev commit `d495d5b0ce3b0e9fd5f9b4df4aec0f9ab7d204ee`, which includes symlink-safe global CLI execution and passed CI build and package checks. It contains branded CLI help and version output, not port discovery or service management. No tag or GitHub Release exists yet. Verify the exact package version output and obtain explicit approval before creating the annotated tag or GitHub Release.
+
+The CLI package first appeared at `7b00ee09a51bdc5c7b3969dad837940b4469efd5`; the later main commit is proposed because it has validated integration and release configuration. The baseline and pending sections in the changelog remain proposals until release reconciliation is implemented.
+
+Run `node scripts/release-preview.mjs` to inspect a provisional calculation from the current manifest and `origin/dev`. Fetch `origin/dev` first. Until `v0.0.1` exists, the command uses the proposed baseline; once a manifest version has a matching tag, it uses that tag. For `v0.0.1`, the preview rejects a tag pointing to a different commit. The preview follows the target branch first-parent history, including merge commits; it is not Release Please and does not create releases or update the changelog.
+
+For a task, run `node scripts/task-lifecycle.mjs changelog "feat(cli): describe the change"` before committing to add an idempotent Unreleased entry. CI and task submission require the matching entry; release reconciliation remains unfinished; do not treat this as a completed release process.
+
+Release Please uses the corrected release candidate as its `bootstrap-sha` to exclude earlier commits from the first generated release PR. This setting does not create the initial tag or release and does not prove that GitHub has recognized it.
+
+After `task-lifecycle.mjs finish`, the helper runs `node scripts/prepare-promotion.mjs`. It checks merged task PRs since `main` and creates or updates a `dev` to `main` PR after three tasks. The PR contains the current Unreleased text and a provisional version; review its scope and CI before approving any merge. If preparation fails, local cleanup has already completed; retry the preparation command on `dev`.
+
+Release PR validation requires a valid version and matching version section. Release Please may retain the pending `Unreleased` section while its release PR is open; automatic reconciliation of those entries is follow-up work tracked in issue #13.
+
+The changelog policy includes a tested reconciliation function that refuses to clear an entry unless the versioned notes contain an exact matching bullet; unsupported prose or list formats stop reconciliation. Connecting that function to Release Please remains issue #13 work.
+
+## npm publication
+
+The publish target is the unscoped `portcn` package from `apps/cli`; the private workspace package and `@portcn/core` are not publishable. Before the first release, confirm that `npm view portcn` returns `E404` (unclaimed), create the `v0.0.1` GitHub release through the approved Release Please flow, and configure npm Trusted Publishing for this repository's `Release Please` workflow. The workflow checks the Release Please version against `apps/cli/package.json`, verifies the packed files, and publishes with OIDC provenance only after Release Please reports `release_created`. A matching already-published version is treated as an idempotent retry; a conflicting registry version fails.
+
+The first publication still requires explicit approval. After approval, verify `npm view portcn@0.0.1`, `npm install --global portcn`, `portcn --version`, and `portcn --help`. Future versions remain Release Please-authoritative and publish from the successful release output rather than a tag-only workflow.

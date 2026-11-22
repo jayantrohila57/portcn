@@ -2,6 +2,7 @@ name: CI
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
     branches: [dev, main]
   push:
     branches: [dev, main]
@@ -32,6 +33,30 @@ jobs:
             });
             const result = evaluateBranchPolicy({ eventName: context.eventName, pullRequest: pr, commits });
             if (!result.allowed) core.setFailed(result.reason);
+            const { checkDocumentation } = require('./scripts/documentation-policy.cjs');
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner, repo: context.repo.repo, pull_number: pr.number, per_page: 100,
+            });
+            const docs = checkDocumentation({ files: files.map(file => file.filename), body: pr.body, base: pr.base.ref, head: pr.head.ref });
+            if (!docs.allowed) core.setFailed(docs.reason);
+            if (pr.base.ref === 'main' && pr.head.ref === 'release-please--branches--main--components--portcn') {
+              const match = /^chore\(main\): release (\d+\.\d+\.\d+)$/.exec(pr.title);
+              if (!match) core.setFailed('Invalid release title.');
+              else {
+                const result = await github.rest.repos.getContent({ owner: context.repo.owner, repo: context.repo.repo, path: 'CHANGELOG.md', ref: pr.head.sha });
+                const check = require('./scripts/changelog-policy.cjs').validateRelease(Buffer.from(result.data.content, 'base64').toString('utf8'), match[1]);
+                if (!check.allowed) core.setFailed(check.reason);
+              }
+            }
+            if (pr.base.ref === 'dev' && pr.head.ref !== 'main-to-dev-sync') {
+              const { validate } = require('./scripts/changelog-policy.cjs');
+              const content = async ref => {
+                const result = await github.rest.repos.getContent({ owner: context.repo.owner, repo: context.repo.repo, path: 'CHANGELOG.md', ref });
+                return Buffer.from(result.data.content, 'base64').toString('utf8');
+              };
+              const check = validate(await content(pr.base.sha), await content(pr.head.sha), pr.title, pr.head.ref);
+              if (!check.allowed) core.setFailed(check.reason);
+            }
 
   validate:
     runs-on: ubuntu-latest
@@ -47,21 +72,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/biome
-            ~/.cache/turbo
-          key: ${{ runner.os }}-tooling-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-tooling-
+          cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm branch-policy:check
-      - run: pnpm exec commitlint --from "$PR_BASE_SHA" --to "$PR_HEAD_SHA"
+      - name: Validate commit messages
         if: github.event_name == 'pull_request'
+        run: node scripts/check-commit-messages.mjs "$PR_BASE_SHA" "$PR_HEAD_SHA"
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      - run: pnpm lifecycle:test
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm check-types
@@ -70,3 +89,4 @@ jobs:
       - run: pnpm package:check
       - run: pnpm boundaries:check
       - run: pnpm release:check
+      - run: pnpm docs:check
