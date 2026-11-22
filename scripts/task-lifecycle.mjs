@@ -111,7 +111,8 @@ export function createLifecycle(run) {
     run('git', ['switch', 'dev']);
     run('git', ['merge', '--ff-only', 'origin/dev']);
     run('git', ['branch', '-D', branch]);
-    return 'Merged task verified and local dev updated.';
+    const promotion = run('node', ['scripts/prepare-promotion.mjs']);
+    return `Merged task verified and local dev updated. ${promotion}`;
   }
   return { start, changelog, submit, finish };
 }
