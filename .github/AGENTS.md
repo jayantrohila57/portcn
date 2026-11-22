@@ -12,4 +12,6 @@
 - Release Please needs workflow `contents`, `issues`, and `pull-requests` write permissions plus the repository Actions setting that permits GitHub Actions to create PRs. Keep default workflow permissions read-only.
 - PR workflows created by `GITHUB_TOKEN` may require an owner to approve workflow runs before required checks execute. A narrowly scoped GitHub App/PAT secret can remove that approval gate if unattended CI is required.
 - Repository rulesets, not these instructions, must require PRs and `branch-policy`/`validate` checks on `dev` and `main`, block deletion and non-fast-forward updates, and define no bypass actors.
-- PR templates and CI must enforce the documentation deliverable: changed pages or a justified `No documentation change required`; CI validates MDX compilation, practical internal links, and objective CLI-reference consistency. Keep semantic coverage as a human review requirement.
+- PR templates must require the documentation deliverable; CI checks objective documentation consistency but cannot assess semantic completeness: changed pages or a justified `No documentation change required`; CI validates MDX compilation, practical internal links, and objective CLI-reference consistency. Keep semantic coverage as a human review requirement.
+
+- Task PRs to dev must include a generated Unreleased entry matching the PR title and branch; CI verifies it. Semantic accuracy still requires review.

@@ -8,12 +8,12 @@
 
 ## Documentation
 
-<!-- List updated Fumadocs pages and summarize their coverage, or justify: No documentation change required. -->
+<!-- List updated Fumadocs pages and summarize their coverage, or write: No documentation change required: <specific explanation>. -->
 
 ## Verification
 
-- [ ] `pnpm docker:test` (local CLI checks)
-- [ ] `pnpm docker:build` (local packaged runtime)
+- [ ] `pnpm precommit:check`
+- [ ] Optional Docker image checks, if relevant
 - [ ] `pnpm docs:check`
 
 ## Checklist

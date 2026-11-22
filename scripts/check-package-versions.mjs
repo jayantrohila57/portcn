@@ -87,6 +87,9 @@ const root = JSON.parse(readFileSync(new URL('../package.json', import.meta.url)
 const manifest = JSON.parse(readFileSync(new URL('../.release-please-manifest.json', import.meta.url), 'utf8'));
 const config = JSON.parse(readFileSync(new URL('../release-please-config.json', import.meta.url), 'utf8'));
 const releasePath = '.';
+if (manifest['.'] === '0.0.1' && config['bootstrap-sha'] !== '846b45801d808bd728161ccc0e3bf4941c5d6756') {
+  throw new Error('Release Please bootstrap boundary must match the proposed 0.0.1 baseline.');
+}
 const cliManifestPath = new URL('../apps/cli/package.json', import.meta.url);
 
 if (!root.private || root.name !== '@portcn/workspace') {

@@ -160,7 +160,7 @@ for (const [name, input, expected, skipped] of cases) {
 }
 
 const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
-assert.match(workflow, /pull_request:\s*\n\s+branches: \[dev, main\]/);
+assert.match(workflow, /pull_request:\s*\n\s+types: \[[^\]]+\]\s*\n\s+branches: \[dev, main\]/);
 assert.match(workflow, /push:\s*\n\s+branches: \[dev, main\]/);
 assert.match(workflow, /if: github\.event_name == 'pull_request'/);
 
