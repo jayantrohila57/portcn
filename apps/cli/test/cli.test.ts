@@ -35,16 +35,14 @@ describe('portcn CLI foundation', () => {
     expect(result.stdout.trim()).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
-  it('executes and prints help', () => {
-    const result = spawnSync(
-      process.execPath,
-      [fileURLToPath(new URL('../dist/index.js', import.meta.url)), '--help'],
-      {
-        encoding: 'utf8',
-      },
-    );
+  it('prints useful default output without arguments', () => {
+    const result = spawnSync(process.execPath, [fileURLToPath(new URL('../dist/index.js', import.meta.url))], {
+      encoding: 'utf8',
+    });
     expect(result.status).toBe(0);
+    expect(result.stdout).toContain('p: portcn');
     expect(result.stdout).toContain('Usage: portcn');
+    expect(result.stdout).toContain("Know what's running.");
   });
 
   it('imports shared core validation through the workspace package', () => {
