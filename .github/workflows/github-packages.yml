@@ -37,6 +37,8 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+          registry-url: https://npm.pkg.github.com
+          scope: "@jayantrohila57"
       - name: Verify release tag and install dependencies
         env:
           HUSKY: "0"
