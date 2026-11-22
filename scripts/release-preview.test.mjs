@@ -24,7 +24,7 @@ test('uses paths and breaking footers, and deduplicates by commit', () => {
   assert.equal(result.changes.length, 1);
 });
 
-test('rejects an initial tag pointing away from the proposed baseline', () => {
+test('rejects an initial tag pointing away from the corrected release baseline', () => {
   assert.doesNotThrow(() => validateBaseline('0.0.1', initialBaseline));
   assert.throws(() => validateBaseline('0.0.1', 'different'), /does not point/);
   assert.doesNotThrow(() => validateBaseline('0.1.0', 'different'));

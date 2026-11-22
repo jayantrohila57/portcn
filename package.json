@@ -25,7 +25,7 @@
     "docker:commitlint": "docker compose -p portcn-dev -f infra/docker/compose.yaml --profile hooks run --build --rm commitlint pnpm exec commitlint --edit",
     "docker:clean": "docker compose -p portcn-dev -f infra/docker/compose.yaml --profile cli --profile test --profile hooks down --rmi local --volumes --remove-orphans",
     "prepare": "husky",
-    "lifecycle:test": "node --test scripts/lifecycle.test.mjs scripts/release-preview.test.mjs scripts/changelog.test.mjs scripts/prepare-promotion.test.mjs scripts/publish-workflow.test.mjs"
+    "lifecycle:test": "node --test scripts/lifecycle.test.mjs scripts/release-preview.test.mjs scripts/changelog.test.mjs scripts/prepare-promotion.test.mjs scripts/publish-workflow.test.mjs scripts/check-commit-messages.test.mjs"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,cjs,mjs,json,jsonc,css,md,mdx,graphql}": "biome check --write"
