@@ -23,14 +23,14 @@ export function parseSsOutput(output: string): ListeningPort[] {
     const endpoint = fields[4];
 
     if ((protocol !== 'tcp' && protocol !== 'udp') || fields.length < 6 || !endpoint) {
-      throw new Error('Unexpected output from ss: ' + line);
+      throw new Error(`Unexpected output from ss: ${line}`);
     }
 
     const separator = endpoint.lastIndexOf(':');
     const portString = endpoint.slice(separator + 1);
     const port = Number(portString);
     if (separator < 0 || !/^\d+$/.test(portString) || !Number.isInteger(port) || port < 1 || port > 65_535) {
-      throw new Error('Unexpected local port from ss: ' + endpoint);
+      throw new Error(`Unexpected local port from ss: ${endpoint}`);
     }
 
     const owner = /"([^"]+)",pid=(\d+)/.exec(line);
@@ -74,7 +74,7 @@ export function discoverListeningPorts({
       throw new Error('The ss command timed out while listing ports.');
     }
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error('Unable to list ports using ss: ' + message);
+    throw new Error(`Unable to list ports using ss: ${message}`);
   }
 
   return parseSsOutput(output);
@@ -91,10 +91,12 @@ export function formatListeningPorts(ports: ListeningPort[]): string {
     port.pid === null ? '-' : String(port.pid),
     port.processName ?? '-',
   ]);
-  const widths = headers.map((header, index) =>
-    Math.max(header.length, ...rows.map((row) => row[index]?.length ?? 0)),
-  );
-  const formatRow = (row: string[]) => row.map((cell, index) => cell.padEnd(widths[index] ?? 0)).join('  ').trimEnd();
+  const widths = headers.map((header, index) => Math.max(header.length, ...rows.map((row) => row[index]?.length ?? 0)));
+  const formatRow = (row: string[]) =>
+    row
+      .map((cell, index) => cell.padEnd(widths[index] ?? 0))
+      .join('  ')
+      .trimEnd();
   return [formatRow(headers), ...rows.map(formatRow)].join('\n');
 }
 
@@ -104,10 +106,10 @@ export function registerListCommand(program: Command): void {
     .description('List listening TCP and UDP ports (Linux)')
     .action(() => {
       try {
-        process.stdout.write(formatListeningPorts(discoverListeningPorts()) + '\n');
+        process.stdout.write(`${formatListeningPorts(discoverListeningPorts())}\n`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        process.stderr.write('portcn: ' + message + '\n');
+        process.stderr.write(`portcn: ${message}\n`);
         process.exitCode = 1;
       }
     });

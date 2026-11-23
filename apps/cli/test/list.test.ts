@@ -41,14 +41,7 @@ describe('read-only Linux port listing', () => {
   it('runs ss without a shell and with read-only, numeric socket flags', () => {
     const runSs = vi.fn(() => SAMPLE);
     expect(discoverListeningPorts({ platform: 'linux', runSs })).toHaveLength(3);
-    expect(runSs).toHaveBeenCalledWith([
-      '--no-header',
-      '--listening',
-      '--tcp',
-      '--udp',
-      '--numeric',
-      '--processes',
-    ]);
+    expect(runSs).toHaveBeenCalledWith(['--no-header', '--listening', '--tcp', '--udp', '--numeric', '--processes']);
   });
 
   it('explains unsupported platforms without inspecting the host', () => {
