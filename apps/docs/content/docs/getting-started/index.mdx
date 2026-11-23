@@ -1,12 +1,12 @@
 ---
 title: Getting started
-description: Install Portcn's development workspace and run the implemented CLI foundation.
+description: Install Portcn's development workspace and list listening Linux ports.
 ---
 
 Portcn is under active development. This guide runs the CLI from a source checkout; it does not describe a published npm installation.
 
 <Callout title="Current capabilities" type="info">
-The CLI currently supports `--help` and `--version`. Port discovery, process inspection, and service management are not implemented.
+The `dev` branch supports `--help`, `--version`, and read-only Linux `list` (requires the `ss` command from `iproute2`). The published `v0.0.1` package does not include `list`. Process and service management are not implemented.
 </Callout>
 
 ## Requirements
@@ -67,6 +67,7 @@ pnpm build
 ```sh
 node apps/cli/dist/index.js --help
 node apps/cli/dist/index.js --version
+node apps/cli/dist/index.js list # Linux only, iproute2 required
 ```
 
   </Step>

@@ -4,6 +4,8 @@
 
 ### Features
 
+- list listening tcp and udp ports <!-- task:feat/port-list -->
+
 - publish cli to github packages <!-- task:feat/github-packages-publishing -->
 
 - publish cli through release please <!-- task:feat/npm-trusted-publishing -->
