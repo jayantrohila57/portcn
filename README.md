@@ -6,7 +6,7 @@ An open-source, developer-first CLI foundation for local development. portcn is 
 
 ## Development status
 
-Early development. The `dev` branch includes a read-only Linux `portcn list` command for listening TCP/UDP ports. Process management is not implemented yet. The published `v0.0.1` package contains only the CLI foundation.
+Early development. The `dev` branch includes read-only Linux `portcn list` and `portcn inspect <port>` commands for listening TCP/UDP ports. Process management is not implemented yet. The published `v0.0.1` package contains only the CLI foundation.
 
 ## Implemented
 
@@ -14,6 +14,7 @@ Early development. The `dev` branch includes a read-only Linux `portcn list` com
 - pnpm workspace and Turborepo task orchestration.
 - `portcn` CLI package with branded default/help/version output and a Node.js executable.
 - Read-only `portcn list` on Linux (development branch): listening TCP/UDP ports, local addresses, and process details when visible; requires `ss` from `iproute2`.
+- Read-only `portcn inspect <port>` on Linux (development branch): protocol, state, local address, PID, process name, and best-effort `/proc` details for all visible listeners on a validated port.
 - Private `@portcn/core` package for future shared functionality.
 - GitHub Actions validation and Release Please version/changelog workflow for `portcn`.
 
@@ -35,6 +36,7 @@ pnpm build
 node apps/cli/dist/index.js --help
 pnpm test
 node apps/cli/dist/index.js list  # Linux, requires iproute2
+node apps/cli/dist/index.js inspect 3000  # Linux, read-only
 ```
 
 Optional Docker Compose commands build and run the packaged CLI image. For example, `pnpm docker:cli -- --version` rebuilds the current artifact before running it. Unit tests and package checks run with the regular pnpm scripts.

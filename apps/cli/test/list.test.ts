@@ -16,9 +16,9 @@ const SAMPLE = [
 describe('read-only Linux port listing', () => {
   it('parses TCP, UDP, IPv6 and visible process owners, sorted by port', () => {
     expect(parseSsOutput(SAMPLE)).toEqual([
-      { protocol: 'tcp', address: '[::]', port: 22, pid: 12, processName: 'sshd' },
-      { protocol: 'tcp', address: '127.0.0.1', port: 3000, pid: 321, processName: 'node' },
-      { protocol: 'udp', address: '0.0.0.0', port: 5353, pid: null, processName: null },
+      { protocol: 'tcp', state: 'LISTEN', address: '[::]', port: 22, pid: 12, processName: 'sshd' },
+      { protocol: 'tcp', state: 'LISTEN', address: '127.0.0.1', port: 3000, pid: 321, processName: 'node' },
+      { protocol: 'udp', state: 'UNCONN', address: '0.0.0.0', port: 5353, pid: null, processName: null },
     ]);
   });
 
