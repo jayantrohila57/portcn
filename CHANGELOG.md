@@ -4,6 +4,8 @@
 
 ### Features
 
+- inspect listeners by port <!-- task:feat/port-inspect -->
+
 - list listening tcp and udp ports <!-- task:feat/port-list -->
 
 - publish cli to github packages <!-- task:feat/github-packages-publishing -->

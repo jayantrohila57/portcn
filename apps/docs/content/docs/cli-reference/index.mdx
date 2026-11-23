@@ -1,9 +1,9 @@
 ---
 title: CLI reference
-description: Implemented Portcn CLI options, port listing, output, and errors.
+description: Implemented Portcn CLI options, port listing, inspection, output, and errors.
 ---
 
-The development branch provides the read-only ``portcn list`` command for Linux. The published ``v0.0.1`` package contains help and version output only; the listing feature will be available in a future release.
+The development branch provides read-only ``portcn list`` and ``portcn inspect`` commands for Linux. The published ``v0.0.1`` package contains the CLI foundation; these commands are development-branch functionality until released.
 
 ```sh
 node apps/cli/dist/index.js --help
@@ -35,18 +35,28 @@ Lists listening TCP and UDP sockets on Linux. Requires ``ss`` (provided by ``ipr
 node apps/cli/dist/index.js list
 ```
 
-Output columns: ``PROTO`` (TCP/UDP), ``PORT`` (numeric), ``LOCAL ADDRESS`` (bind address), ``PID`` and ``PROCESS``. Results are sorted by ascending port number. PID and process may display `` - `` when the operating system does not expose ownership to your current user. You do not need to run with sudo just to list visible sockets.
+Output columns: ``PROTO`` (TCP/UDP), ``STATE``, ``PORT`` (numeric), ``LOCAL ADDRESS`` (bind address), ``PID`` and ``PROCESS``. Results are sorted by ascending port number. PID and process may display `` - `` when the operating system does not expose ownership to your current user. You do not need to run with sudo just to list visible sockets.
 
 Example with sample data from tests:
 
 ```text
-PROTO  PORT  LOCAL ADDRESS  PID  PROCESS
-TCP    22    [::]           12   sshd
-TCP    3000  127.0.0.1      321  node
-UDP    5353  0.0.0.0        -    -
+PROTO  STATE   PORT  LOCAL ADDRESS  PID  PROCESS
+TCP    LISTEN  22    [::]           12   sshd
+TCP    LISTEN  3000  127.0.0.1      321  node
+UDP    UNCONN  5353  0.0.0.0        -    -
 ```
 
 If no listening sockets are found, Portcn prints ``No listening TCP or UDP ports found.``
+
+## ``portcn inspect <port>``
+
+The `inspect` subcommand inspects all visible TCP and UDP listeners for one port using the same read-only Linux discovery path as ``list``. It prints protocol, socket state, local address, PID, process name, and best-effort ``/proc`` command details. IPv4, IPv6, and multiple listeners are retained. A missing listener is informational and returns status 0; an invalid port returns status 2.
+
+```sh
+node apps/cli/dist/index.js inspect 3000
+```
+
+The command never changes sockets or processes and does not require sudo. Process details may show ``unavailable`` when ``/proc`` access is restricted. Linux and ``ss``/``iproute2`` limitations are the same as ``list``.
 
 ## Errors and limitations
 
@@ -54,7 +64,7 @@ If no listening sockets are found, Portcn prints ``No listening TCP or UDP ports
 - If ``ss`` is missing, install ``iproute2`` (Ubuntu: ``sudo apt install iproute2``). Portcn exits with status 1 instead of hiding the error.
 - Failures or unexpected output from ``ss`` produce a nonzero exit and explanatory error. Hidden process metadata appears as `` - `` rather than an invented owner.
 - Containers only see sockets in their own network namespace unless explicitly configured otherwise. Host-level inspection is not enabled automatically.
-- No kill, filtering, JSON output, process management, or service management commands have been implemented.
+- No kill, JSON output, process management, or service management commands have been implemented.
 
 ## Help and version
 

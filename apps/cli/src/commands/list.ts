@@ -3,6 +3,7 @@ import type { Command } from 'commander';
 
 export interface ListeningPort {
   protocol: 'tcp' | 'udp';
+  state: string;
   address: string;
   port: number;
   pid: number | null;
@@ -36,6 +37,7 @@ export function parseSsOutput(output: string): ListeningPort[] {
     const owner = /"([^"]+)",pid=(\d+)/.exec(line);
     ports.push({
       protocol,
+      state: fields[1] ?? 'UNKNOWN',
       address: endpoint.slice(0, separator),
       port,
       pid: owner ? Number(owner[2]) : null,
@@ -83,9 +85,10 @@ export function discoverListeningPorts({
 export function formatListeningPorts(ports: ListeningPort[]): string {
   if (ports.length === 0) return 'No listening TCP or UDP ports found.';
 
-  const headers = ['PROTO', 'PORT', 'LOCAL ADDRESS', 'PID', 'PROCESS'];
+  const headers = ['PROTO', 'STATE', 'PORT', 'LOCAL ADDRESS', 'PID', 'PROCESS'];
   const rows = ports.map((port) => [
     port.protocol.toUpperCase(),
+    port.state,
     String(port.port),
     port.address,
     port.pid === null ? '-' : String(port.pid),
