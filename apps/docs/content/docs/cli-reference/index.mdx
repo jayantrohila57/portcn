@@ -1,12 +1,13 @@
 ---
 title: CLI reference
-description: Implemented Portcn CLI options, output, and behavior.
+description: Implemented Portcn CLI options, port listing, output, and errors.
 ---
 
-Portcn currently has no subcommands. Invoke it with the options below. The examples use the built executable from the repository root.
+The development branch provides the read-only ``portcn list`` command for Linux. The published ``v0.0.1`` package contains help and version output only; the listing feature will be available in a future release.
 
-```sh title="Help"
+```sh
 node apps/cli/dist/index.js --help
+node apps/cli/dist/index.js list
 ```
 
 ## Root options
@@ -14,7 +15,7 @@ node apps/cli/dist/index.js --help
 <TypeTable
   type={{
     "-h, --help": {
-      description: "Display help for the root command.",
+      description: "Display help for the root command or a subcommand.",
       type: "boolean",
       default: false,
     },
@@ -26,17 +27,43 @@ node apps/cli/dist/index.js --help
   }}
 />
 
-## Output and errors
+## ``portcn list``
 
-Help prints the `p: portcn — Know what's running.` brand, root usage, and registered options. The version option prints the CLI package version followed by a newline. Both successful options exit with status `0`.
-
-There are no implemented domain commands or command-specific errors yet. Commander reports unsupported options and exits unsuccessfully; exact wording can vary by Commander version.
-
-## Examples
+Lists listening TCP and UDP sockets on Linux. Requires ``ss`` (provided by ``iproute2`` on Ubuntu). This command runs ``ss --no-header --listening --tcp --udp --numeric --processes`` without using a shell. It does not change ports, processes, or services.
 
 ```sh
-node apps/cli/dist/index.js --help
-node apps/cli/dist/index.js -V
+node apps/cli/dist/index.js list
 ```
 
-The workspace build is described in [Getting Started](/docs/getting-started).
+Output columns: ``PROTO`` (TCP/UDP), ``PORT`` (numeric), ``LOCAL ADDRESS`` (bind address), ``PID`` and ``PROCESS``. Results are sorted by ascending port number. PID and process may display `` - `` when the operating system does not expose ownership to your current user. You do not need to run with sudo just to list visible sockets.
+
+Example with sample data from tests:
+
+```text
+PROTO  PORT  LOCAL ADDRESS  PID  PROCESS
+TCP    22    [::]           12   sshd
+TCP    3000  127.0.0.1      321  node
+UDP    5353  0.0.0.0        -    -
+```
+
+If no listening sockets are found, Portcn prints ``No listening TCP or UDP ports found.``
+
+## Errors and limitations
+
+- Supported platform: Linux only. On other platforms, ``list`` prints ``Port listing currently supports Linux only.`` and exits with status 1.
+- If ``ss`` is missing, install ``iproute2`` (Ubuntu: ``sudo apt install iproute2``). Portcn exits with status 1 instead of hiding the error.
+- Failures or unexpected output from ``ss`` produce a nonzero exit and explanatory error. Hidden process metadata appears as `` - `` rather than an invented owner.
+- Containers only see sockets in their own network namespace unless explicitly configured otherwise. Host-level inspection is not enabled automatically.
+- No kill, filtering, JSON output, process management, or service management commands have been implemented.
+
+## Help and version
+
+Running Portcn without arguments or with ``--help`` displays branded help. ``--version`` prints the package version. Both return status 0.
+
+```sh
+node apps/cli/dist/index.js
+node apps/cli/dist/index.js --help
+node apps/cli/dist/index.js --version
+```
+
+See [Getting Started](/docs/getting-started) for local development.

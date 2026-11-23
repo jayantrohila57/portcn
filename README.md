@@ -6,13 +6,14 @@ An open-source, developer-first CLI foundation for local development. portcn is 
 
 ## Development status
 
-Early development. The CLI package and executable foundation are in place; port discovery and service management are not implemented yet.
+Early development. The `dev` branch includes a read-only Linux `portcn list` command for listening TCP/UDP ports. Process management is not implemented yet. The published `v0.0.1` package contains only the CLI foundation.
 
 ## Implemented
 
 - Fumadocs documentation site with navigation, search, Markdown negotiation, LLM-friendly exports, and generated Open Graph images.
 - pnpm workspace and Turborepo task orchestration.
 - `portcn` CLI package with branded default/help/version output and a Node.js executable.
+- Read-only `portcn list` on Linux (development branch): listening TCP/UDP ports, local addresses, and process details when visible; requires `ss` from `iproute2`.
 - Private `@portcn/core` package for future shared functionality.
 - GitHub Actions validation and Release Please version/changelog workflow for `portcn`.
 
@@ -33,6 +34,7 @@ pnpm install --frozen-lockfile
 pnpm build
 node apps/cli/dist/index.js --help
 pnpm test
+node apps/cli/dist/index.js list  # Linux, requires iproute2
 ```
 
 Optional Docker Compose commands build and run the packaged CLI image. For example, `pnpm docker:cli -- --version` rebuilds the current artifact before running it. Unit tests and package checks run with the regular pnpm scripts.
@@ -41,7 +43,7 @@ Containers use their normal PID, network, and mount namespaces. The CLI can init
 
 Before each commit, Git hooks run staged Biome checks, Conventional Commit validation, and the full workspace validation suite with pnpm on the host. Pushes do not run local checks; CI runs its checks directly on GitHub Actions without Docker. For local Fumadocs development, run `pnpm dev`. See the [Portcn documentation](apps/docs/content/docs/index.mdx) for setup and reference, and [CONTRIBUTING.md](CONTRIBUTING.md) for the contributor policy.
 
-Running `pnpm docker:cli` without arguments currently displays help and foundation status. Port discovery and service management are not implemented yet. Use Conventional Commits when Release Please should calculate a version bump.
+Running `pnpm docker:cli` without arguments displays help. Port listing is read-only and sees only sockets within the current process/network namespace; running the CLI in Docker does not grant host inspection. Service management is not implemented. Use Conventional Commits when Release Please should calculate a version bump.
 
 To work on the documentation site:
 

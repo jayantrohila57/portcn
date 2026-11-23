@@ -1,6 +1,6 @@
 # Contributing to portcn
 
-Thanks for helping improve portcn. The CLI foundation is in place; port discovery and service management are not implemented yet.
+Thanks for helping improve portcn. The `dev` branch implements a first read-only Linux port listing command; process and service management are not implemented yet.
 
 ## Requirements and setup
 
