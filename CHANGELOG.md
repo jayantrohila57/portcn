@@ -28,6 +28,8 @@
 
 ### Fixes
 
+- exclude generated changelog from formatting <!-- task:fix/ignore-generated-changelog-format -->
+
 - reconcile initial release history <!-- task:fix/reconcile-initial-release-history -->
 
 - recognize Release Please bot identity <!-- task:fix/recognize-release-bot-identity -->
