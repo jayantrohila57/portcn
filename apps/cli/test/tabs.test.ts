@@ -20,15 +20,16 @@ describe('interactive port tabs', () => {
     expect(filterPorts(ports, 'tcp')).toHaveLength(1);
     expect(filterPorts(ports, 'udp')).toHaveLength(1);
     expect(filterPorts(ports, 'process')).toHaveLength(1);
-    expect(formatTabView(ports, 'tcp')).toContain('Keys: 1-4 switch tabs');
+    expect(formatTabView(ports, 'tcp')).toContain('PORTCN  LISTENING PORTS');
+    expect(formatTabView(ports, 'tcp')).toContain('Navigation: 1-4 switch tabs');
     expect(formatTabView(ports, 'tcp')).toContain('3000');
     expect(formatTabView(ports, 'tcp')).not.toContain('5353');
-    expect(formatTabView(ports, 'tcp').endsWith('Keys: 1-4 switch tabs · Tab next · q quit')).toBe(true);
+    expect(formatTabView(ports, 'tcp').endsWith(`+${'-'.repeat(98)}+`)).toBe(true);
   });
 
   it('keeps column widths stable and fills the requested terminal width', () => {
     const widths = stableColumnWidths(ports, 100);
-    expect(formatTabView(ports, 'tcp').split('\n')[2]).toBe(formatTabView(ports, 'udp').split('\n')[2]);
+    expect(formatTabView(ports, 'tcp').split('\n')[0]).toBe(formatTabView(ports, 'udp').split('\n')[0]);
     expect(widths.reduce((sum, width) => sum + width, 0) + widths.length * 3 + 1).toBe(100);
     const long = [{ ...ports[0], address: '[fe80::1234:5678:90ab:cdef]%very-long-interface' }];
     expect(

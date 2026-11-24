@@ -20,6 +20,8 @@
 
 ### Fixes
 
+- section interactive port layout <!-- task:fix/interactive-sectioned-layout -->
+
 - bound interactive table widths <!-- task:fix/compact-tab-layout -->
 
 - stabilize interactive tab layout <!-- task:fix/stable-tab-layout -->
