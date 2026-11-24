@@ -55,6 +55,7 @@ jobs:
           set -euo pipefail
           version="${RELEASE_TAG#v}"
           test "$(node -p "require('./apps/cli/package.json').version")" = "$version"
+          pnpm --filter @portcn/core build
           pnpm --filter portcn build
           node scripts/check-cli-package.mjs
       - name: Stage scoped GitHub package

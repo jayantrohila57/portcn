@@ -31,6 +31,9 @@ test('GitHub Packages workflow publishes only the scoped CLI from a verified rel
   assert.match(githubWorkflow, /scope: ['"]@jayantrohila57['"]/);
   assert.match(githubWorkflow, /NODE_AUTH_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/);
   assert.match(githubWorkflow, /already exists; skipping duplicate publication/);
+  assert.ok(
+    githubWorkflow.indexOf('pnpm --filter @portcn/core build') < githubWorkflow.indexOf('pnpm --filter portcn build'),
+  );
 });
 
 test('uses npm trusted publishing and verifies the released CLI version', () => {
