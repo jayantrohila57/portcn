@@ -1,6 +1,6 @@
 {
   "name": "@portcn/workspace",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "description": "The portcn CLI monorepo workspace.",
   "license": "MIT",
