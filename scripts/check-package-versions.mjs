@@ -152,11 +152,30 @@ if (Object.keys(config.packages).length !== 1) {
 }
 
 const cliConfig = config.packages[releasePath];
+const releaseExcludedPaths = [
+  'apps/docs',
+  '.github',
+  'docs',
+  'scripts',
+  'CHANGELOG.md',
+  'AGENTS.md',
+  'CONTRIBUTING.md',
+  'README.md',
+  'RELEASE-DESCRIPTION-DRAFTS',
+  'RELEASE-HISTORY-AUDIT.md',
+  'RELEASE-MANAGEMENT-PLAN.md',
+  'biome.json',
+  'package.json',
+  'pnpm-lock.yaml',
+  'pnpm-workspace.yaml',
+  'release-please-config.json',
+  'turbo.json',
+];
 if (
   cliConfig['release-type'] !== 'node' ||
   cliConfig['package-name'] !== 'portcn' ||
   cliConfig.component !== 'portcn' ||
-  JSON.stringify(cliConfig['exclude-paths']) !== JSON.stringify(['apps/docs', '.github', 'docs', 'scripts']) ||
+  JSON.stringify(cliConfig['exclude-paths']) !== JSON.stringify(releaseExcludedPaths) ||
   cliConfig['initial-version'] !== '0.0.1' ||
   config['include-v-in-tag'] !== true ||
   config['include-component-in-tag'] !== false
@@ -173,7 +192,7 @@ if (
   !cliConfig['exclude-paths'].includes('apps/docs') ||
   !cliConfig['exclude-paths'].includes('docs')
 ) {
-  throw new Error('Release Please must use supported exclude-paths for documentation-only changes.');
+  throw new Error('Release Please must exclude docs, changelog, and root maintenance paths from CLI release parsing.');
 }
 const extraVersionFiles = new Set(cliConfig['extra-files'].map(({ path }) => path));
 for (const path of ['package.json', 'apps/cli/package.json']) {
@@ -236,7 +255,9 @@ if (latestTagVersion && compareSemver(latestTagVersion, manifest[releasePath]) >
 }
 
 console.log(`Root package ${root.name} is private and synchronized with portcn ${packageMetadata.version}.`);
-console.log('Release scope is the single portcn release unit; docs, workflows, and scripts are excluded.');
+console.log(
+  'Release scope is the single portcn release unit; docs, changelog, and root maintenance paths are excluded.',
+);
 console.log(
   latestTagVersion
     ? `Latest release tag is v${latestTagVersion}; manifest ${manifest[releasePath]}${latestTagVersion === manifest[releasePath] ? ' matches it' : ' is a valid release candidate'}.`
