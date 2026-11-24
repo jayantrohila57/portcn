@@ -26,4 +26,16 @@ Applications can depend on workspace packages. Packages must not depend on apps.
 
 ## Current CLI flow
 
-The executable entry point creates a Commander root program, sets its package version, and parses arguments only when invoked as the process entry point. The current root handles help and version; it does not inspect the host or open network sockets.
+The executable entry point creates a Commander root program, sets its package version, and parses arguments only when invoked as the process entry point. In an interactive terminal, invoking `portcn` opens the keyboard-first listener dashboard; non-interactive invocation remains help-oriented and machine-safe. Explicit `list` and `inspect` commands remain independently usable.
+
+## Terminal dashboard roadmap
+
+The dashboard is being delivered in focused slices so each terminal behavior remains testable:
+
+1. **Foundation (current):** shared screen lifecycle, full redraw, resize-aware viewport sizing, stable sectioned layout, pagination, and default interactive entrypoint.
+2. **Interaction:** selection, search, sorting, command palette, and process detail panels.
+3. **Resilience:** refresh scheduling, discovery loading/error states, Unicode display widths, responsive column policies, and pseudo-terminal coverage across terminal sizes.
+
+The UI acceptance checklist for each slice is: no layout shift across tabs/pages, no clipped or wrapped table borders, correct page totals and visible ranges, restored cursor/raw mode on exit, graceful behavior for small or non-interactive terminals, and unchanged plain-text/JSON command output.
+
+The current implementation intentionally uses a small in-house renderer over Node's terminal APIs. A framework such as Ink or blessed would add a dependency and a second rendering model before Portcn has a component tree or event abstraction; the existing renderer already supports deterministic output, raw-mode cleanup, and focused Vitest coverage. We will reassess that choice when selection, search, dialogs, and asynchronous refresh require shared stateful components.

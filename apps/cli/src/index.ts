@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import packageJson from '../package.json' with { type: 'json' };
 import { registerCommands } from './commands/index.js';
+import { discoverListeningPorts } from './commands/list.js';
+import { runTabbedList } from './commands/tabs.js';
 
 export function createProgram(): Command {
   const program = new Command()
@@ -21,8 +23,18 @@ const program = createProgram();
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(resolve(process.argv[1]))) {
   if (process.argv.length === 2) {
-    program.outputHelp();
+    if (process.stdin.isTTY && process.stdout.isTTY) {
+      try {
+        await runTabbedList(discoverListeningPorts());
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        process.stderr.write(`portcn: ${message}\n`);
+        process.exitCode = 1;
+      }
+    } else {
+      program.outputHelp();
+    }
   } else {
-    program.parse(process.argv);
+    await program.parseAsync(process.argv);
   }
 }
