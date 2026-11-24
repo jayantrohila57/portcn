@@ -5,6 +5,7 @@ import { createLifecycle } from './task-lifecycle.mjs';
 
 const require = createRequire(import.meta.url);
 const { checkDocumentation } = require('./documentation-policy.cjs');
+const { update } = require('./changelog-policy.cjs');
 function fixture(overrides = {}) {
   const calls = [];
   const state = { branch: 'feat/example', dirty: false, prs: [], ...overrides };
@@ -18,8 +19,12 @@ function fixture(overrides = {}) {
     if (cmd === 'git' && args[0] === 'log') return 'abc';
     if (cmd === 'git' && args[0] === 'show')
       return args[1].startsWith('origin/')
-        ? '# Changelog\n\n## Unreleased\n'
-        : '# Changelog\n\n## Unreleased\n\n### Features\n\n- example <!-- task:feat/example -->\n';
+        ? '# Changelog\n\n## Unreleased\n\n### Added\n\n### Changed\n\n### Fixed\n\n### Deprecated\n\n### Removed\n\n### Security\n'
+        : update(
+            '# Changelog\n\n## Unreleased\n\n### Added\n\n### Changed\n\n### Fixed\n\n### Deprecated\n\n### Removed\n\n### Security\n',
+            'feat(cli): example',
+            'feat/example',
+          );
     if (cmd === 'gh' && args[0] === 'pr' && args[1] === 'list') return JSON.stringify(state.prs);
     if (cmd === 'gh' && args[1] === 'create') state.prs = [pr()];
     return '';

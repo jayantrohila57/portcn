@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { test } from 'node:test';
+
+const require = createRequire(import.meta.url);
+const { parseChangelog } = require('./changelog-policy.cjs');
+const source = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8');
+const page = readFileSync(new URL('../apps/docs/app/whats-new/page.tsx', import.meta.url), 'utf8');
+
+test("What's New renders only dated published releases from CHANGELOG.md", () => {
+  const { releases } = parseChangelog(source);
+  assert.deepEqual(
+    releases.map(({ version }) => version),
+    ['0.1.1', '0.1.0', '0.0.1'],
+  );
+  assert.deepEqual(
+    releases.map(({ title }) => title),
+    ['More reliable package publishing', 'Port discovery and an interactive dashboard', 'Portcn CLI foundation'],
+  );
+  assert.equal(
+    releases.find(({ version }) => version === '0.1.0')?.demo,
+    '`portcn list --interactive` · `portcn list --json` · `portcn inspect 3000`',
+  );
+  assert.equal(
+    releases.some(({ version }) => version === 'Unreleased'),
+    false,
+  );
+  assert.match(page, /CHANGELOG\.md/);
+  assert.match(page, /Filter by year/);
+  assert.match(page, /name="year"/);
+  assert.match(page, /searchParams/);
+  assert.match(page, /parseChangelog\(changelog\)/);
+});
+
+test("What's New page exposes accessible navigation, SEO, anchors, and GitHub links", () => {
+  assert.match(page, /export const metadata/);
+  assert.match(page, /aria-label="Release versions"/);
+  assert.match(page, /id=\{`release-\$\{release\.anchor\}`\}/);
+  assert.match(page, /releases\/tag\/v/);
+  assert.match(page, /compare\/v/);
+  assert.match(page, /Latest release/);
+  assert.match(page, /Terminal demo/);
+});

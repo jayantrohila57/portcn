@@ -13,6 +13,9 @@ export default function HomePage() {
       <Link href="/docs" className="mt-8 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground">
         Read the project notes
       </Link>
+      <Link href="/whats-new" className="mt-4 text-sm font-medium text-primary underline underline-offset-4">
+        Explore release notes
+      </Link>
     </div>
   );
 }

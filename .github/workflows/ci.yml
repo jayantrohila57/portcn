@@ -48,10 +48,7 @@ jobs:
                 const policy = require('./scripts/changelog-policy.cjs');
                 const check = policy.validateRelease(changelog, match[1]);
                 if (!check.allowed) core.setFailed(check.reason);
-                else {
-                  try { policy.reconcileRelease(changelog, match[1]); }
-                  catch (error) { core.setFailed(`Changelog reconciliation failed: ${error.message}`); }
-                }
+                else if (!changelog.includes(`[${match[1]}]: https://github.com/${context.repo.owner}/${context.repo.repo}/compare/`)) core.setFailed('Release changelog is missing its version comparison link.');
               }
             }
             if (pr.base.ref === 'dev' && pr.head.ref !== 'main-to-dev-sync') {
@@ -60,7 +57,8 @@ jobs:
                 const result = await github.rest.repos.getContent({ owner: context.repo.owner, repo: context.repo.repo, path: 'CHANGELOG.md', ref });
                 return Buffer.from(result.data.content, 'base64').toString('utf8');
               };
-              const check = validate(await content(pr.base.sha), await content(pr.head.sha), pr.title, pr.head.ref);
+              const issueMatch = /(?:Closes|Fixes|Resolves)\s+#(\d+)/i.exec(pr.body ?? '');
+              const check = validate(await content(pr.base.sha), await content(pr.head.sha), pr.title, pr.head.ref, issueMatch?.[1]);
               if (!check.allowed) core.setFailed(check.reason);
             }
 
