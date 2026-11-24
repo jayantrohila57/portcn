@@ -28,6 +28,8 @@
 
 ### Fixes
 
+- make version tests release aware <!-- task:fix/version-aware-cli-tests -->
+
 - reconcile Release Please references <!-- task:fix/release-changelog-links -->
 
 - harden dashboard terminal rendering <!-- task:fix/dashboard-terminal-hardening -->
