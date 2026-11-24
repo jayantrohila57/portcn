@@ -75,6 +75,8 @@
 
 ### Fixes
 
+- support existing tag publication <!-- task:fix/manual-release-publication -->
+
 - exclude generated changelog from formatting <!-- task:fix/ignore-generated-changelog-format -->
 
 - reconcile initial release history <!-- task:fix/reconcile-initial-release-history -->
