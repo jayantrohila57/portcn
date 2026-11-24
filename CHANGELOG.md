@@ -132,6 +132,8 @@
 
 ### Documentation
 
+- record verified npm publication <!-- task:docs/update-published-status -->
+
 - document verified release publication procedure <!-- task:docs/release-publication-runbook -->
 
 - Add Fumadocs guides for getting started, the CLI, architecture, development, Docker, contributing, releases, security, and open source. [#9](https://github.com/jayantrohila57/portcn/pull/9)
