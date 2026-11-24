@@ -52,7 +52,7 @@ Branch: `feat/release-management-changelog-whats-new`
 - PR #122 (`fix(release): exclude tooling from release eligibility`) merged as `d1a103c`; both required checks passed. Its follow-up changed the release guide and expanded path-eligibility tests.
 - The local `dev` pointer had an already-integrated pre-PR commit not on the remote; after confirming its changes were represented by PR #122, the local pointer was safely aligned to `origin/dev`. No remote history was rewritten.
 - Visual browser review: responsive layout at 390×844 with no horizontal overflow; dark and light palettes; latest badge; all three historical releases; year filter; version anchors; issue, release, and comparison links; terminal demos for releases that have source-backed commands.
-- Promotion preview against `origin/dev` remains `0.1.1` → `0.1.1`. PR #120 and #122 change release tooling/docs only, not shipped CLI/core behavior, so there is no meaningful product release candidate to promote. PR #121 remains unmerged; no tag, package, version, or historical GitHub Release description was changed.
+- At that checkpoint, promotion preview against `origin/dev` remained `0.1.1` → `0.1.1`. PR #120 and #122 change release tooling/docs only, not shipped CLI/core behavior, so there was no meaningful product release candidate to promote. PR #121 remains unmerged; no tag, package, version, or historical GitHub Release description had then been changed.
 - PR #123 (`fix(release): allow documentation-only task PRs`) merged as `227772b`; `branch-policy` and `validate` both passed. Local submit validation and CI now accept an unchanged changelog only when every changed path is documentation, with tests covering the allowed and rejected cases.
 - Final preview on `origin/dev` is `0.1.1` → `0.1.1`; the three integrated PRs change release tooling and documentation only. No next product release is prepared because no shipped CLI/core behavior changed.
 - No new version, tag, or package was created. PR #121 remains open and unmerged until a meaningful product release is ready.
@@ -72,6 +72,14 @@ Branch: `feat/release-management-changelog-whats-new`
 | 10              | Prepare docs application and docs for an independent Vercel project; resolve lint and metadata build warnings                                   | Complete               |       100% |
 | 11              | Configure and deploy Vercel project after explicit owner authorization                                                                          | Authorization required |         0% |
 | 12              | Apply approved historical release descriptions; validate deployment preparation and release-path exclusions                                     | Validated, PR pending  |       100% |
+
+### Final follow-up verification
+
+- Applied the approved draft bodies to the existing GitHub Releases for v0.0.1, v0.1.0, and v0.1.1. API reads confirm exact draft bodies and unchanged release names, tags, peeled commits, asset lists, and UTC publication timestamps.
+- Fixed `PORTCN_TASK_ISSUE` and Vercel host variable lint findings by declaring the allowed variables in the shared Biome configuration. `apps/docs/app/layout.tsx` resolves canonical metadata from Vercel's production/deployment host values and uses `http://localhost:3000` for local builds; the Next build emitted no metadataBase warning.
+- Added independent deployment instructions for the docs workspace app. A Vercel project is still not configured; creation, settings, branch tracking, domains, and deployment remain approval-gated. The app retains server routes for search and `/whats-new` year filtering.
+- Expanded and validated Release Please `exclude-paths` for canonical changelog and root maintenance/configuration files. Local release preview remains `0.1.1` → `0.1.1`; no product release or package action was triggered.
+- PR #126 (`fix(docs): set deployment-aware metadata`) contains these changes and closes implementation issue #119 after protected checks pass. PR #121 remains open until a meaningful CLI/core release candidate is ready.
 
 ## Approval gates
 
