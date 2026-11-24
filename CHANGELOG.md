@@ -4,6 +4,8 @@
 
 ### Features
 
+- add dashboard refresh and palette <!-- task:feat/dashboard-refresh-palette -->
+
 - add dashboard interaction controls <!-- task:feat/dashboard-interaction-controls -->
 
 - add terminal dashboard foundation <!-- task:feat/terminal-dashboard-foundation -->

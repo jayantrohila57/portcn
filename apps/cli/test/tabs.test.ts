@@ -5,6 +5,7 @@ import {
   filterPorts,
   formatTabView,
   pageForKey,
+  paletteActionForKey,
   searchPorts,
   selectionForKey,
   sortPorts,
@@ -28,6 +29,8 @@ describe('interactive port tabs', () => {
     expect(pageForKey('p')).toBe('previous');
     expect(selectionForKey('j', 0, 2)).toBe(1);
     expect(selectionForKey('k', 0, 2)).toBe(1);
+    expect(paletteActionForKey('r')).toBe('refresh');
+    expect(paletteActionForKey('a')).toBe('auto-refresh');
   });
 
   it('searches and sorts without mutating discovery results', () => {
@@ -35,6 +38,11 @@ describe('interactive port tabs', () => {
     expect(sortPorts([...ports].reverse(), 'protocol').map((port) => port.protocol)).toEqual(['tcp', 'udp']);
     expect(formatTabView(ports, 'all', 0, 24, 'node')).toContain('3000');
     expect(formatTabView(ports, 'all', 0, 24, 'node')).not.toContain('5353');
+  });
+
+  it('renders palette and selected process details without changing table geometry', () => {
+    expect(formatTabView(ports, 'all', 0, 24, '', 'port', 0, ports[0], true)).toContain('Command palette');
+    expect(formatTabView(ports, 'all', 0, 24, '', 'port', 0, ports[0])).toContain('Detail: node | PID 10');
   });
 
   it('filters unnecessary ports by protocol and process visibility', () => {

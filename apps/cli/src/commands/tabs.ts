@@ -55,6 +55,25 @@ export function pageForKey(key: string): 'next' | 'previous' | null {
   return null;
 }
 
+export type PaletteAction = 'refresh' | 'auto-refresh' | 'close';
+
+export function paletteActionForKey(key: string): PaletteAction | null {
+  if (key === 'r') return 'refresh';
+  if (key === 'a') return 'auto-refresh';
+  if (key === ':' || key === '\u001b' || key === 'q') return 'close';
+  return null;
+}
+
+export function selectedPort(
+  ports: ListeningPort[],
+  tab: PortTab,
+  query: string,
+  sort: PortSort,
+  selected: number,
+): ListeningPort | null {
+  return sortPorts(searchPorts(filterPorts(ports, tab), query), sort)[selected] ?? null;
+}
+
 /** Calculate the number of data rows after the rendered chrome and table frame. */
 export function calculatePageSize(terminalHeight: number, chromeLines = 8, tableFrameLines = 4): number {
   return Math.max(1, terminalHeight - chromeLines - tableFrameLines);
@@ -68,6 +87,8 @@ export function formatTabView(
   query = '',
   sort: PortSort = 'port',
   selected = 0,
+  detail: ListeningPort | null = null,
+  palette = false,
 ): string {
   const labels: Record<PortTab, string> = { all: 'ALL', tcp: 'TCP', udp: 'UDP', process: 'WITH PROCESS' };
   const width = process.stdout.columns ?? 100;
@@ -85,6 +106,10 @@ export function formatTabView(
     columnWidths: stableColumnWidths(ports, width),
     selectedRow: Math.max(0, selected - currentPage * pageSize),
   });
+  const detailLine = detail
+    ? `Detail: ${detail.processName ?? 'unknown process'} | PID ${detail.pid ?? 'unavailable'} | ${detail.protocol.toUpperCase()} ${detail.address}:${detail.port}`
+    : '';
+  const paletteLine = palette ? 'Command palette: [r] refresh  [a] auto-refresh  [q/Esc] close' : '';
   return [
     divider,
     framed('PORTCN  LISTENING PORTS'),
@@ -93,6 +118,8 @@ export function formatTabView(
     divider,
     table,
     divider,
+    ...(detailLine ? [framed(detailLine), divider] : []),
+    ...(paletteLine ? [framed(paletteLine), divider] : []),
     framed(
       `Page ${currentPage + 1}/${pageCount}  |  ${filtered.length} records  |  / search  |  s sort:${sort}  |  j/k select  |  n/p page  |  q quit`,
     ),
@@ -134,21 +161,26 @@ export function stableColumnWidths(ports: ListeningPort[], terminalWidth = proce
   return widths;
 }
 
-export async function runTabbedList(ports: ListeningPort[]): Promise<void> {
+export async function runTabbedList(ports: ListeningPort[], refresh?: () => ListeningPort[]): Promise<void> {
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     process.stdout.write(`${formatListeningPorts(ports)}\n`);
     return;
   }
 
+  let currentPorts = ports;
   let current: PortTab = 'all';
   let page = 0;
   let query = '';
   let sort: PortSort = 'port';
   let selected = 0;
   let searching = false;
+  let palette = false;
+  let detail: ListeningPort | null = null;
+  let autoRefresh = false;
+  let refreshTimer: NodeJS.Timeout | undefined;
   const render = () =>
     process.stdout.write(
-      `\u001b[2J\u001b[3J\u001b[H\u001b[?25l${formatTabView(ports, current, page, process.stdout.rows ?? 24, query, sort, selected)}\n`,
+      `\u001b[2J\u001b[3J\u001b[H\u001b[?25l${formatTabView(currentPorts, current, page, process.stdout.rows ?? 24, query, sort, selected, detail, palette)}\n`,
     );
   const stdin = process.stdin;
   const onResize = () => render();
@@ -159,6 +191,37 @@ export async function runTabbedList(ports: ListeningPort[]): Promise<void> {
   await new Promise<void>((resolve) => {
     const onKey = (chunk: Buffer) => {
       const key = chunk.toString();
+      if (palette) {
+        const action = paletteActionForKey(key);
+        if (action === 'close') palette = false;
+        if (action === 'refresh' && refresh) {
+          try {
+            currentPorts = refresh();
+            selected = 0;
+            page = 0;
+            detail = null;
+          } catch {
+            detail = null;
+          }
+          palette = false;
+        }
+        if (action === 'auto-refresh' && refresh) {
+          autoRefresh = !autoRefresh;
+          if (autoRefresh)
+            refreshTimer = setInterval(() => {
+              try {
+                currentPorts = refresh();
+                render();
+              } catch {
+                /* retain last good snapshot */
+              }
+            }, 5_000);
+          else if (refreshTimer) clearInterval(refreshTimer);
+          palette = false;
+        }
+        render();
+        return;
+      }
       if (searching) {
         if (key === '\r') searching = false;
         else if (key === '\u001b') {
@@ -176,6 +239,16 @@ export async function runTabbedList(ports: ListeningPort[]): Promise<void> {
         render();
         return;
       }
+      if (key === ':') {
+        palette = true;
+        render();
+        return;
+      }
+      if (key === '\r') {
+        detail = selectedPort(currentPorts, current, query, sort, selected);
+        render();
+        return;
+      }
       if (key === 's' || key === 'S') {
         sort = sort === 'port' ? 'protocol' : sort === 'protocol' ? 'process' : 'port';
         selected = 0;
@@ -183,7 +256,11 @@ export async function runTabbedList(ports: ListeningPort[]): Promise<void> {
         render();
         return;
       }
-      const nextSelection = selectionForKey(key, selected, searchPorts(filterPorts(ports, current), query).length);
+      const nextSelection = selectionForKey(
+        key,
+        selected,
+        searchPorts(filterPorts(currentPorts, current), query).length,
+      );
       if (nextSelection !== selected || key === 'j' || key === 'k' || key === '\u001b[A' || key === '\u001b[B') {
         selected = nextSelection;
         page = Math.floor(selected / calculatePageSize(process.stdout.rows ?? 24));
@@ -206,7 +283,7 @@ export async function runTabbedList(ports: ListeningPort[]): Promise<void> {
         const pageAction = pageForKey(key);
         if (pageAction) {
           const pageSize = calculatePageSize(process.stdout.rows ?? 24);
-          const pageCount = Math.max(1, Math.ceil(filterPorts(ports, current).length / pageSize));
+          const pageCount = Math.max(1, Math.ceil(filterPorts(currentPorts, current).length / pageSize));
           page = pageAction === 'next' ? (page + 1) % pageCount : (page - 1 + pageCount) % pageCount;
           render();
         }
@@ -214,4 +291,5 @@ export async function runTabbedList(ports: ListeningPort[]): Promise<void> {
     };
     stdin.on('data', onKey);
   });
+  if (refreshTimer) clearInterval(refreshTimer);
 }
