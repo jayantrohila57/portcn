@@ -31,7 +31,7 @@ test('prepares a promotion for one meaningful task and skips changes without a v
   );
   assert(one.calls.some((call) => call.includes('create')));
   const docsOnly = fixture({ count: 1, proposedVersion: '0.0.1' });
-  assert.match(preparePromotion(docsOnly.run), /none contains a release-relevant/);
+  assert.match(preparePromotion(docsOnly.run), /none changes shipped CLI or core behavior/);
   assert(!docsOnly.calls.some((call) => call.includes('create')));
   const first = fixture();
   assert.match(preparePromotion(first.run), /Prepared promotion/);

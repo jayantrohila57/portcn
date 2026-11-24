@@ -164,16 +164,6 @@ export default async function WhatsNewPage({ searchParams }: { searchParams: Pro
               Apply filter
             </button>
           </form>
-          <ul className="mt-4 flex flex-wrap gap-2">
-            {[...releasesByYear.keys()].map((year) => (
-              <li key={year}>
-                <a className="rounded border px-2 py-1 text-xs hover:bg-muted" href={`#year-${year}`}>
-                  {year}
-                </a>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-4 text-xs font-medium text-muted-foreground">Version navigation</p>
           <ul className="mt-2 flex flex-wrap gap-2">
             {[...releasesByYear.keys()].map((year) => (
               <li key={year}>
@@ -255,12 +245,14 @@ export default async function WhatsNewPage({ searchParams }: { searchParams: Pro
                         >
                           GitHub Release
                         </a>
-                        <a
-                          className="text-primary underline underline-offset-4"
-                          href={`${repo}/compare/v${releases[releases.indexOf(release) + 1]?.version ?? release.version}...v${release.version}`}
-                        >
-                          Compare changes
-                        </a>
+                        {releases[releases.indexOf(release) + 1] ? (
+                          <a
+                            className="text-primary underline underline-offset-4"
+                            href={`${repo}/compare/v${releases[releases.indexOf(release) + 1]?.version}...v${release.version}`}
+                          >
+                            Compare changes
+                          </a>
+                        ) : null}
                       </div>
                       {release.demo ? <TerminalDemo demo={release.demo} /> : null}
                     </li>
