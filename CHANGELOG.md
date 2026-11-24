@@ -75,6 +75,8 @@
 
 ### Fixes
 
+- verify annotated package tags <!-- task:fix/github-packages-tag-verification -->
+
 - support existing tag publication <!-- task:fix/manual-release-publication -->
 
 - exclude generated changelog from formatting <!-- task:fix/ignore-generated-changelog-format -->

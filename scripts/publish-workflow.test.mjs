@@ -23,11 +23,8 @@ test('GitHub Packages workflow publishes only the scoped CLI from a verified rel
   assert.match(githubWorkflow, /workflow_dispatch:/);
   assert.match(githubWorkflow, /contents: read/);
   assert.match(githubWorkflow, /packages: write/);
-  assert.match(githubWorkflow, /test "\$\(git cat-file -t "refs\/tags\/\$RELEASE_TAG"\)" = tag/);
-  assert.match(
-    githubWorkflow,
-    /test "\$\(git rev-parse "refs\/tags\/\$RELEASE_TAG\^\{commit\}"\)" = "\$\(git rev-parse HEAD\)"/,
-  );
+  assert.match(githubWorkflow, /git cat-file -t "\$RELEASE_TAG"/);
+  assert.match(githubWorkflow, /git rev-parse "\$RELEASE_TAG\^\{commit\}".*git rev-parse HEAD\^\{commit\}/s);
   assert.match(githubWorkflow, /PACKAGE_NAME: ["']@jayantrohila57\/portcn["']/);
   assert.match(githubWorkflow, /npm\.pkg\.github\.com/);
   assert.match(githubWorkflow, /registry-url: https:\/\/npm\.pkg\.github\.com/);
