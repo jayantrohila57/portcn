@@ -12,7 +12,25 @@
       "initial-version": "0.0.1",
       "component": "portcn",
       "include-component-in-tag": false,
-      "exclude-paths": ["apps/docs", ".github", "docs", "scripts"],
+      "exclude-paths": [
+        "apps/docs",
+        ".github",
+        "docs",
+        "scripts",
+        "CHANGELOG.md",
+        "AGENTS.md",
+        "CONTRIBUTING.md",
+        "README.md",
+        "RELEASE-DESCRIPTION-DRAFTS",
+        "RELEASE-HISTORY-AUDIT.md",
+        "RELEASE-MANAGEMENT-PLAN.md",
+        "biome.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "release-please-config.json",
+        "turbo.json"
+      ],
       "extra-files": [
         {
           "type": "json",

@@ -12,6 +12,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Fixed
 
+- set deployment-aware metadata ([#119](https://github.com/jayantrohila57/portcn/issues/119)) <!-- task:fix/docs-vercel-deployment-readiness -->
+
 - skip unsupported MDX in staged Biome checks <!-- task:fix/biome-mdx-staged-checks -->
 
 - allow documentation-only task PRs <!-- task:fix/docs-only-lifecycle -->

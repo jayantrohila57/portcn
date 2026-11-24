@@ -42,6 +42,7 @@ test('handles breaking changes and refuses duplicates or empty releases', () => 
       renderRelease({
         source: source
           .replace(/- modernize release management and changelog[^\n]*\n/, '')
+          .replace(/- set deployment-aware metadata[^\n]*\n/, '')
           .replace(/- exclude tooling from release eligibility[^\n]*\n/, '')
           .replace(/- allow documentation-only task PRs[^\n]*\n/, '')
           .replace(/- skip unsupported MDX in staged Biome checks[^\n]*\n/, ''),
@@ -57,6 +58,7 @@ test('handles breaking changes and refuses duplicates or empty releases', () => 
       renderRelease({
         source: source
           .replace(/- modernize release management and changelog[^\n]*\n/, '')
+          .replace(/- set deployment-aware metadata[^\n]*\n/, '')
           .replace(/- exclude tooling from release eligibility[^\n]*\n/, '')
           .replace(/- allow documentation-only task PRs[^\n]*\n/, '')
           .replace(/- skip unsupported MDX in staged Biome checks[^\n]*\n/, ''),

@@ -10,6 +10,7 @@ Branch: `feat/release-management-changelog-whats-new`
 - `scripts/prepare-promotion.mjs` originally required three integrated task PRs. `scripts/release-preview.mjs` previews Conventional Commit SemVer. Release Please runs on `main`, creates the release PR/tag/GitHub Release, and `.github/workflows/release-please.yml` handles idempotent npm publication and GitHub Packages dispatch/recovery.
 - `CHANGELOG.md` is the canonical Keep a Changelog history. The three published sections remain preserved, and `Unreleased` contains only reviewed task entries; docs-only lifecycle work does not add a changelog entry.
 - `apps/docs` is an independently buildable Fumadocs/Next app. Release guide is `apps/docs/content/docs/releases/index.mdx`; docs directory navigation is managed by `_meta.json`.
+- Release Please's verified `exclude-paths` now covers the docs app, changelog, root guidance/manifests/configuration, and tooling. Release checks enforce the same list, so docs-site metadata work does not become a CLI version bump.
 
 ## Phases and status
 
@@ -18,7 +19,7 @@ Branch: `feat/release-management-changelog-whats-new`
 - PR #120 merged to `dev` as `1a8fbe7`; the corrected CI run passed `branch-policy` and `validate` without bypassing protections.
 - The promotion preview incorrectly classified the release-tooling `feat(release)` commit as a product feature because it treated most non-documentation paths as release-relevant. Correcting eligibility to require shipped CLI/core source changes; promotion PR #121 remains unmerged pending explicit approval.
 - Visual review confirmed the release timeline, unique year navigation, and comparison links. Desktop and a 390×844 mobile viewport render correctly with no horizontal overflow. Dark and light Fumadocs themes both render correctly. Year filtering and version-specific anchor navigation work; the initial `v0.0.1` release correctly has no self-comparison link.
-- Historical source review reconfirmed that `v0.1.1` CLI command source is unchanged from `v0.1.0`. Existing release descriptions remain unchanged pending explicit approval of the drafts. PR #122 merged after `branch-policy` and `validate` succeeded; it excludes release tooling from product release eligibility.
+- Historical source review reconfirmed that `v0.1.1` CLI command source is unchanged from `v0.1.0`. The approved release description drafts were applied later without changing release tags or versions. PR #122 merged after `branch-policy` and `validate` succeeded; it excludes release tooling from product release eligibility.
 
 | Phase | Scope                                                                                                                                           |   Status | Completion |
 | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------: | ---------: |
@@ -46,29 +47,40 @@ Branch: `feat/release-management-changelog-whats-new`
 ### Phase 5 status
 
 - Updated root and GitHub agent instructions, contributor guidance, release runbook, promotion summary, and pull request body expectations.
-- Reconstructed all three published releases from tag SHAs, GitHub publication timestamps, PR/issue evidence, release bodies, package inventory, and source snapshots. Recorded discrepancies and preserved exact proposed GitHub Release bodies under `RELEASE-DESCRIPTION-DRAFTS/`; public descriptions still require owner approval.
+- Reconstructed all three published releases from tag SHAs, GitHub publication timestamps, PR/issue evidence, release bodies, package inventory, and source snapshots. Recorded discrepancies and preserved the exact approved GitHub Release bodies under `RELEASE-DESCRIPTION-DRAFTS/`.
 - `pnpm precommit:check` passes locally: lifecycle/release tests, lint, formatting, types, package tests/build, package/boundary/release checks, and docs validation.
 - PR #122 (`fix(release): exclude tooling from release eligibility`) merged as `d1a103c`; both required checks passed. Its follow-up changed the release guide and expanded path-eligibility tests.
 - The local `dev` pointer had an already-integrated pre-PR commit not on the remote; after confirming its changes were represented by PR #122, the local pointer was safely aligned to `origin/dev`. No remote history was rewritten.
 - Visual browser review: responsive layout at 390×844 with no horizontal overflow; dark and light palettes; latest badge; all three historical releases; year filter; version anchors; issue, release, and comparison links; terminal demos for releases that have source-backed commands.
-- Promotion preview against `origin/dev` remains `0.1.1` → `0.1.1`. PR #120 and #122 change release tooling/docs only, not shipped CLI/core behavior, so there is no meaningful product release candidate to promote. PR #121 remains unmerged; no tag, package, version, or historical GitHub Release description was changed.
+- At that checkpoint, promotion preview against `origin/dev` remained `0.1.1` → `0.1.1`. PR #120 and #122 change release tooling/docs only, not shipped CLI/core behavior, so there was no meaningful product release candidate to promote. PR #121 remains unmerged; no tag, package, version, or historical GitHub Release description had then been changed.
 - PR #123 (`fix(release): allow documentation-only task PRs`) merged as `227772b`; `branch-policy` and `validate` both passed. Local submit validation and CI now accept an unchanged changelog only when every changed path is documentation, with tests covering the allowed and rejected cases.
 - Final preview on `origin/dev` is `0.1.1` → `0.1.1`; the three integrated PRs change release tooling and documentation only. No next product release is prepared because no shipped CLI/core behavior changed.
-- No new version, tag, package, or published GitHub Release description was created or modified. PR #121 remains open and unmerged pending explicit production approval; historical Release description drafts still require explicit approval before publication.
+- No new version, tag, or package was created. PR #121 remains open and unmerged until a meaningful product release is ready.
 
 ### Follow-up: publication and docs deployment verification
 
 - GitHub Packages publication is verified for `0.0.1` (run `45021457874`), `0.1.0` (`45404125212`), and `0.1.1` (`45410185155`); each successful exact-tag workflow log reports publishing the matching `@jayantrohila57/portcn` version. The earlier `0.1.0` failure was superseded; no republish is needed. Authenticated registry metadata could not be independently queried: anonymous npm.pkg.github.com returned 401 and the connected GitHub token lacks `read:packages` (GitHub API 403).
-- Current `dev` and `main` rulesets remain active: PR required, `branch-policy` and `validate` checks required, deletion and non-fast-forward updates blocked, and no bypass actors. PR #121 remains open. No production merge, tag, package publish, or GitHub Release edit was performed.
+- Current `dev` and `main` rulesets remain active: PR required, `branch-policy` and `validate` checks required, deletion and non-fast-forward updates blocked, and no bypass actors. PR #121 remains open. No production merge, tag, or package publish was performed.
 - `apps/docs` is excluded from Release Please and independently buildable, so a docs-only merge can avoid a CLI version bump. Actual production deployment is not configured/evidenced in this repository: no linked Vercel project is visible to the connected account, no Vercel config or deploy workflow exists, and GitHub reports zero environments/deployments. A hosting project linked to protected `main` would support docs-only deployment without weakening branch rules, but must be configured and verified before claiming that capability is live.
-- Updated the historical audit, release runbook, root/automation agent instructions, and this plan. Proposed historical GitHub Release descriptions remain unchanged and await explicit authorization. Vercel's documented Git integration supports previews for PRs and production deployments from a selected production branch ([official guide](https://vercel.com/docs/git)); this is feasibility evidence, not evidence of Portcn project configuration.
+- Updated the historical audit, release runbook, root/automation agent instructions, and this plan. Vercel's documented Git integration supports previews for PRs and production deployments from a selected production branch ([official guide](https://vercel.com/docs/git)); this is feasibility evidence, not evidence of Portcn project configuration.
 
-| Follow-up phase | Scope                                                                                                                                           | Status                          | Completion |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ---------: |
-| 7               | Verify package publication/recovery; assess docs-only production deployment; update audit and agent guidance without changing published records | Complete                        |       100% |
-| 8               | Merge this documentation PR into `dev` after required checks; preserve PR #121 open                                                             | Pending CI                      |         0% |
-| 9               | Apply approved historical GitHub Release description updates or configure/deploy docs hosting                                                   | Approval/configuration required |         0% |
+| Follow-up phase | Scope                                                                                                                                           | Status                 | Completion |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ---------: |
+| 7               | Verify package publication/recovery; assess docs-only production deployment; update audit and agent guidance without changing published records | Complete               |       100% |
+| 8               | Merge the documentation verification PR into `dev` after required checks; preserve PR #121 open                                                 | Complete               |       100% |
+| 9               | Apply approved historical GitHub Release description drafts and verify immutable release metadata                                               | Complete               |       100% |
+| 10              | Prepare docs application and docs for an independent Vercel project; resolve lint and metadata build warnings                                   | Complete               |       100% |
+| 11              | Configure and deploy Vercel project after explicit owner authorization                                                                          | Authorization required |         0% |
+| 12              | Apply approved historical release descriptions; validate deployment preparation and release-path exclusions                                     | Validated, PR pending  |       100% |
+
+### Final follow-up verification
+
+- Applied the approved draft bodies to the existing GitHub Releases for v0.0.1, v0.1.0, and v0.1.1. API reads confirm exact draft bodies and unchanged release names, tags, peeled commits, asset lists, and UTC publication timestamps.
+- Fixed `PORTCN_TASK_ISSUE` and Vercel host variable lint findings by declaring the allowed variables in the shared Biome configuration. `apps/docs/app/layout.tsx` resolves canonical metadata from Vercel's production/deployment host values and uses `http://localhost:3000` for local builds; the Next build emitted no metadataBase warning.
+- Added independent deployment instructions for the docs workspace app. A Vercel project is still not configured; creation, settings, branch tracking, domains, and deployment remain approval-gated. The app retains server routes for search and `/whats-new` year filtering.
+- Expanded and validated Release Please `exclude-paths` for canonical changelog and root maintenance/configuration files. Local release preview remains `0.1.1` → `0.1.1`; no product release or package action was triggered.
+- PR #126 (`fix(docs): set deployment-aware metadata`) contains these changes and closes implementation issue #119 after protected checks pass. PR #121 remains open until a meaningful CLI/core release candidate is ready.
 
 ## Approval gates
 
-Do not merge a promotion/release PR to `main`, create a release tag, or publish packages without explicit owner authorization. Preserve all existing Git/GitHub/npm history. Task PR to `dev` may use the repository's existing protected auto-merge lifecycle after required checks pass.
+Do not merge a promotion/release PR to `main`, create a release tag, publish packages, or configure/deploy the production docs site without explicit owner authorization. Preserve all existing Git/GitHub/npm history. Task PR to `dev` may use the repository's existing protected auto-merge lifecycle after required checks pass.
