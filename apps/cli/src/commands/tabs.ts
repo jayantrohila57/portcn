@@ -26,6 +26,11 @@ export function pageForKey(key: string): 'next' | 'previous' | null {
   return null;
 }
 
+/** Calculate the number of data rows after the rendered chrome and table frame. */
+export function calculatePageSize(terminalHeight: number, chromeLines = 8, tableFrameLines = 4): number {
+  return Math.max(1, terminalHeight - chromeLines - tableFrameLines);
+}
+
 export function formatTabView(
   ports: ListeningPort[],
   tab: PortTab,
@@ -40,7 +45,7 @@ export function formatTabView(
     (name, index) => `${name === tab ? '[' : ' '} ${index + 1}:${labels[name]} ${name === tab ? ']' : ' '}`,
   ).join('  ');
   const filtered = filterPorts(ports, tab);
-  const pageSize = Math.max(1, terminalHeight - 11);
+  const pageSize = calculatePageSize(terminalHeight);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(Math.max(page, 0), pageCount - 1);
   const table = formatListeningPorts(filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize), {
@@ -104,16 +109,19 @@ export async function runTabbedList(ports: ListeningPort[]): Promise<void> {
   let current: PortTab = 'all';
   let page = 0;
   const render = () =>
-    process.stdout.write(`\u001b[2J\u001b[3J\u001b[H\u001b[?25l${formatTabView(ports, current, page)}\u001b[?25h\n`);
+    process.stdout.write(`\u001b[2J\u001b[3J\u001b[H\u001b[?25l${formatTabView(ports, current, page)}\n`);
   const stdin = process.stdin;
+  const onResize = () => render();
   stdin.setRawMode?.(true);
   stdin.resume();
+  process.stdout.on('resize', onResize);
   render();
   await new Promise<void>((resolve) => {
     const onKey = (chunk: Buffer) => {
       const next = tabForKey(chunk.toString(), current);
       if (next === 'quit') {
         stdin.off('data', onKey);
+        process.stdout.off('resize', onResize);
         stdin.setRawMode?.(false);
         stdin.pause();
         process.stdout.write('\u001b[?25h\n');
@@ -125,7 +133,7 @@ export async function runTabbedList(ports: ListeningPort[]): Promise<void> {
       } else {
         const pageAction = pageForKey(chunk.toString());
         if (pageAction) {
-          const pageSize = Math.max(1, (process.stdout.rows ?? 24) - 11);
+          const pageSize = calculatePageSize(process.stdout.rows ?? 24);
           const pageCount = Math.max(1, Math.ceil(filterPorts(ports, current).length / pageSize));
           page = pageAction === 'next' ? (page + 1) % pageCount : (page - 1 + pageCount) % pageCount;
           render();

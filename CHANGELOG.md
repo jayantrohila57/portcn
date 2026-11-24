@@ -4,6 +4,8 @@
 
 ### Features
 
+- add terminal dashboard foundation <!-- task:feat/terminal-dashboard-foundation -->
+
 - add interactive port tabs <!-- task:feat/port-tabs -->
 
 - add bordered colored output <!-- task:feat/pretty-cli-output -->

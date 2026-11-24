@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { ListeningPort } from '../src/commands/list.js';
-import { filterPorts, formatTabView, pageForKey, stableColumnWidths, tabForKey } from '../src/commands/tabs.js';
+import {
+  calculatePageSize,
+  filterPorts,
+  formatTabView,
+  pageForKey,
+  stableColumnWidths,
+  tabForKey,
+} from '../src/commands/tabs.js';
 
 const ports: ListeningPort[] = [
   { protocol: 'tcp', state: 'LISTEN', address: '127.0.0.1', port: 3000, pid: 10, processName: 'node' },
@@ -31,8 +38,9 @@ describe('interactive port tabs', () => {
 
   it('paginates rows to the available terminal height', () => {
     const manyPorts = Array.from({ length: 20 }, (_, index) => ({ ...ports[0], port: 3000 + index }));
-    expect(formatTabView(manyPorts, 'all', 0, 15)).toContain('Page 1/5');
-    expect(formatTabView(manyPorts, 'all', 4, 15)).toContain('Page 5/5');
+    expect(calculatePageSize(15)).toBe(3);
+    expect(formatTabView(manyPorts, 'all', 0, 15)).toContain('Page 1/7');
+    expect(formatTabView(manyPorts, 'all', 6, 15)).toContain('Page 7/7');
     expect(formatTabView(manyPorts, 'all', 0, 15)).toContain('3000');
     expect(formatTabView(manyPorts, 'all', 0, 15)).not.toContain('3005');
   });
