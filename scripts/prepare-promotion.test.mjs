@@ -35,3 +35,15 @@ test('prepares or updates a promotion only after three integrated tasks', () => 
   const duplicate = fixture({ open: [{ number: 1 }, { number: 2 }] });
   assert.throws(() => preparePromotion(duplicate.run), /Multiple/);
 });
+
+test('explains how to recover when main and dev diverge', () => {
+  const { run } = fixture();
+  assert.throws(
+    () =>
+      preparePromotion((command, args) => {
+        if (command === 'git' && args[0] === 'merge-base') throw new Error('not an ancestor');
+        return run(command, args);
+      }),
+    /main and dev have diverged.*main-to-dev-sync/,
+  );
+});

@@ -65,11 +65,11 @@ const packed = JSON.parse(
   execFileSync('npm', ['pack', '--dry-run', '--json'], { cwd: cliDirectory, encoding: 'utf8' }),
 );
 const files = new Set(packed[0]?.files?.map(({ path }) => path));
-for (const expected of ['package.json', 'dist/index.js', 'dist/index.js.map']) {
+for (const expected of ['package.json', 'README.md', 'LICENSE', 'dist/index.js', 'dist/index.js.map']) {
   if (!files.has(expected)) throw new Error(`The npm package is missing ${expected}.`);
 }
 for (const path of files) {
-  if (!['package.json', 'dist/index.js', 'dist/index.js.map'].includes(path)) {
+  if (!['package.json', 'README.md', 'LICENSE', 'dist/index.js', 'dist/index.js.map'].includes(path)) {
     throw new Error(`Unexpected file in npm package: ${path}`);
   }
 }

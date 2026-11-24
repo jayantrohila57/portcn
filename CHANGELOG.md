@@ -75,6 +75,14 @@
 
 ### Fixes
 
+- recognize synchronization merge commits <!-- task:fix/promotion-merge-policy-v2 -->
+
+- permit synchronized merge commits in promotions <!-- task:fix/promotion-merge-policy -->
+
+- explain synchronization before promotion <!-- task:fix/lifecycle-sync-guard -->
+
+- accept lightweight and annotated package tags <!-- task:fix/release-tag-verification -->
+
 - verify annotated package tags <!-- task:fix/github-packages-tag-verification -->
 
 - support existing tag publication <!-- task:fix/manual-release-publication -->
@@ -129,6 +137,10 @@
 - Add a Docker Compose setup that builds and runs the packaged CLI and provides optional workspace checks. [#9](https://github.com/jayantrohila57/portcn/pull/9)
 
 ### Documentation
+
+- record verified npm publication <!-- task:docs/update-published-status -->
+
+- document verified release publication procedure <!-- task:docs/release-publication-runbook -->
 
 - Add Fumadocs guides for getting started, the CLI, architecture, development, Docker, contributing, releases, security, and open source. [#9](https://github.com/jayantrohila57/portcn/pull/9)
 
