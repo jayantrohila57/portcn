@@ -43,3 +43,12 @@ test('Release Please candidate preparation is separate from package publication'
   assert.match(source, /publish-npm\.mjs/);
   assert.match(source, /gh workflow run github-packages\.yml --ref main -f "tag=\$RELEASE_TAG"/);
 });
+
+test('staged Biome checks include Markdown and exclude unsupported MDX', () => {
+  const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  const stagedPatterns = Object.keys(packageJson['lint-staged']);
+  assert(stagedPatterns.some((pattern) => pattern.split(',').includes('md')));
+  assert(stagedPatterns.every((pattern) => !pattern.split(',').includes('mdx')));
+  assert.match(packageJson.scripts['precommit:check'], /pnpm docs:check/);
+  assert.match(packageJson.scripts['precommit:check'], /pnpm build/);
+});
