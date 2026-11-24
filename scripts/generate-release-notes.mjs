@@ -68,7 +68,8 @@ export function renderRelease({ source, version, previousVersion, title, commits
     .filter((name) => groups.get(name).length)
     .map((name) => `### ${name}\n\n${groups.get(name).join('\n')}`)
     .join('\n\n');
-  if (!sections) throw new Error('No user-facing release notes were generated.');
+  if (!sections || !order.some((name) => groups.get(name).length))
+    throw new Error('No user-facing release notes were generated.');
   if (releases.some((item) => item.version === version))
     throw new Error(`Release ${version} already exists in CHANGELOG.md.`);
   const from = previousVersion ? `v${previousVersion}` : `v${version}`;

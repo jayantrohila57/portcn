@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { ListeningPort } from '../src/commands/list.js';
+import { formatListeningPorts, type ListeningPort } from '../src/commands/list.js';
 import {
   calculatePageSize,
+  clampSelection,
   filterPorts,
   formatTabView,
+  pageCountFor,
   pageForKey,
   paletteActionForKey,
   searchPorts,
@@ -75,6 +77,23 @@ describe('interactive port tabs', () => {
     expect(formatTabView(manyPorts, 'all', 6, 15)).toContain('Page 7/7');
     expect(formatTabView(manyPorts, 'all', 0, 15)).toContain('3000');
     expect(formatTabView(manyPorts, 'all', 0, 15)).not.toContain('3005');
+  });
+
+  it('clamps selection and calculates pages from the active result set', () => {
+    expect(clampSelection(4, 0)).toBe(0);
+    expect(clampSelection(4, 3)).toBe(2);
+    expect(pageCountFor(0, 5)).toBe(1);
+    expect(pageCountFor(11, 5)).toBe(3);
+    expect(formatTabView(ports, 'all', 0, 24, 'not-found', 'port', 50)).toContain('Page 1/1  |  0 records');
+  });
+
+  it('highlights the selected row with a stable row index', () => {
+    const rendered = formatListeningPorts(ports, { color: true, selectedRow: 1 });
+    expect(rendered).toContain('\u001b[33m');
+    const rows = rendered.split('\n').filter((line) => line.includes('\u001b[33m'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toContain('5353');
+    expect(rows[0]).not.toContain('3000');
   });
 
   it('keeps column widths stable and fills the requested terminal width', () => {

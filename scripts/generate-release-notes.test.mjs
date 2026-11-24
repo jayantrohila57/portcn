@@ -45,7 +45,8 @@ test('handles breaking changes and refuses duplicates or empty releases', () => 
           .replace(/- set deployment-aware metadata[^\n]*\n/, '')
           .replace(/- exclude tooling from release eligibility[^\n]*\n/, '')
           .replace(/- allow documentation-only task PRs[^\n]*\n/, '')
-          .replace(/- skip unsupported MDX in staged Biome checks[^\n]*\n/, ''),
+          .replace(/- skip unsupported MDX in staged Biome checks[^\n]*\n/, '')
+          .replace(/- stabilize dashboard navigation and terminal lifecycle[^\n]*\n/, ''),
         version: '0.1.2',
         previousVersion: '0.1.1',
         title: 'Dashboard improvements',
@@ -61,7 +62,8 @@ test('handles breaking changes and refuses duplicates or empty releases', () => 
           .replace(/- set deployment-aware metadata[^\n]*\n/, '')
           .replace(/- exclude tooling from release eligibility[^\n]*\n/, '')
           .replace(/- allow documentation-only task PRs[^\n]*\n/, '')
-          .replace(/- skip unsupported MDX in staged Biome checks[^\n]*\n/, ''),
+          .replace(/- skip unsupported MDX in staged Biome checks[^\n]*\n/, '')
+          .replace(/- stabilize dashboard navigation and terminal lifecycle[^\n]*\n/, ''),
         version: '0.2.0',
         previousVersion: '0.1.1',
         title: 'Dashboard improvements',

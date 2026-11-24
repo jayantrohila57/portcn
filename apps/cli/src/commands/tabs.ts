@@ -79,6 +79,14 @@ export function calculatePageSize(terminalHeight: number, chromeLines = 8, table
   return Math.max(1, terminalHeight - chromeLines - tableFrameLines);
 }
 
+export function pageCountFor(length: number, pageSize: number): number {
+  return Math.max(1, Math.ceil(length / Math.max(1, pageSize)));
+}
+
+export function clampSelection(selected: number, length: number): number {
+  return length === 0 ? 0 : Math.min(Math.max(selected, 0), length - 1);
+}
+
 export function visibleColumnsForWidth(terminalWidth: number): number[] {
   if (terminalWidth < 58) return [0, 1, 2];
   if (terminalWidth < 78) return [0, 1, 2, 3, 4];
@@ -105,12 +113,13 @@ export function formatTabView(
   ).join('  ');
   const filtered = sortPorts(searchPorts(filterPorts(ports, tab), query), sort);
   const pageSize = calculatePageSize(terminalHeight);
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageCount = pageCountFor(filtered.length, pageSize);
   const currentPage = Math.min(Math.max(page, 0), pageCount - 1);
+  const currentSelection = clampSelection(selected, filtered.length);
   const visible = filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
   const table = formatListeningPorts(visible, {
     columnWidths: stableColumnWidths(ports, width),
-    selectedRow: Math.max(0, selected - currentPage * pageSize),
+    selectedRow: currentSelection - currentPage * pageSize,
     visibleColumns: visibleColumnsForWidth(width),
   });
   const detailLine = detail
