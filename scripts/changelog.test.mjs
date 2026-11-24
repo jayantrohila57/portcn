@@ -76,6 +76,16 @@ test('reconciliation accepts Release Please PR reference formatting', () => {
   assert.doesNotThrow(() => reconcileRelease(source, '0.1.0'));
 });
 
+test('reconciliation clears the historical 0.0.1 bootstrap block for 0.1.0', () => {
+  const source =
+    '# Changelog\n\n## [0.1.0]\n\n### Features\n\n* add current work\n\n## Changelog\n\n## Unreleased\n\n- historical bootstrap <!-- task:feat/old -->\n\n## Proposed 0.0.1 release candidate (not released)\n\nlegacy notes\n';
+  const result = reconcileRelease(source, '0.1.0');
+  assert.match(result, /## \[0\.1\.0\]/);
+  assert.equal(result.includes('historical bootstrap'), false);
+  assert.equal(result.includes('Proposed 0.0.1'), false);
+  assert.equal(result.endsWith('## Unreleased\n'), true);
+});
+
 test('reconciliation refuses to discard prose or unsupported list entries', () => {
   const source = '# Changelog\n\n## Unreleased\n\nPending context\n\n## 0.1.0\n\n- item\n';
   assert.throws(() => reconcileRelease(source, '0.1.0'), /cannot be safely reconciled/);
