@@ -93,7 +93,19 @@ function update(source, title, branch, issue) {
   return `${prefix}${section}${suffix}`;
 }
 
-function validate(base, head, title, branch, issue) {
+function isDocumentationOnly(files) {
+  return (
+    files.length > 0 &&
+    files.every(
+      (file) =>
+        file !== 'CHANGELOG.md' &&
+        /(?:^|\/)(?:AGENTS\.md|CONTRIBUTING\.md|README\.md|RELEASE-[^/]+\.md|[^/]+\.mdx)$/.test(file),
+    )
+  );
+}
+
+function validate(base, head, title, branch, issue, files = []) {
+  if (base === head && isDocumentationOnly(files)) return { allowed: true };
   try {
     const expected = update(base, title, branch, issue);
     if (expected === base) return { allowed: false, reason: 'Task changelog entry already exists in base.' };
@@ -237,6 +249,7 @@ module.exports = {
   categories,
   parseChangelog,
   parseCategories,
+  isDocumentationOnly,
   entry,
   update,
   validate,

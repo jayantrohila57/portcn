@@ -58,7 +58,7 @@ jobs:
                 return Buffer.from(result.data.content, 'base64').toString('utf8');
               };
               const issueMatch = /(?:Closes|Fixes|Resolves)\s+#(\d+)/i.exec(pr.body ?? '');
-              const check = validate(await content(pr.base.sha), await content(pr.head.sha), pr.title, pr.head.ref, issueMatch?.[1]);
+              const check = validate(await content(pr.base.sha), await content(pr.head.sha), pr.title, pr.head.ref, issueMatch?.[1], files.map(file => file.filename));
               if (!check.allowed) core.setFailed(check.reason);
             }
 

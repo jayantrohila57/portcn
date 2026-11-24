@@ -18,6 +18,27 @@ test('generates one categorized user-facing entry, includes issue refs, and pres
   assert.equal(validate(base, next, 'feat(cli): add example', 'feat/example', '119').allowed, true);
   assert.equal(validate(base, base, 'feat(cli): add example', 'feat/example').allowed, false);
 });
+test('allows documentation-only PRs to leave the release changelog unchanged', () => {
+  const files = ['apps/docs/content/docs/releases/index.mdx', 'RELEASE-MANAGEMENT-PLAN.md'];
+  assert.equal(
+    validate(base, base, 'docs(release): record verified lifecycle status', 'docs/release-status', undefined, files)
+      .allowed,
+    true,
+  );
+  assert.equal(
+    validate(base, base, 'docs(release): record verified lifecycle status', 'docs/release-status', undefined, [
+      ...files,
+      'scripts/task-lifecycle.mjs',
+    ]).allowed,
+    false,
+  );
+  assert.equal(
+    validate(base, base, 'docs(release): record verified lifecycle status', 'docs/release-status', undefined, [
+      'CHANGELOG.md',
+    ]).allowed,
+    false,
+  );
+});
 test('categorizes fixes and breaking commits and rejects duplicate task entries', () => {
   assert.match(update(base, 'fix(cli): handle empty input', 'fix/example'), /### Fixed/);
   assert.match(update(base, 'fix!: change behavior', 'fix/example'), /### Changed/);
