@@ -10,6 +10,12 @@ node apps/cli/dist/index.js --help
 node apps/cli/dist/index.js list
 ```
 
+For an interactive view, use ``--interactive``. Press ``1`` for all listeners, ``2`` for TCP, ``3`` for UDP, ``4`` for listeners with visible processes, ``Tab`` for the next tab, and ``q`` to quit. Interactive mode requires a terminal; piped output remains the normal table.
+
+```sh
+node apps/cli/dist/index.js list --interactive
+```
+
 ## Root options
 
 <TypeTable
