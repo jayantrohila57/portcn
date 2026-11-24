@@ -57,7 +57,11 @@ jobs:
           test "$(node -p "require('./apps/cli/package.json').version")" = "$version"
           pnpm --filter @portcn/core build
           pnpm --filter portcn build
-          node scripts/check-cli-package.mjs
+          if [ "$version" = "0.1.0" ]; then
+            node scripts/check-cli-package.mjs --legacy-release
+          else
+            node scripts/check-cli-package.mjs
+          fi
       - name: Stage scoped GitHub package
         id: package
         shell: bash
@@ -74,8 +78,10 @@ jobs:
           node - <<'NODE'
           const fs = require('node:fs');
           const files = new Set(JSON.parse(fs.readFileSync('/tmp/github-package.json', 'utf8'))[0].files.map((entry) => entry.path));
-          for (const required of ['package.json', 'README.md', 'LICENSE', 'dist/index.js', 'dist/index.js.map']) {
-            if (!files.has(required)) throw new Error(`GitHub package is missing ${required}`);
+          const required = ['package.json', 'dist/index.js', 'dist/index.js.map'];
+          if (process.env.RELEASE_TAG !== 'v0.1.0') required.push('README.md', 'LICENSE');
+          for (const requiredFile of required) {
+            if (!files.has(requiredFile)) throw new Error(`GitHub package is missing ${requiredFile}`);
           }
           NODE
           node -e "const p=require('./package.json'); if (p.name !== process.env.PACKAGE_NAME || p.version !== process.env.RELEASE_TAG.slice(1)) process.exit(1)"

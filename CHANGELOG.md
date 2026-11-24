@@ -75,6 +75,8 @@
 
 ### Fixes
 
+- preserve legacy package compatibility <!-- task:fix/legacy-package-content -->
+
 - build core before GitHub package <!-- task:fix/github-packages-build-order -->
 
 - recognize synchronization merge commits <!-- task:fix/promotion-merge-policy-v2 -->
