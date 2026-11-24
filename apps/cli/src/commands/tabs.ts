@@ -26,7 +26,7 @@ export function formatTabView(ports: ListeningPort[], tab: PortTab): string {
     (name, index) => `${name === tab ? '[' : ' '} ${index + 1}:${labels[name]} ${name === tab ? ']' : ' '}`,
   ).join('  ');
   const table = formatListeningPorts(filterPorts(ports, tab), { columnWidths: stableColumnWidths(ports) });
-  return `${table}\n\nKeys: 1-4 switch tabs · Tab next · q quit`;
+  return `${tabs}\n\n${table}\n\nKeys: 1-4 switch tabs · Tab next · q quit`;
 }
 
 export function stableColumnWidths(ports: ListeningPort[], terminalWidth = process.stdout.columns ?? 100): number[] {
