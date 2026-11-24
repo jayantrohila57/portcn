@@ -27,7 +27,7 @@ export function parseCommit({ sha, message, files }) {
     type: match[1],
     breaking: Boolean(match[2]) || /^BREAKING[ -]CHANGE:/m.test(message),
     description: match[3],
-    releaseRelevant: files.some((file) => !/^(apps\/docs\/|\.github\/|docs\/|scripts\/)/.test(file)),
+    releaseRelevant: files.some((file) => /^(apps\/cli\/|packages\/core\/)/.test(file)),
   };
 }
 export function preview({ version, commits }) {

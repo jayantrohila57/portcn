@@ -40,7 +40,7 @@ export function preparePromotion(run) {
   const unreleased = changelog.split('## Unreleased\n')[1]?.split(/\n## /)[0]?.trim();
   const candidate = JSON.parse(run('node', ['scripts/release-preview.mjs', 'origin/dev']));
   if (candidate.proposedVersion === candidate.currentVersion)
-    return `Promotion not prepared: ${tasks.length} task PRs are integrated, but none contains a release-relevant feature, fix, performance change, or breaking change.`;
+    return `Promotion not prepared: ${tasks.length} task PRs are integrated, but none changes shipped CLI or core behavior with a feature, fix, performance improvement, or breaking change.`;
   if (!unreleased) throw new Error('Unreleased changelog is missing or empty.');
   const body = `## Promotion summary\n\nProposed version: ${candidate.proposedVersion} (calculated from Conventional Commits; Release Please remains authoritative).\n\nIntegrated task PRs: ${tasks.map((pr) => `#${pr.number}`).join(', ')}.\n\n## Unreleased\n\n${unreleased}\n\n## Documentation\n\nSee the [release guide](https://github.com/jayantrohila57/portcn/blob/dev/apps/docs/content/docs/releases/index.mdx). Before the Release Please PR is approved, run \`node scripts/generate-release-notes.mjs ${candidate.proposedVersion} ${candidate.currentVersion} "<meaningful release title>"\` in that PR branch, review the categorized dated output, and commit it there so the Release Please candidate receives normal protected CI checks.\n\nDo not merge without explicit authorization. Preserve task commits.\n`;
   if (open.length) {

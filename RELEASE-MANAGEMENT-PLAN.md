@@ -13,6 +13,13 @@ Branch: `feat/release-management-changelog-whats-new`
 
 ## Phases and status
 
+### Follow-up verification after PR #120
+
+- PR #120 merged to `dev` as `1a8fbe7`; the corrected CI run passed `branch-policy` and `validate` without bypassing protections.
+- The promotion preview incorrectly classified the release-tooling `feat(release)` commit as a product feature because it treated most non-documentation paths as release-relevant. Correcting eligibility to require shipped CLI/core source changes; promotion PR #121 remains unmerged pending explicit approval.
+- Visual review confirmed the release timeline and links, and found duplicate year navigation plus a self-comparison link on `v0.0.1`; those are corrected. Desktop rendering uses existing light/dark Fumadocs tokens. Browser mobile emulation did not provide a valid 390 CSS-pixel viewport, so mobile visual verification is not claimed.
+- Historical source review reconfirmed that `v0.1.1` CLI command source is unchanged from `v0.1.0`. Existing release descriptions remain unchanged pending explicit approval of the drafts.
+
 | Phase | Scope                                                                                                                                           |   Status | Completion |
 | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------: | ---------: |
 | 1     | Replace task-count promotion threshold with meaningful release eligibility; tests and lifecycle docs                                            | Complete |       100% |
