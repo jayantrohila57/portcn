@@ -6,7 +6,7 @@ Branch: `feat/release-management-changelog-whats-new`
 ## Audit findings
 
 - `dev` is clean and protected; the `dev` and `main` GitHub rulesets require PRs and `branch-policy` plus `validate`, forbid deletion and force pushes, and have no bypass actors.
-- `dev` is at `abd134c`; `main` and `v0.1.1` are at `e1a041e`. Existing tags and GitHub Releases are `v0.0.1`, `v0.1.0`, and `v0.1.1`; npm publication and the GitHub Packages recovery caveat are documented in the release runbook. Do not alter existing versions or published artifacts.
+- At the latest verification, `dev` is at `d1a103c` after PRs #120 and #122; `main` and `v0.1.1` remain at `e1a041e`. Existing tags and GitHub Releases are `v0.0.1`, `v0.1.0`, and `v0.1.1`; npm publication and the unresolved GitHub Packages recovery caveat are documented in the release runbook. Do not alter existing versions or published artifacts.
 - `scripts/prepare-promotion.mjs` originally required three integrated task PRs. `scripts/release-preview.mjs` previews Conventional Commit SemVer. Release Please runs on `main`, creates the release PR/tag/GitHub Release, and `.github/workflows/release-please.yml` handles idempotent npm publication and GitHub Packages dispatch/recovery.
 - `CHANGELOG.md` currently mixes Release Please commit summaries and legacy task markers in `Unreleased`; its existing three released sections must be preserved and editorially reconciled without inventing functionality.
 - `apps/docs` is an independently buildable Fumadocs/Next app. Release guide is `apps/docs/content/docs/releases/index.mdx`; docs directory navigation is managed by `_meta.json`.
@@ -17,16 +17,17 @@ Branch: `feat/release-management-changelog-whats-new`
 
 - PR #120 merged to `dev` as `1a8fbe7`; the corrected CI run passed `branch-policy` and `validate` without bypassing protections.
 - The promotion preview incorrectly classified the release-tooling `feat(release)` commit as a product feature because it treated most non-documentation paths as release-relevant. Correcting eligibility to require shipped CLI/core source changes; promotion PR #121 remains unmerged pending explicit approval.
-- Visual review confirmed the release timeline and links, and found duplicate year navigation plus a self-comparison link on `v0.0.1`; those are corrected. Desktop rendering uses existing light/dark Fumadocs tokens. Browser mobile emulation did not provide a valid 390 CSS-pixel viewport, so mobile visual verification is not claimed.
-- Historical source review reconfirmed that `v0.1.1` CLI command source is unchanged from `v0.1.0`. Existing release descriptions remain unchanged pending explicit approval of the drafts.
+- Visual review confirmed the release timeline, unique year navigation, and comparison links. Desktop and a 390×844 mobile viewport render correctly with no horizontal overflow. Dark and light Fumadocs themes both render correctly. Year filtering and version-specific anchor navigation work; the initial `v0.0.1` release correctly has no self-comparison link.
+- Historical source review reconfirmed that `v0.1.1` CLI command source is unchanged from `v0.1.0`. Existing release descriptions remain unchanged pending explicit approval of the drafts. PR #122 merged after `branch-policy` and `validate` succeeded; it excludes release tooling from product release eligibility.
 
-| Phase | Scope                                                                                                                                           |   Status | Completion |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------: | ---------: |
-| 1     | Replace task-count promotion threshold with meaningful release eligibility; tests and lifecycle docs                                            | Complete |       100% |
-| 2     | Canonical Keep a Changelog, safe historical preservation, IST dates/links, human-readable release generation and synchronized release authority | Complete |       100% |
-| 3     | Publication idempotence/recovery/exact-commit traceability and workflow tests                                                                   | Complete |       100% |
-| 4     | Responsive accessible `/whats-new` rendered directly from `CHANGELOG.md`, SEO and version navigation/filtering                                  | Complete |       100% |
-| 5     | Governance/docs updates, historical audit, full validation, PR readiness and approval-gated handoff                                             | Complete |       100% |
+| Phase | Scope                                                                                                                                           |      Status | Completion |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------: | ---------: |
+| 1     | Replace task-count promotion threshold with meaningful release eligibility; tests and lifecycle docs                                            |    Complete |       100% |
+| 2     | Canonical Keep a Changelog, safe historical preservation, IST dates/links, human-readable release generation and synchronized release authority |    Complete |       100% |
+| 3     | Publication idempotence/recovery/exact-commit traceability and workflow tests                                                                   |    Complete |       100% |
+| 4     | Responsive accessible `/whats-new` rendered directly from `CHANGELOG.md`, SEO and version navigation/filtering                                  |    Complete |       100% |
+| 5     | Governance/docs updates, historical audit, full validation, PR readiness and approval-gated handoff                                             |    Complete |       100% |
+| 6     | Remove changelog noise for docs-only tasks; record final verification, preview, and approval-gated release state                                | In progress |        50% |
 
 ### Phase 1 completion
 
@@ -47,7 +48,11 @@ Branch: `feat/release-management-changelog-whats-new`
 - Updated root and GitHub agent instructions, contributor guidance, release runbook, promotion summary, and pull request body expectations.
 - Reconstructed all three published releases from tag SHAs, GitHub publication timestamps, PR/issue evidence, release bodies, package inventory, and source snapshots. Recorded discrepancies and preserved exact proposed GitHub Release bodies under `RELEASE-DESCRIPTION-DRAFTS/`; public descriptions still require owner approval.
 - `pnpm precommit:check` passes locally: lifecycle/release tests, lint, formatting, types, package tests/build, package/boundary/release checks, and docs validation.
-- Remaining workflow step: commit and push the task branch, create the PR to `dev`, and await required checks. Per user instruction, stop at the `dev` PR; no production promotion, tag, or publication steps.
+- PR #122 (`fix(release): exclude tooling from release eligibility`) merged as `d1a103c`; both required checks passed. Its follow-up changed the release guide and expanded path-eligibility tests.
+- The local `dev` pointer had an already-integrated pre-PR commit not on the remote; after confirming its changes were represented by PR #122, the local pointer was safely aligned to `origin/dev`. No remote history was rewritten.
+- Visual browser review: responsive layout at 390×844 with no horizontal overflow; dark and light palettes; latest badge; all three historical releases; year filter; version anchors; issue, release, and comparison links; terminal demos for releases that have source-backed commands.
+- Promotion preview against `origin/dev` remains `0.1.1` → `0.1.1`. PR #120 and #122 change release tooling/docs only, not shipped CLI/core behavior, so there is no meaningful product release candidate to promote. PR #121 remains unmerged; no tag, package, version, or historical GitHub Release description was changed.
+- A remaining task-lifecycle inconsistency blocks docs-only PRs because it requires a changelog entry. This follow-up is implementing a narrow docs-only exception enforced by changed paths in local and CI validation; docs-only changes will not add release-note noise. After its PR merges, refresh this phase status and rerun the release preview.
 
 ## Approval gates
 

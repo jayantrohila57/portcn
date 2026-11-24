@@ -65,12 +65,14 @@ export function createLifecycle(run) {
     run('git', ['fetch', 'origin', 'dev']);
     git('merge-base', '--is-ancestor', 'origin/dev', 'HEAD');
     if (!git('log', '--format=%H', 'origin/dev..HEAD')) throw new Error('No task commits to submit.');
+    const changedFiles = git('diff', '--name-only', 'origin/dev...HEAD').split('\n').filter(Boolean);
     const check = validate(
       git('show', 'origin/dev:CHANGELOG.md'),
       git('show', 'HEAD:CHANGELOG.md'),
       title,
       branch,
       process.env.PORTCN_TASK_ISSUE,
+      changedFiles,
     );
     if (!check.allowed) throw new Error(check.reason);
     let pr = getPr(branch);
