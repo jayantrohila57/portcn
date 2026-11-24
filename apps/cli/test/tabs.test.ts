@@ -29,6 +29,14 @@ describe('interactive port tabs', () => {
   it('keeps column widths stable and fills the requested terminal width', () => {
     const widths = stableColumnWidths(ports, 100);
     expect(formatTabView(ports, 'tcp').split('\n')[2]).toBe(formatTabView(ports, 'udp').split('\n')[2]);
-    expect(widths.reduce((sum, width) => sum + width, 0) + widths.length * 3 - 1).toBe(100);
+    expect(widths.reduce((sum, width) => sum + width, 0) + widths.length * 3 + 1).toBe(100);
+    const long = [{ ...ports[0], address: '[fe80::1234:5678:90ab:cdef]%very-long-interface' }];
+    expect(
+      Math.max(
+        ...formatTabView(long, 'all')
+          .split('\n')
+          .map((line) => line.length),
+      ),
+    ).toBeLessThanOrEqual(100);
   });
 });

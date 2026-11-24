@@ -39,8 +39,25 @@ export function stableColumnWidths(ports: ListeningPort[], terminalWidth = proce
     port.processName ?? '-',
   ]);
   const headers = ['PROTO', 'STATE', 'PORT', 'LOCAL ADDRESS', 'PID', 'PROCESS'];
-  const widths = headers.map((header, index) => Math.max(header.length, ...rows.map((row) => row[index]?.length ?? 0)));
-  const used = widths.reduce((sum, width) => sum + width, 0) + widths.length * 3 - 1;
+  const natural = headers.map((header, index) =>
+    Math.max(header.length, ...rows.map((row) => row[index]?.length ?? 0)),
+  );
+  const widths = natural.map((width, index) =>
+    index === 3 ? Math.min(width, 24) : index === 5 ? Math.min(width, 24) : width,
+  );
+  const minimum = [5, 6, 4, 12, 3, 8];
+  const minimumUsed = minimum.reduce((sum, width) => sum + width, 0) + widths.length * 3 + 1;
+  if (minimumUsed > terminalWidth) return minimum;
+  for (let index = 0; index < widths.length; index += 1) {
+    widths[index] = Math.max(widths[index] ?? 0, minimum[index] ?? 0);
+  }
+  let used = widths.reduce((sum, width) => sum + width, 0) + widths.length * 3 + 1;
+  for (const index of [3, 5]) {
+    while (used > terminalWidth && (widths[index] ?? 0) > (minimum[index] ?? 0)) {
+      widths[index] -= 1;
+      used -= 1;
+    }
+  }
   const extra = Math.max(0, terminalWidth - used);
   widths[widths.length - 1] = (widths[widths.length - 1] ?? 0) + extra;
   return widths;

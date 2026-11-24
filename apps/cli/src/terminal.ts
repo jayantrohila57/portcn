@@ -21,12 +21,18 @@ export function formatTable(headers: string[], rows: string[][], options: TableO
   const naturalWidths = headers.map((header, index) =>
     Math.max(header.length, ...rows.map((row) => row[index]?.length ?? 0)),
   );
-  const widths = naturalWidths.map((width, index) => Math.max(width, options.columnWidths?.[index] ?? width));
+  const widths = options.columnWidths
+    ? headers.map((header, index) =>
+        Math.max(header.length, options.columnWidths?.[index] ?? naturalWidths[index] ?? header.length),
+      )
+    : naturalWidths;
   const border = `+${widths.map((width) => '-'.repeat(width + 2)).join('+')}+`;
   const formatRow = (values: string[], header = false) =>
     `| ${values
       .map((value, index) => {
-        const padded = value.padEnd(widths[index] ?? 0);
+        const width = widths[index] ?? value.length;
+        const clipped = value.length > width ? `${value.slice(0, Math.max(1, width - 1))}~` : value;
+        const padded = clipped.padEnd(width);
         if (header) return paint(padded, ansi.cyan + ansi.bold, color);
         return options.columnColors?.[index] ? paint(padded, options.columnColors[index], color) : padded;
       })
