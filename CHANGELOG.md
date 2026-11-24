@@ -20,6 +20,8 @@
 
 ### Fixes
 
+- stabilize interactive tab layout <!-- task:fix/stable-tab-layout -->
+
 - gate publication on reconciliation <!-- task:fix/release-reconciliation-order -->
 
 - verify changelog reconciliation <!-- task:fix/release-changelog-verification -->
