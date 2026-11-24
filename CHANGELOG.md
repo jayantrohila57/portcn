@@ -71,6 +71,8 @@
 
 ### Tests
 
+- cover dashboard terminal sizes <!-- task:test/dashboard-pty-matrix -->
+
 - cover dashboard pseudo terminal <!-- task:test/dashboard-pty-coverage -->
 
 ## Proposed 0.0.1 release candidate (not released)
