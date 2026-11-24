@@ -3,6 +3,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const cliDirectory = fileURLToPath(new URL('../apps/cli/', import.meta.url));
+const legacyRelease = process.argv.includes('--legacy-release');
 const cliManifest = JSON.parse(readFileSync(new URL('../apps/cli/package.json', import.meta.url), 'utf8'));
 const rootManifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const coreManifest = JSON.parse(readFileSync(new URL('../packages/core/package.json', import.meta.url), 'utf8'));
@@ -65,11 +66,13 @@ const packed = JSON.parse(
   execFileSync('npm', ['pack', '--dry-run', '--json'], { cwd: cliDirectory, encoding: 'utf8' }),
 );
 const files = new Set(packed[0]?.files?.map(({ path }) => path));
-for (const expected of ['package.json', 'README.md', 'LICENSE', 'dist/index.js', 'dist/index.js.map']) {
+const requiredFiles = ['package.json', 'dist/index.js', 'dist/index.js.map'];
+if (!legacyRelease) requiredFiles.push('README.md', 'LICENSE');
+for (const expected of requiredFiles) {
   if (!files.has(expected)) throw new Error(`The npm package is missing ${expected}.`);
 }
 for (const path of files) {
-  if (!['package.json', 'README.md', 'LICENSE', 'dist/index.js', 'dist/index.js.map'].includes(path)) {
+  if (!requiredFiles.includes(path)) {
     throw new Error(`Unexpected file in npm package: ${path}`);
   }
 }
