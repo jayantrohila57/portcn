@@ -17,8 +17,8 @@ function pr({ base, head, title = 'fix(core): correct port validation', actor = 
   };
 }
 
-function commit(message) {
-  return [{ commit: { message } }];
+function commit(message, parents = [{}]) {
+  return [{ commit: { message, parents } }];
 }
 
 const cases = [
@@ -83,6 +83,18 @@ const cases = [
       eventName: 'pull_request',
       pullRequest: pr({ base: 'main', head: 'dev', title: 'chore(main): promote validated changes' }),
       commits: commit('fix(core): correct port validation'),
+    },
+    true,
+  ],
+  [
+    'valid dev promotion with synchronization merge commit',
+    {
+      eventName: 'pull_request',
+      pullRequest: pr({ base: 'main', head: 'dev', title: 'chore(main): promote validated changes' }),
+      commits: [
+        ...commit('Merge pull request #73 from jayantrohila57/main-to-dev-sync', [{}, {}]),
+        ...commit('fix(core): correct port validation'),
+      ],
     },
     true,
   ],
