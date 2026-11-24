@@ -22,11 +22,24 @@ export function filterPorts(ports: ListeningPort[], tab: PortTab): ListeningPort
 
 export function formatTabView(ports: ListeningPort[], tab: PortTab): string {
   const labels: Record<PortTab, string> = { all: 'ALL', tcp: 'TCP', udp: 'UDP', process: 'WITH PROCESS' };
+  const width = process.stdout.columns ?? 100;
+  const divider = `+${'-'.repeat(Math.max(1, width - 2))}+`;
+  const framed = (text: string) => `| ${text.slice(0, Math.max(0, width - 4)).padEnd(Math.max(0, width - 4))} |`;
   const tabs = PORT_TABS.map(
     (name, index) => `${name === tab ? '[' : ' '} ${index + 1}:${labels[name]} ${name === tab ? ']' : ' '}`,
   ).join('  ');
-  const table = formatListeningPorts(filterPorts(ports, tab), { columnWidths: stableColumnWidths(ports) });
-  return `${tabs}\n\n${table}\n\nKeys: 1-4 switch tabs · Tab next · q quit`;
+  const table = formatListeningPorts(filterPorts(ports, tab), { columnWidths: stableColumnWidths(ports, width) });
+  return [
+    divider,
+    framed('PORTCN  LISTENING PORTS'),
+    divider,
+    framed(`Tabs: ${tabs}`),
+    divider,
+    table,
+    divider,
+    framed('Navigation: 1-4 switch tabs  |  Tab next tab  |  q or Esc quit'),
+    divider,
+  ].join('\n');
 }
 
 export function stableColumnWidths(ports: ListeningPort[], terminalWidth = process.stdout.columns ?? 100): number[] {
