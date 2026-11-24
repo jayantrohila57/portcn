@@ -28,6 +28,14 @@
 
 ### Fixes
 
+- skip sync commit validation <!-- task:fix/skip-sync-commit-validation -->
+
+- skip commitlint for synchronized history <!-- task:fix/skip-commitlint-on-sync -->
+
+- allow synchronized release history <!-- task:fix/allow-main-sync-history -->
+
+- make version tests release aware <!-- task:fix/version-aware-cli-tests -->
+
 - reconcile Release Please references <!-- task:fix/release-changelog-links -->
 
 - harden dashboard terminal rendering <!-- task:fix/dashboard-terminal-hardening -->
