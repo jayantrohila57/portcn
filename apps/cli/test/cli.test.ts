@@ -8,6 +8,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { createProgram } from '../src/program.js';
 
 const executable = fileURLToPath(new URL('../dist/index.js', import.meta.url));
+const packageVersion = JSON.parse(readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8'))
+  .version as string;
 
 function run(command: string, args: string[] = []) {
   return spawnSync(command, args, { encoding: 'utf8' });
@@ -46,7 +48,7 @@ describe('portcn CLI foundation', () => {
   it('shows its version through direct Node.js execution', () => {
     const result = run(process.execPath, [executable, '--version']);
     expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe('0.0.1');
+    expect(result.stdout.trim()).toBe(packageVersion);
   });
 
   it('prints branded output without arguments', () => {
@@ -64,7 +66,7 @@ describe('portcn CLI foundation', () => {
       for (const args of [['--help'], ['--version'], []]) {
         const result = run(symlink, args);
         expect(result.status, result.stderr).toBe(0);
-        if (args[0] === '--version') expect(result.stdout.trim()).toBe('0.0.1');
+        if (args[0] === '--version') expect(result.stdout.trim()).toBe(packageVersion);
         else expectBrandedHelp(result.stdout);
       }
     } finally {
@@ -91,7 +93,7 @@ describe('portcn CLI foundation', () => {
       for (const args of [[], ['--help'], ['--version']]) {
         const result = run(installedExecutable, args);
         expect(result.status, result.stderr).toBe(0);
-        if (args[0] === '--version') expect(result.stdout.trim()).toBe('0.0.1');
+        if (args[0] === '--version') expect(result.stdout.trim()).toBe(packageVersion);
         else expectBrandedHelp(result.stdout);
       }
     } finally {
