@@ -20,6 +20,8 @@
 
 ### Fixes
 
+- bound interactive table widths <!-- task:fix/compact-tab-layout -->
+
 - stabilize interactive tab layout <!-- task:fix/stable-tab-layout -->
 
 - gate publication on reconciliation <!-- task:fix/release-reconciliation-order -->
