@@ -28,6 +28,8 @@
 
 ### Fixes
 
+- reconcile Release Please references <!-- task:fix/release-changelog-links -->
+
 - harden dashboard terminal rendering <!-- task:fix/dashboard-terminal-hardening -->
 
 - paginate interactive port tables <!-- task:fix/interactive-pagination -->
