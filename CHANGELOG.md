@@ -28,6 +28,8 @@
 
 ### Fixes
 
+- build core before publishing <!-- task:fix/build-core-before-release -->
+
 - exclude generated changelog from formatting <!-- task:fix/ignore-generated-changelog-format -->
 
 - reconcile initial release history <!-- task:fix/reconcile-initial-release-history -->

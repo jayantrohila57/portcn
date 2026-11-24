@@ -63,6 +63,7 @@ jobs:
         run: |
           set -euo pipefail
           node -e "const p=require('./apps/cli/package.json'); if (p.version !== process.env.RELEASE_VERSION) { throw new Error('CLI version '+p.version+' does not match Release Please '+process.env.RELEASE_VERSION); }"
+          pnpm --filter @portcn/core build
           pnpm --filter portcn build
           mkdir -p /tmp/portcn-release
           pnpm --filter portcn pack --pack-destination /tmp/portcn-release
