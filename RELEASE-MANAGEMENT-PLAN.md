@@ -6,7 +6,7 @@ Branch: `feat/release-management-changelog-whats-new`
 ## Audit findings
 
 - `dev` is clean and protected; the `dev` and `main` GitHub rulesets require PRs and `branch-policy` plus `validate`, forbid deletion and force pushes, and have no bypass actors.
-- At final verification, `dev` is at `227772b` after PRs #120, #122, and #123; `main` and `v0.1.1` remain at `e1a041e`. Existing tags and GitHub Releases are `v0.0.1`, `v0.1.0`, and `v0.1.1`; npm publication and the unresolved GitHub Packages recovery caveat are documented in the release runbook. Do not alter existing versions or published artifacts.
+- At final verification for PR #123, `dev` was at `227772b`; PR #121 remains open with head `5b21382` and must stay open until a meaningful product candidate exists. Existing tags and GitHub Releases are `v0.0.1`, `v0.1.0`, and `v0.1.1`; no versions, tags, or published artifacts were altered. This follow-up confirms GitHub Packages publication for all three exact tags from successful runs; direct registry metadata remains inaccessible without `read:packages`.
 - `scripts/prepare-promotion.mjs` originally required three integrated task PRs. `scripts/release-preview.mjs` previews Conventional Commit SemVer. Release Please runs on `main`, creates the release PR/tag/GitHub Release, and `.github/workflows/release-please.yml` handles idempotent npm publication and GitHub Packages dispatch/recovery.
 - `CHANGELOG.md` is the canonical Keep a Changelog history. The three published sections remain preserved, and `Unreleased` contains only reviewed task entries; docs-only lifecycle work does not add a changelog entry.
 - `apps/docs` is an independently buildable Fumadocs/Next app. Release guide is `apps/docs/content/docs/releases/index.mdx`; docs directory navigation is managed by `_meta.json`.
@@ -55,6 +55,19 @@ Branch: `feat/release-management-changelog-whats-new`
 - PR #123 (`fix(release): allow documentation-only task PRs`) merged as `227772b`; `branch-policy` and `validate` both passed. Local submit validation and CI now accept an unchanged changelog only when every changed path is documentation, with tests covering the allowed and rejected cases.
 - Final preview on `origin/dev` is `0.1.1` → `0.1.1`; the three integrated PRs change release tooling and documentation only. No next product release is prepared because no shipped CLI/core behavior changed.
 - No new version, tag, package, or published GitHub Release description was created or modified. PR #121 remains open and unmerged pending explicit production approval; historical Release description drafts still require explicit approval before publication.
+
+### Follow-up: publication and docs deployment verification
+
+- GitHub Packages publication is verified for `0.0.1` (run `45021457874`), `0.1.0` (`45404125212`), and `0.1.1` (`45410185155`); each successful exact-tag workflow log reports publishing the matching `@jayantrohila57/portcn` version. The earlier `0.1.0` failure was superseded; no republish is needed. Authenticated registry metadata could not be independently queried: anonymous npm.pkg.github.com returned 401 and the connected GitHub token lacks `read:packages` (GitHub API 403).
+- Current `dev` and `main` rulesets remain active: PR required, `branch-policy` and `validate` checks required, deletion and non-fast-forward updates blocked, and no bypass actors. PR #121 remains open. No production merge, tag, package publish, or GitHub Release edit was performed.
+- `apps/docs` is excluded from Release Please and independently buildable, so a docs-only merge can avoid a CLI version bump. Actual production deployment is not configured/evidenced in this repository: no linked Vercel project is visible to the connected account, no Vercel config or deploy workflow exists, and GitHub reports zero environments/deployments. A hosting project linked to protected `main` would support docs-only deployment without weakening branch rules, but must be configured and verified before claiming that capability is live.
+- Updated the historical audit, release runbook, root/automation agent instructions, and this plan. Proposed historical GitHub Release descriptions remain unchanged and await explicit authorization. Vercel's documented Git integration supports previews for PRs and production deployments from a selected production branch ([official guide](https://vercel.com/docs/git)); this is feasibility evidence, not evidence of Portcn project configuration.
+
+| Follow-up phase | Scope                                                                                                                                           | Status                          | Completion |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ---------: |
+| 7               | Verify package publication/recovery; assess docs-only production deployment; update audit and agent guidance without changing published records | Complete                        |       100% |
+| 8               | Merge this documentation PR into `dev` after required checks; preserve PR #121 open                                                             | Pending CI                      |         0% |
+| 9               | Apply approved historical GitHub Release description updates or configure/deploy docs hosting                                                   | Approval/configuration required |         0% |
 
 ## Approval gates
 
