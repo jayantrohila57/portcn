@@ -3,6 +3,8 @@
 Issue: [#119](https://github.com/jayantrohila57/portcn/issues/119)
 Branch: `feat/release-management-changelog-whats-new`
 
+**Implementation status:** Complete. Vercel project configuration and website deployment are intentionally deferred until explicitly requested. The What's New page and deployment preparation remain available for future use.
+
 ## Audit findings
 
 - `dev` is clean and protected; the `dev` and `main` GitHub rulesets require PRs and `branch-policy` plus `validate`, forbid deletion and force pushes, and have no bypass actors.
@@ -70,7 +72,7 @@ Branch: `feat/release-management-changelog-whats-new`
 | 8               | Merge the documentation verification PR into `dev` after required checks; preserve PR #121 open                                                 | Complete               |       100% |
 | 9               | Apply approved historical GitHub Release description drafts and verify immutable release metadata                                               | Complete               |       100% |
 | 10              | Prepare docs application and docs for an independent Vercel project; resolve lint and metadata build warnings                                   | Complete               |       100% |
-| 11              | Configure and deploy Vercel project after explicit owner authorization                                                                          | Authorization required |         0% |
+| 11              | Configure and deploy the docs site on Vercel                                                                                                    | Intentionally deferred |          — |
 | 12              | Apply approved historical release descriptions; validate deployment preparation and release-path exclusions                                     | Complete (PR #126)     |       100% |
 
 ### Final follow-up verification
@@ -79,7 +81,9 @@ Branch: `feat/release-management-changelog-whats-new`
 - Fixed `PORTCN_TASK_ISSUE` and Vercel host variable lint findings by declaring the allowed variables in the shared Biome configuration. `apps/docs/app/layout.tsx` resolves canonical metadata from Vercel's production/deployment host values and uses `http://localhost:3000` for local builds; the Next build emitted no metadataBase warning.
 - Added independent deployment instructions for the docs workspace app. A Vercel project is still not configured; creation, settings, branch tracking, domains, and deployment remain approval-gated. The app retains server routes for search and `/whats-new` year filtering.
 - Expanded and validated Release Please `exclude-paths` for canonical changelog and root maintenance/configuration files. Local release preview remains `0.1.1` → `0.1.1`; no product release or package action was triggered.
-- PR #126 (`fix(docs): set deployment-aware metadata`) merged to `dev` as `084f0b3` after `branch-policy` and `validate` passed. Issue #119 remains open until its protected `main` integration; PR #121 remains open until a meaningful CLI/core release candidate is ready.
+- PR #126 (`fix(docs): set deployment-aware metadata`) merged to `dev` as `084f0b3` after `branch-policy` and `validate` passed. PR #127 finalized the implementation record; issue #119 is closed. PR #121 remains open until a meaningful product release is ready.
+- Per the owner's explicit direction, Vercel configuration and deployment are deferred. Release-management implementation is complete; no production deployment is claimed or required for completion. Preserve `/whats-new` and its deployment guide for a future explicit request.
+- Core development resumed with dashboard stability issue #94, merged through PR #128 as `ef51dc6` after both required checks passed. The release preview is `0.1.1` → `0.1.2`; no release PR, tag, or publication was initiated. PR #121 remains open.
 
 ## Approval gates
 
