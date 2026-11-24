@@ -75,6 +75,8 @@
 
 ### Fixes
 
+- reconcile legacy release notes <!-- task:fix/release-reconciliation-legacy -->
+
 - reconcile notes across release history <!-- task:fix/release-reconciliation-history-v2 -->
 
 - reconcile historical changelog entries <!-- task:fix/release-reconciliation-history -->
