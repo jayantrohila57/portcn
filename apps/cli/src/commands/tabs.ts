@@ -20,6 +20,35 @@ export function filterPorts(ports: ListeningPort[], tab: PortTab): ListeningPort
   return ports.filter((port) => port.protocol === tab);
 }
 
+export type PortSort = 'port' | 'protocol' | 'process';
+
+export function searchPorts(ports: ListeningPort[], query: string): ListeningPort[] {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return ports;
+  return ports.filter((port) =>
+    [port.protocol, port.state, port.address, String(port.port), String(port.pid ?? ''), port.processName ?? '']
+      .join(' ')
+      .toLowerCase()
+      .includes(normalized),
+  );
+}
+
+export function sortPorts(ports: ListeningPort[], sort: PortSort): ListeningPort[] {
+  return [...ports].sort((left, right) => {
+    if (sort === 'protocol') return left.protocol.localeCompare(right.protocol) || left.port - right.port;
+    if (sort === 'process')
+      return (left.processName ?? '').localeCompare(right.processName ?? '') || left.port - right.port;
+    return left.port - right.port || left.protocol.localeCompare(right.protocol);
+  });
+}
+
+export function selectionForKey(key: string, selected: number, length: number): number {
+  if (length === 0) return 0;
+  if (key === '\u001b[A' || key === 'k') return (selected - 1 + length) % length;
+  if (key === '\u001b[B' || key === 'j') return (selected + 1) % length;
+  return Math.min(Math.max(selected, 0), length - 1);
+}
+
 export function pageForKey(key: string): 'next' | 'previous' | null {
   if (key === 'n' || key === 'N' || key === ' ') return 'next';
   if (key === 'p' || key === 'P') return 'previous';
@@ -36,6 +65,9 @@ export function formatTabView(
   tab: PortTab,
   page = 0,
   terminalHeight = process.stdout.rows ?? 24,
+  query = '',
+  sort: PortSort = 'port',
+  selected = 0,
 ): string {
   const labels: Record<PortTab, string> = { all: 'ALL', tcp: 'TCP', udp: 'UDP', process: 'WITH PROCESS' };
   const width = process.stdout.columns ?? 100;
@@ -44,12 +76,14 @@ export function formatTabView(
   const tabs = PORT_TABS.map(
     (name, index) => `${name === tab ? '[' : ' '} ${index + 1}:${labels[name]} ${name === tab ? ']' : ' '}`,
   ).join('  ');
-  const filtered = filterPorts(ports, tab);
+  const filtered = sortPorts(searchPorts(filterPorts(ports, tab), query), sort);
   const pageSize = calculatePageSize(terminalHeight);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(Math.max(page, 0), pageCount - 1);
-  const table = formatListeningPorts(filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize), {
+  const visible = filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+  const table = formatListeningPorts(visible, {
     columnWidths: stableColumnWidths(ports, width),
+    selectedRow: Math.max(0, selected - currentPage * pageSize),
   });
   return [
     divider,
@@ -60,7 +94,7 @@ export function formatTabView(
     table,
     divider,
     framed(
-      `Page ${currentPage + 1}/${pageCount}  |  1-4 tabs  |  Tab next tab  |  n/Space next  |  p previous  |  q/Esc quit`,
+      `Page ${currentPage + 1}/${pageCount}  |  ${filtered.length} records  |  / search  |  s sort:${sort}  |  j/k select  |  n/p page  |  q quit`,
     ),
     divider,
   ].join('\n');
@@ -108,8 +142,14 @@ export async function runTabbedList(ports: ListeningPort[]): Promise<void> {
 
   let current: PortTab = 'all';
   let page = 0;
+  let query = '';
+  let sort: PortSort = 'port';
+  let selected = 0;
+  let searching = false;
   const render = () =>
-    process.stdout.write(`\u001b[2J\u001b[3J\u001b[H\u001b[?25l${formatTabView(ports, current, page)}\n`);
+    process.stdout.write(
+      `\u001b[2J\u001b[3J\u001b[H\u001b[?25l${formatTabView(ports, current, page, process.stdout.rows ?? 24, query, sort, selected)}\n`,
+    );
   const stdin = process.stdin;
   const onResize = () => render();
   stdin.setRawMode?.(true);
@@ -118,7 +158,39 @@ export async function runTabbedList(ports: ListeningPort[]): Promise<void> {
   render();
   await new Promise<void>((resolve) => {
     const onKey = (chunk: Buffer) => {
-      const next = tabForKey(chunk.toString(), current);
+      const key = chunk.toString();
+      if (searching) {
+        if (key === '\r') searching = false;
+        else if (key === '\u001b') {
+          searching = false;
+          query = '';
+        } else if (key === '\u007f') query = query.slice(0, -1);
+        else if (key.length === 1 && key >= ' ') query += key;
+        selected = 0;
+        page = 0;
+        render();
+        return;
+      }
+      if (key === '/') {
+        searching = true;
+        render();
+        return;
+      }
+      if (key === 's' || key === 'S') {
+        sort = sort === 'port' ? 'protocol' : sort === 'protocol' ? 'process' : 'port';
+        selected = 0;
+        page = 0;
+        render();
+        return;
+      }
+      const nextSelection = selectionForKey(key, selected, searchPorts(filterPorts(ports, current), query).length);
+      if (nextSelection !== selected || key === 'j' || key === 'k' || key === '\u001b[A' || key === '\u001b[B') {
+        selected = nextSelection;
+        page = Math.floor(selected / calculatePageSize(process.stdout.rows ?? 24));
+        render();
+        return;
+      }
+      const next = tabForKey(key, current);
       if (next === 'quit') {
         stdin.off('data', onKey);
         process.stdout.off('resize', onResize);
@@ -131,7 +203,7 @@ export async function runTabbedList(ports: ListeningPort[]): Promise<void> {
         page = 0;
         render();
       } else {
-        const pageAction = pageForKey(chunk.toString());
+        const pageAction = pageForKey(key);
         if (pageAction) {
           const pageSize = calculatePageSize(process.stdout.rows ?? 24);
           const pageCount = Math.max(1, Math.ceil(filterPorts(ports, current).length / pageSize));

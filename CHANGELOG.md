@@ -4,6 +4,8 @@
 
 ### Features
 
+- add dashboard interaction controls <!-- task:feat/dashboard-interaction-controls -->
+
 - add terminal dashboard foundation <!-- task:feat/terminal-dashboard-foundation -->
 
 - add interactive port tabs <!-- task:feat/port-tabs -->
