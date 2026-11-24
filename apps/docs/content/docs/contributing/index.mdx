@@ -23,6 +23,10 @@ For changes to behavior, commands, packages, dependencies, architecture, securit
 
 Use the repository scripts and include a documentation summary naming changed pages or a justified `No documentation change required`. Use a Conventional Commit title. Run `node scripts/task-lifecycle.mjs submit "feat(cli): describe the change" /path/to/pr-body.md` after committing and checking your changes. It creates or reuses the PR and requests auto-merge. CI requires an updated Fumadocs page or `No documentation change required:` followed by a specific explanation. Routine task pushes and merges into `dev` are authorized after required checks pass. Once merged, run `node scripts/task-lifecycle.mjs finish` from the clean task branch. Preserve the branch if checks or merge are blocked.
 
+## Release notes
+
+`CHANGELOG.md` is the canonical Keep a Changelog history; `/whats-new` renders its published sections directly. A single meaningful feature or fix can qualify for release promotion. Add a concise categorized `Unreleased` entry with `node scripts/task-lifecycle.mjs changelog "feat(cli): describe the change" <issue-number>` when the change has an issue. Use IST dates and the release runbook's six categories. Before approving a Release Please PR, generate and commit the dated release notes on its candidate branch so CI validates the final changelog. Release Please remains the version and tag authority, and production release approval remains explicit.
+
 ## Canonical community files
 
 - [Contribution process](https://github.com/jayantrohila57/portcn/blob/main/CONTRIBUTING.md)

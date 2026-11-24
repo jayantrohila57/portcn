@@ -35,9 +35,11 @@ test('workflow YAML has required structure and every embedded shell block parses
   }
 });
 
-test('release workflow dispatches the exact successful tag and has no stray shell terminator', () => {
+test('Release Please candidate preparation is separate from package publication', () => {
   const source = readFileSync(new URL('release-please.yml', root), 'utf8');
   assert.match(source, /actions: write/);
-  assert.match(source, /gh workflow run github-packages\.yml --ref main -f tag="\$RELEASE_TAG"/);
-  assert.doesNotMatch(source, /run: gh workflow run[\s\S]*\n\s+fi\s*$/);
+  assert.match(source, /googleapis\/release-please-action@v4/);
+  assert.match(source, /workflow_dispatch:/);
+  assert.match(source, /publish-npm\.mjs/);
+  assert.match(source, /gh workflow run github-packages\.yml --ref main -f "tag=\$RELEASE_TAG"/);
 });

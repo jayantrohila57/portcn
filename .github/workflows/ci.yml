@@ -48,10 +48,7 @@ jobs:
                 const policy = require('./scripts/changelog-policy.cjs');
                 const check = policy.validateRelease(changelog, match[1]);
                 if (!check.allowed) core.setFailed(check.reason);
-                else {
-                  try { policy.reconcileRelease(changelog, match[1]); }
-                  catch (error) { core.setFailed(`Changelog reconciliation failed: ${error.message}`); }
-                }
+                else if (!changelog.includes(`[${match[1]}]: https://github.com/${context.repo.owner}/${context.repo.repo}/compare/`)) core.setFailed('Release changelog is missing its version comparison link.');
               }
             }
             if (pr.base.ref === 'dev' && pr.head.ref !== 'main-to-dev-sync') {

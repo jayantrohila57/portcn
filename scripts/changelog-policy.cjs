@@ -1,23 +1,78 @@
-const headings = {
-  feat: 'Features',
-  fix: 'Fixes',
-  perf: 'Performance',
-  refactor: 'Improvements',
-  docs: 'Documentation',
-  ci: 'CI',
-  build: 'Build system',
-  test: 'Tests',
-  chore: 'Maintenance',
-  revert: 'Reverts',
-};
-function entry(title, branch) {
-  const match = /^(feat|fix|perf|refactor|docs|ci|build|test|chore|revert)(?:\([a-z0-9-]+\))?(!)?: (.+)$/.exec(title);
-  if (!match || !/^(feat|fix|perf|refactor|docs|ci|build|test|chore)\/[a-z0-9-]+$/.test(branch))
-    throw new Error('A Conventional title and task branch are required.');
-  return { heading: match[2] ? 'Breaking Changes' : headings[match[1]], line: `- ${match[3]} <!-- task:${branch} -->` };
+const categories = ['Added', 'Changed', 'Fixed', 'Deprecated', 'Removed', 'Security'];
+const commitCategory = { feat: 'Added', fix: 'Fixed', perf: 'Changed', refactor: 'Changed', revert: 'Changed' };
+const issueUrl = (number) => `https://github.com/jayantrohila57/portcn/issues/${number}`;
+
+function parseCategories(content) {
+  const result = [];
+  const headings = [...content.matchAll(/^### (.+)$/gm)];
+  for (let index = 0; index < headings.length; index += 1) {
+    const name = headings[index][1].trim();
+    if (!categories.includes(name)) continue;
+    const start = headings[index].index + headings[index][0].length;
+    const end = headings[index + 1]?.index ?? content.length;
+    const entries = content
+      .slice(start, end)
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    result.push({ name, entries });
+  }
+  return result;
 }
-function update(source, title, branch) {
-  const { heading, line } = entry(title, branch);
+
+function parseChangelog(source) {
+  const headings = [...source.matchAll(/^## (.+)$/gm)];
+  const releases = [];
+  let unreleased = null;
+  let previousVersion = null;
+  for (let index = 0; index < headings.length; index += 1) {
+    const heading = headings[index][1].trim();
+    const start = headings[index].index + headings[index][0].length;
+    const end = headings[index + 1]?.index ?? source.length;
+    const content = source.slice(start, end).trim();
+    if (heading === 'Unreleased') {
+      unreleased = { content, categories: parseCategories(content) };
+      continue;
+    }
+    const match = /^\[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})$/.exec(heading);
+    if (!match) continue;
+    const [, version, date] = match;
+    if (previousVersion && compareVersions(previousVersion, version) <= 0)
+      throw new Error('Published changelog releases must be listed in descending semantic-version order.');
+    previousVersion = version;
+    releases.push({
+      version,
+      date,
+      anchor: `v${version.replaceAll('.', '-')}`,
+      title: /^\*\*Title:\*\* (.+)$/m.exec(content)?.[1] ?? null,
+      demo: /^\*\*Terminal demo:\*\* (.+)$/m.exec(content)?.[1] ?? null,
+      content,
+      categories: parseCategories(content),
+    });
+  }
+  return { releases, unreleased };
+}
+
+function compareVersions(left, right) {
+  const a = left.split('.').map(Number);
+  const b = right.split('.').map(Number);
+  for (let index = 0; index < 3; index += 1) if (a[index] !== b[index]) return a[index] - b[index];
+  return 0;
+}
+
+function entry(title, branch, issue) {
+  const match = /^(feat|fix|perf|refactor|docs|ci|build|test|chore|revert)(?:\([^)]+\))?(!)?: (.+)$/.exec(title);
+  if (!match || !/^(feat|fix|refactor|chore|docs|test|build|ci|perf)\/[a-z0-9][a-z0-9-]*$/.test(branch))
+    throw new Error('A Conventional title and task branch are required.');
+  const heading = match[2] ? 'Changed' : commitCategory[match[1]];
+  if (!heading) throw new Error('This change type does not produce a user-facing changelog entry.');
+  const cleaned = match[3].replace(/[.!]$/, '');
+  const ref = Number.isInteger(Number(issue)) && Number(issue) > 0 ? ` ([#${issue}](${issueUrl(issue)}))` : '';
+  return { heading, line: `- ${cleaned}${ref} <!-- task:${branch} -->` };
+}
+
+function update(source, title, branch, issue) {
+  const { heading, line } = entry(title, branch, issue);
   if (!source.includes('## Unreleased\n')) throw new Error('Missing Unreleased section.');
   const marker = `<!-- task:${branch} -->`;
   const occurrences = source.split(marker).length - 1;
@@ -37,18 +92,16 @@ function update(source, title, branch) {
   else section = `${section.trimEnd()}\n\n${header}\n${line}\n`;
   return `${prefix}${section}${suffix}`;
 }
-function validate(base, head, title, branch) {
+
+function validate(base, head, title, branch, issue) {
   try {
-    if (!base.includes('## Unreleased\n')) {
-      const { line } = entry(title, branch);
-      const section = head.split('## Unreleased\n')[1]?.split(/\n## /)[0];
-      if (section?.split(line).length !== 2)
-        return { allowed: false, reason: 'Initial backfill must include exactly one matching task entry.' };
-      return { allowed: true };
-    }
-    const expected = update(base, title, branch);
+    const expected = update(base, title, branch, issue);
     if (expected === base) return { allowed: false, reason: 'Task changelog entry already exists in base.' };
-    if (head !== expected && !isReleaseCandidateMigration(base, head, expected))
+    if (
+      head !== expected &&
+      !isCanonicalHistoryMigration(base, head, expected, branch) &&
+      !isReleaseCandidateMigration(base, head, expected)
+    )
       return {
         allowed: false,
         reason: 'Changelog must contain the generated task entry and preserve existing content.',
@@ -58,6 +111,17 @@ function validate(base, head, title, branch) {
     return { allowed: false, reason: error.message };
   }
 }
+
+function isCanonicalHistoryMigration(base, head, expected, branch) {
+  if (!/^# Changelog\n/m.test(base) || !/^# Changelog\n\nAll notable changes/m.test(head)) return false;
+  const legacyVersions = [...base.matchAll(/^## \[(\d+\.\d+\.\d+)\]\(/gm)].map((match) => match[1]);
+  const parsed = parseChangelog(head);
+  if (legacyVersions.some((version) => !parsed.releases.some((release) => release.version === version))) return false;
+  const expectedTask = expected.split('\n').find((line) => line.includes(`<!-- task:${branch} -->`));
+  if (!expectedTask || !head.includes(expectedTask)) return false;
+  return true;
+}
+
 function isReleaseCandidateMigration(base, head, expected) {
   if (
     !base.includes('## Proposed 0.0.1 baseline (not released)') ||
@@ -72,100 +136,111 @@ function isReleaseCandidateMigration(base, head, expected) {
     );
   return migrated.trimEnd() === head.trimEnd();
 }
+
 function validateRelease(source, version) {
-  if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version))
-    return { allowed: false, reason: 'Invalid release version.' };
-  const escaped = version.replaceAll('.', '\\.');
-  if (!new RegExp(`^#{2,3} (?:\\[)?v?${escaped}(?:\\]|[ \n]|$)`, 'm').test(source))
-    return { allowed: false, reason: `Missing release changelog section for ${version}.` };
+  const { releases } = parseChangelog(source);
+  const release = releases.find((item) => item.version === version);
+  if (!release) return { allowed: false, reason: `Missing release changelog section for ${version}.` };
+  if (!release.title?.trim()) return { allowed: false, reason: `Release ${version} is missing its title.` };
+  if (!release.categories.length) return { allowed: false, reason: `Release ${version} has no categorized changes.` };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(release.date) || Number.isNaN(Date.parse(`${release.date}T00:00:00Z`)))
+    return { allowed: false, reason: `Release ${version} has an invalid IST date.` };
+  if (
+    !new RegExp(
+      `^\\[${version.replaceAll('.', '\\.')}\\]: https://github\\.com/jayantrohila57/portcn/(?:compare|releases/tag)/`,
+      'm',
+    ).test(source)
+  )
+    return { allowed: false, reason: `Release ${version} is missing its version link.` };
+  const linkDefinition = source.split('\n').find((line) => line.startsWith(`[${version}]: `));
+  if (linkDefinition.includes('/compare/')) {
+    const match = /\/compare\/v(\d+\.\d+\.\d+)\.\.\.v(\d+\.\d+\.\d+)$/.exec(linkDefinition);
+    const previousRelease = releases[releases.findIndex((item) => item.version === version) + 1];
+    if (!match || match[2] !== version || previousRelease?.version !== match[1])
+      return { allowed: false, reason: `Release ${version} has an invalid version comparison link.` };
+  }
   return { allowed: true };
 }
+
 function reconcileRelease(source, version) {
-  if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) throw new Error('Invalid release version.');
-  const escaped = version.replaceAll('.', '\\.');
-  const header = new RegExp(`^#{2,3} (?:\\[)?v?${escaped}(?:\\]|[ \n]|$)`, 'm').exec(source);
-  if (!header) throw new Error('Matching Release Please version section is missing.');
-  const releaseStart = header.index;
-  const nextHeader = source.slice(releaseStart + 1).search(/^## /m);
-  const releaseEnd = nextHeader < 0 ? source.length : releaseStart + 1 + nextHeader;
-  const releaseLines = source
-    .slice(releaseStart, releaseEnd)
-    .split('\n')
-    .map((line) =>
-      line
-        .trim()
-        .toLowerCase()
-        .replace(/^\*\s+/, '- ')
-        .replace(/^(-\s+)\*\*[^*]+:\*\*\s+/, '$1')
-        .replace(/\s*\(?\[[^\]]+\]\([^)]+\)\)?/g, ''),
-    );
-  const unreleasedStart = source.indexOf('## Unreleased\n');
-  const unreleasedEnd = unreleasedStart < 0 ? -1 : source.indexOf('\n## ', unreleasedStart + 1);
-  const historicalSource =
-    unreleasedStart < 0
-      ? source
-      : `${source.slice(0, unreleasedStart)}${source.slice(unreleasedEnd < 0 ? source.length : unreleasedEnd)}`;
-  const historicalLines = historicalSource.split('\n').map((line) =>
-    line
-      .trim()
-      .toLowerCase()
-      .replace(/^\*\s+/, '- ')
-      .replace(/^-\s+\*\*[^*]+:\*\*\s+/, '- ')
-      .replace(/\s*\(?\[[^\]]+\]\([^)]+\)\)?/g, ''),
+  if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Invalid release version.');
+  const headings = [...source.matchAll(/^## (.+)$/gm)];
+  const releaseIndex = headings.findIndex((match) =>
+    new RegExp(`^\\[${version.replaceAll('.', '\\.')}\\] - \\d{4}-\\d{2}-\\d{2}$`).test(match[1].trim()),
   );
-  const start = source.indexOf('## Unreleased\n');
-  if (start < 0) return source;
-  if (version === '0.1.0' && source.includes('## Proposed 0.0.1 release candidate (not released)')) {
-    const changelogStart = source.indexOf('\n## Changelog', start);
-    return changelogStart < 0
-      ? `${source.slice(0, start)}## Unreleased\n`
-      : `${source.slice(0, changelogStart)}\n## Unreleased\n`;
-  }
-  const end = source.indexOf('\n## ', start + 1);
-  const actualEnd = end < 0 ? source.length : end;
-  const section = source.slice(start, actualEnd);
-  const sectionLines = section.split('\n').slice(1);
-  if (sectionLines.some((line) => line.trim() && !/^### /.test(line) && !/^- /.test(line))) {
-    throw new Error('Unreleased section contains content that cannot be safely reconciled.');
-  }
-  const lines = sectionLines.filter((line) => /^- /.test(line));
-  const legacyUnreleasedMarkers = new Set([
-    'feat/npm-trusted-publishing',
-    'fix/npm-publish-workflow',
-    'fix/manual-release-publication',
-    'fix/github-packages-auth',
-    'fix/release-package-dispatch',
-    'fix/release-changelog-verification',
-    'fix/release-reconciliation-order',
-    'fix/release-workflow-validation',
-    'fix/release-changelog-links',
-    'fix/reconcile-initial-release-history',
-    'fix/release-candidate-baseline',
-    'fix/allow-main-sync-history',
-    'fix/skip-commitlint-on-sync',
-    'fix/skip-sync-commit-validation',
-    'fix/recognize-release-bot-identity',
-    'fix/ignore-generated-changelog-format',
-    'fix/version-aware-cli-tests',
-    'chore/automate-development-lifecycle',
-  ]);
-  for (const line of lines) {
-    const marker = /<!-- task:([^>]+) -->/.exec(line)?.[1];
-    const text = line
-      .replace(/\s*<!-- task:[^>]+ -->/g, '')
-      .replace(/\s*\(?\[#\d+\]\([^)]+\)\)?/g, '')
-      .slice(2)
-      .trim()
-      .toLowerCase();
-    if (!marker && (line.includes('](') || line.includes('[#'))) continue;
-    if (version === '0.1.1' && legacyUnreleasedMarkers.has(marker)) continue;
-    if (
-      !text ||
-      (!releaseLines.some((line) => line === `- ${text}` || line === `* ${text}`) &&
-        !historicalLines.some((line) => line === `- ${text}` || line === `* ${text}`))
+  if (releaseIndex < 0) throw new Error('Matching release section is missing.');
+  const release = parseChangelog(source).releases.find((item) => item.version === version);
+  if (!release) throw new Error('Matching release section is malformed.');
+  const unreleasedIndex = headings.findIndex((match) => match[1].trim() === 'Unreleased');
+  if (unreleasedIndex < 0) throw new Error('Unreleased section is missing.');
+  const unreleasedStart = headings[unreleasedIndex].index;
+  const unreleasedEnd = headings[unreleasedIndex + 1]?.index ?? source.length;
+  const section = source.slice(unreleasedStart, unreleasedEnd);
+  const contentLines = section
+    .split('\n')
+    .slice(1)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (
+    contentLines.some(
+      (line) => !/^### (Added|Changed|Fixed|Deprecated|Removed|Security)$/.test(line) && !/^- /.test(line),
     )
-      throw new Error(`Release notes do not contain pending entry: ${text}`);
+  )
+    throw new Error('Unreleased section contains content that cannot be safely reconciled.');
+  const canonicalItems = new Set(
+    release.categories.flatMap(({ entries }) => entries.map((item) => normalizeItem(item))),
+  );
+  const oldItems = parseChangelog(source)
+    .releases.filter((item) => item.version !== version)
+    .flatMap((item) => item.categories.flatMap(({ entries }) => entries.map(normalizeItem)));
+  for (const raw of contentLines.filter((line) => line.startsWith('- '))) {
+    const normalized = normalizeItem(raw);
+    if (!canonicalItems.has(normalized) && !oldItems.includes(normalized))
+      throw new Error(`Release notes do not contain pending entry: ${raw.slice(2)}`);
   }
-  return `${source.slice(0, start)}## Unreleased\n${source.slice(actualEnd)}`;
+  if (version === '0.1.0' && source.includes('## Proposed 0.0.1 release candidate (not released)')) {
+    const end = headings[releaseIndex + 1]?.index ?? source.length;
+    const from = headings.findIndex((match) => match[1].trim() === 'Unreleased');
+    const after = headings.findIndex(
+      (match, index) => index > from && match[1].trim() === 'Proposed 0.0.1 release candidate (not released)',
+    );
+    if (after >= 0)
+      return `${source.slice(0, headings[after].index).replace(/\n+$/, '\n')}${source.slice(headings[after].index).replace(/^## Proposed 0\.0\.1 release candidate \(not released\)[\s\S]*?(?=^## |\s*$)/m, '')}`;
+    return `${source.slice(0, end)}${source.slice(end)}`;
+  }
+  return `${source.slice(0, unreleasedStart)}## Unreleased\n\n${source.slice(unreleasedEnd).replace(/^\n*/, '')}`;
 }
-module.exports = { entry, update, validate, validateRelease, reconcileRelease };
+
+function releaseBlock(source, version) {
+  if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Invalid release version.');
+  const headings = [...source.matchAll(/^## (.+)$/gm)];
+  const index = headings.findIndex((match) =>
+    new RegExp(`^\\[${version.replaceAll('.', '\\.')}\\] - \\d{4}-\\d{2}-\\d{2}$`).test(match[1].trim()),
+  );
+  if (index < 0) throw new Error(`Release ${version} is missing from CHANGELOG.md.`);
+  const start = headings[index].index;
+  const end = headings[index + 1]?.index ?? source.length;
+  return source.slice(start, end).trim();
+}
+
+function normalizeItem(line) {
+  return line
+    .replace(/<!-- task:[^>]+ -->/g, '')
+    .replace(/\s*\(\[#(\d+)\]\([^)]+\)\)/g, ' #$1')
+    .replace(/^[-*]\s+/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+module.exports = {
+  categories,
+  parseChangelog,
+  parseCategories,
+  entry,
+  update,
+  validate,
+  validateRelease,
+  reconcileRelease,
+  releaseBlock,
+};

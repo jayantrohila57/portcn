@@ -65,7 +65,13 @@ export function createLifecycle(run) {
     run('git', ['fetch', 'origin', 'dev']);
     git('merge-base', '--is-ancestor', 'origin/dev', 'HEAD');
     if (!git('log', '--format=%H', 'origin/dev..HEAD')) throw new Error('No task commits to submit.');
-    const check = validate(git('show', 'origin/dev:CHANGELOG.md'), git('show', 'HEAD:CHANGELOG.md'), title, branch);
+    const check = validate(
+      git('show', 'origin/dev:CHANGELOG.md'),
+      git('show', 'HEAD:CHANGELOG.md'),
+      title,
+      branch,
+      process.env.PORTCN_TASK_ISSUE,
+    );
     if (!check.allowed) throw new Error(check.reason);
     let pr = getPr(branch);
     if (pr?.state === 'MERGED') throw new Error('Branch already merged; run finish.');
@@ -94,10 +100,10 @@ export function createLifecycle(run) {
     run('gh', ['pr', 'merge', String(pr.number), '--auto', '--squash']);
     return 'Auto-merge requested; run finish after GitHub reports the PR merged.';
   }
-  function changelog(title) {
+  function changelog(title, issue) {
     task();
     if (!title) throw new Error('Usage: changelog <conventional-title>');
-    return run('node', ['scripts/changelog.mjs', title]);
+    return run('node', ['scripts/changelog.mjs', title, ...(issue ? [issue] : [])]);
   }
   function finish(retryBranch) {
     clean();

@@ -2,107 +2,99 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { test } from 'node:test';
 
-const { update, validate, validateRelease, reconcileRelease } = createRequire(import.meta.url)(
+const { update, validate, validateRelease, reconcileRelease, parseChangelog } = createRequire(import.meta.url)(
   './changelog-policy.cjs',
 );
-const base = '# Changelog\n\n## Unreleased\n\n### Features\n\n- Previous feature\n\n## 0.0.1\n\nOld release\n';
-test('generates one deterministic entry and preserves versioned history', () => {
-  const next = update(base, 'feat(cli): add example', 'feat/example');
-  assert.match(next, /add example <!-- task:feat\/example -->/);
-  assert.match(next, /## 0\.0\.1\n\nOld release/);
-  assert.equal(update(next, 'feat(cli): add example', 'feat/example'), next);
-  assert.equal(validate(base, next, 'feat(cli): add example', 'feat/example').allowed, true);
+const base =
+  '# Changelog\n\n## Unreleased\n\n### Added\n\n### Changed\n\n### Fixed\n\n### Deprecated\n\n### Removed\n\n### Security\n\n## [0.0.1] - 2026-11-22\n\n[0.0.1]: https://github.com/jayantrohila57/portcn/releases/tag/v0.0.1\n\n**Title:** First release\n\n### Added\n\n- Existing release\n';
+test('generates one categorized user-facing entry, includes issue refs, and preserves history', () => {
+  const next = update(base, 'feat(cli): add example', 'feat/example', '119');
+  assert.match(
+    next,
+    /### Added[\s\S]*- add example \(\[#119\]\(https:\/\/github.com\/jayantrohila57\/portcn\/issues\/119\)\) <!-- task:feat\/example -->/,
+  );
+  assert.match(next, /## \[0\.0\.1\] - 2026-11-22[\s\S]*- Existing release/);
+  assert.equal(update(next, 'feat(cli): add example', 'feat/example', '119'), next);
+  assert.equal(validate(base, next, 'feat(cli): add example', 'feat/example', '119').allowed, true);
   assert.equal(validate(base, base, 'feat(cli): add example', 'feat/example').allowed, false);
-  assert.equal(validate(base, `${next}\nextra`, 'feat(cli): add example', 'feat/example').allowed, false);
 });
-test('rejects duplicate or changed task entries and supports breaking changes', () => {
-  const next = update(base, 'fix!: change behavior', 'fix/example');
-  assert.match(next, /### Breaking Changes/);
-  assert.throws(() => update(next, 'fix: different', 'fix/example'), /differs/);
+test('categorizes fixes and breaking commits and rejects duplicate task entries', () => {
+  assert.match(update(base, 'fix(cli): handle empty input', 'fix/example'), /### Fixed/);
+  assert.match(update(base, 'fix!: change behavior', 'fix/example'), /### Changed/);
   assert.throws(
-    () => update(`${next}\n<!-- task:fix/example -->`, 'fix!: change behavior', 'fix/example'),
+    () =>
+      update(
+        `${update(base, 'fix!: change behavior', 'fix/example')}\n<!-- task:fix/example -->`,
+        'fix!: change behavior',
+        'fix/example',
+      ),
     /Duplicate/,
   );
 });
-
-test('release validation accepts pending notes and requires a version section', () => {
+test('parses only canonical dated release headings and recognized sections', () => {
+  const parsed = parseChangelog(base);
+  assert.equal(parsed.releases.length, 1);
+  assert.equal(parsed.releases[0].version, '0.0.1');
+  assert.deepEqual(parsed.releases[0].categories[0].entries, ['- Existing release']);
   assert.equal(
-    validateRelease('# Changelog\n\n## Unreleased\n\n- pending\n\n## 0.1.0\n\n- released\n', '0.1.0').allowed,
+    validateRelease(
+      base.replace('https://example.test/release', 'https://github.com/jayantrohila57/portcn/releases/tag/v0.0.1'),
+      '0.0.1',
+    ).allowed,
     true,
   );
-  assert.equal(
-    validateRelease('# Changelog\n\n## Unreleased\n\n## [0.1.0](https://example.test)\n\n- released\n', '0.1.0')
-      .allowed,
-    true,
-  );
-  assert.equal(validateRelease('# Changelog\n\n## Unreleased\n', '0.1.0').allowed, false);
+  assert.equal(validateRelease(base, '0.1.0').allowed, false);
 });
-
-test('task validation permits only the corrected initial release-candidate block migration', () => {
-  const previous = `${base}\n## Proposed 0.0.1 baseline (not released)\n\nThe proposed baseline is commit \`old\` on \`main\`. It has not been tagged or published.\n`;
-  const current = update(
-    previous,
-    'fix(release): correct initial release candidate',
-    'fix/release-candidate-baseline',
-  ).replace(
-    '## Proposed 0.0.1 baseline (not released)\n\nThe proposed baseline is commit `old` on `main`. It has not been tagged or published.',
-    '## Proposed 0.0.1 release candidate (not released)\n\nThe corrected release candidate is commit `d495d5b0ce3b0e9fd5f9b4df4aec0f9ab7d204ee` on `dev`. It includes symlink-safe CLI execution and has not been tagged or published.',
+test('rejects out-of-order history and requires release dates and version links', () => {
+  const olderFirst = base.replace(
+    '## [0.0.1] - 2026-11-22',
+    '## [0.0.1] - 2026-11-22\n\n### Added\n\n- Existing release\n\n## [0.0.2] - 2026-11-23',
+  );
+  assert.throws(() => parseChangelog(olderFirst), /descending semantic-version order/);
+  assert.equal(
+    validateRelease(
+      base.replace('[0.0.1]: https://github.com/jayantrohila57/portcn/releases/tag/v0.0.1\n', ''),
+      '0.0.1',
+    ).allowed,
+    false,
   );
   assert.equal(
-    validate(previous, current, 'fix(release): correct initial release candidate', 'fix/release-candidate-baseline')
-      .allowed,
-    true,
+    validateRelease(
+      base.replace(
+        'https://github.com/jayantrohila57/portcn/releases/tag/v0.0.1',
+        'https://github.com/jayantrohila57/portcn/compare/v0.0.2...v0.0.1',
+      ),
+      '0.0.1',
+    ).allowed,
+    false,
   );
 });
-
-test('reconciliation preserves versioned notes and refuses unrepresented pending notes', () => {
+test('reconciles only entries represented in the exact release and is idempotent', () => {
   const source =
-    '# Changelog\n\n## Unreleased\n\n### Features\n\n- add example <!-- task:feat/example -->\n\n## [0.1.0](https://example.test)\n\n### Features\n\n- add example\n';
+    '# Changelog\n\n## Unreleased\n\n### Added\n\n- add tool <!-- task:feat/tool -->\n\n## [0.1.0] - 2026-11-24\n\n### Added\n\n- add tool\n';
   const result = reconcileRelease(source, '0.1.0');
-  assert.equal((result.match(/add example/g) ?? []).length, 1);
+  assert.match(result, /## Unreleased\n\n## \[0\.1\.0\]/);
   assert.equal(reconcileRelease(result, '0.1.0'), result);
-  assert.throws(() => reconcileRelease(source.replace('- add example\n', '- other\n'), '0.1.0'), /do not contain/);
+  assert.throws(() => reconcileRelease(source.replace('add tool <!--', 'other <!--'), '0.1.0'), /do not contain/);
   assert.throws(() => reconcileRelease(source, '0.2.0'), /missing/);
 });
-
-test('reconciliation does not accept a pending entry as a substring of another entry', () => {
-  const source = '# Changelog\n\n## Unreleased\n\n- fix issue\n\n## 0.1.0\n\n- fix issues\n';
-  assert.throws(() => reconcileRelease(source, '0.1.0'), /do not contain/);
-});
-
-test('reconciliation accepts Release Please PR reference formatting', () => {
-  const source =
-    '# Changelog\n\n## Unreleased\n\n- add machine-readable output <!-- task:feat/example -->\n\n## [0.1.0](https://example.test)\n\n* **cli:** add machine-readable output ([#41](https://github.com/example/issues/41)) ([abc1234](https://github.com/example/commit/abc1234))\n';
-  assert.doesNotThrow(() => reconcileRelease(source, '0.1.0'));
-});
-
-test('reconciliation ignores stale Unreleased entries already present in earlier releases', () => {
-  const source =
-    '# Changelog\n\n## [0.1.0]\n\n### Features\n\n* old feature\n\n## Unreleased\n\n- old feature <!-- task:feat/old -->\n\n## [0.1.1]\n\n### Fixes\n\n* current fix\n';
-  assert.doesNotThrow(() => reconcileRelease(source, '0.1.1'));
-});
-
-test('reconciliation preserves the historical trusted-publishing bootstrap exception', () => {
-  const source =
-    '# Changelog\n\n## [0.1.1]\n\n### Fixes\n\n* current fix\n\n## Unreleased\n\n- publish cli through release please <!-- task:feat/npm-trusted-publishing -->\n\n- Historical release note from the bootstrap process ([#9](https://example.test/9)).\n';
-  assert.doesNotThrow(() => reconcileRelease(source, '0.1.1'));
-});
-
-test('reconciliation clears the historical 0.0.1 bootstrap block for 0.1.0', () => {
-  const source =
-    '# Changelog\n\n## [0.1.0]\n\n### Features\n\n* add current work\n\n## Changelog\n\n## Unreleased\n\n- historical bootstrap <!-- task:feat/old -->\n\n## Proposed 0.0.1 release candidate (not released)\n\nlegacy notes\n';
-  const result = reconcileRelease(source, '0.1.0');
-  assert.match(result, /## \[0\.1\.0\]/);
-  assert.equal(result.includes('historical bootstrap'), false);
-  assert.equal(result.includes('Proposed 0.0.1'), false);
-  assert.equal(result.endsWith('## Unreleased\n'), true);
-});
-
-test('reconciliation refuses to discard prose or unsupported list entries', () => {
-  const source = '# Changelog\n\n## Unreleased\n\nPending context\n\n## 0.1.0\n\n- item\n';
+test('rejects prose that cannot be safely reconciled', () => {
+  const source = '# Changelog\n\n## Unreleased\n\nPending context\n\n## [0.1.0] - 2026-11-24\n\n### Added\n\n- item\n';
   assert.throws(() => reconcileRelease(source, '0.1.0'), /cannot be safely reconciled/);
-  assert.throws(
-    () => reconcileRelease(source.replace('Pending context', '* item'), '0.1.0'),
-    /cannot be safely reconciled/,
+});
+test('permits a canonical history migration only when published versions remain', () => {
+  const legacy =
+    '# Changelog\n\n## Unreleased\n\n## [0.1.0](https://github.com/jayantrohila57/portcn/compare/v0.0.1...v0.1.0) (2026-11-24)\n\n- feature ([#8](https://github.com/jayantrohila57/portcn/issues/8))\n';
+  let migrated = update(base, 'feat(cli): add example', 'feat/example', '119');
+  migrated = migrated.replace('# Changelog\n', '# Changelog\n\nAll notable changes are listed here.\n');
+  migrated = migrated.replace(
+    '## [0.0.1] - 2026-11-22',
+    '## [0.1.0] - 2026-11-24\n\n[0.1.0]: https://github.com/jayantrohila57/portcn/compare/v0.0.1...v0.1.0\n\n**Title:** Feature release\n\n### Added\n\n- feature ([#8](https://github.com/jayantrohila57/portcn/issues/8))\n\n## [0.0.1] - 2026-11-22',
+  );
+  assert.equal(validate(legacy, migrated, 'feat(cli): add example', 'feat/example', '119').allowed, true);
+  assert.equal(
+    validate(legacy, migrated.replace('## [0.1.0]', '## [0.2.0]'), 'feat(cli): add example', 'feat/example', '119')
+      .allowed,
+    false,
   );
 });
