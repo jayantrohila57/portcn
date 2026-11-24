@@ -28,6 +28,8 @@
 
 ### Fixes
 
+- allow synchronized release history <!-- task:fix/allow-main-sync-history -->
+
 - make version tests release aware <!-- task:fix/version-aware-cli-tests -->
 
 - reconcile Release Please references <!-- task:fix/release-changelog-links -->
