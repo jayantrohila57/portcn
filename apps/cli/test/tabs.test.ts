@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ListeningPort } from '../src/commands/list.js';
-import { filterPorts, formatTabView, stableColumnWidths, tabForKey } from '../src/commands/tabs.js';
+import { filterPorts, formatTabView, pageForKey, stableColumnWidths, tabForKey } from '../src/commands/tabs.js';
 
 const ports: ListeningPort[] = [
   { protocol: 'tcp', state: 'LISTEN', address: '127.0.0.1', port: 3000, pid: 10, processName: 'node' },
@@ -14,6 +14,8 @@ describe('interactive port tabs', () => {
     expect(tabForKey('4')).toBe('process');
     expect(tabForKey('\t', 'tcp')).toBe('udp');
     expect(tabForKey('q')).toBe('quit');
+    expect(pageForKey('n')).toBe('next');
+    expect(pageForKey('p')).toBe('previous');
   });
 
   it('filters unnecessary ports by protocol and process visibility', () => {
@@ -21,10 +23,18 @@ describe('interactive port tabs', () => {
     expect(filterPorts(ports, 'udp')).toHaveLength(1);
     expect(filterPorts(ports, 'process')).toHaveLength(1);
     expect(formatTabView(ports, 'tcp')).toContain('PORTCN  LISTENING PORTS');
-    expect(formatTabView(ports, 'tcp')).toContain('Navigation: 1-4 switch tabs');
+    expect(formatTabView(ports, 'tcp')).toContain('Page 1/1');
     expect(formatTabView(ports, 'tcp')).toContain('3000');
     expect(formatTabView(ports, 'tcp')).not.toContain('5353');
     expect(formatTabView(ports, 'tcp').endsWith(`+${'-'.repeat(98)}+`)).toBe(true);
+  });
+
+  it('paginates rows to the available terminal height', () => {
+    const manyPorts = Array.from({ length: 20 }, (_, index) => ({ ...ports[0], port: 3000 + index }));
+    expect(formatTabView(manyPorts, 'all', 0, 15)).toContain('Page 1/5');
+    expect(formatTabView(manyPorts, 'all', 4, 15)).toContain('Page 5/5');
+    expect(formatTabView(manyPorts, 'all', 0, 15)).toContain('3000');
+    expect(formatTabView(manyPorts, 'all', 0, 15)).not.toContain('3005');
   });
 
   it('keeps column widths stable and fills the requested terminal width', () => {
