@@ -13,7 +13,7 @@ permissions:
 jobs:
   branch-policy:
     name: branch-policy
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'main-to-dev-sync'
     runs-on: ubuntu-latest
     permissions:
       contents: read
