@@ -75,6 +75,8 @@
 
 ### Fixes
 
+- build core before GitHub package <!-- task:fix/github-packages-build-order -->
+
 - recognize synchronization merge commits <!-- task:fix/promotion-merge-policy-v2 -->
 
 - permit synchronized merge commits in promotions <!-- task:fix/promotion-merge-policy -->
