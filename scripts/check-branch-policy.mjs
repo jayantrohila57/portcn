@@ -18,7 +18,7 @@ function pr({ base, head, title = 'fix(core): correct port validation', actor = 
 }
 
 function commit(message, parents = [{}]) {
-  return [{ commit: { message, parents } }];
+  return [{ commit: { message }, parents }];
 }
 
 const cases = [

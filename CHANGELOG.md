@@ -75,6 +75,8 @@
 
 ### Fixes
 
+- recognize synchronization merge commits <!-- task:fix/promotion-merge-policy-v2 -->
+
 - permit synchronized merge commits in promotions <!-- task:fix/promotion-merge-policy -->
 
 - explain synchronization before promotion <!-- task:fix/lifecycle-sync-guard -->

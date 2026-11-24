@@ -21,7 +21,7 @@ function evaluateBranchPolicy({ eventName, pullRequest, commits = [] }) {
   const titleIsConventional = conventionalHeader.test(pullRequest.title ?? '');
   const commitHeaders = commits.map(({ commit }) => headerOf(commit?.message));
   const authoredCommitHeaders = commits
-    .filter(({ commit }) => (commit?.parents?.length ?? 1) < 2)
+    .filter(({ parents }) => (parents?.length ?? 1) < 2)
     .map(({ commit }) => headerOf(commit?.message));
   const commitsAreConventional =
     head === 'main-to-dev-sync' ||
