@@ -6,13 +6,16 @@ An open-source, developer-first CLI foundation for local development. portcn is 
 
 ## Development status
 
-Early development. The CLI package and executable foundation are in place; port discovery and service management are not implemented yet.
+Early development. The `dev` branch includes read-only Linux `portcn list` and `portcn inspect <port>` commands for listening TCP/UDP ports. Process management is not implemented yet. The published `v0.0.1` package contains only the CLI foundation.
 
 ## Implemented
 
 - Fumadocs documentation site with navigation, search, Markdown negotiation, LLM-friendly exports, and generated Open Graph images.
 - pnpm workspace and Turborepo task orchestration.
 - `portcn` CLI package with branded default/help/version output and a Node.js executable.
+- Read-only `portcn list` on Linux (development branch): listening TCP/UDP ports, local addresses, and process details when visible; requires `ss` from `iproute2`.
+- Read-only `portcn inspect <port>` on Linux (development branch): protocol, state, local address, PID, process name, and best-effort `/proc` details for all visible listeners on a validated port.
+- Human-readable list and inspect output uses bordered ASCII tables with colors in interactive terminals and plain text when piped.
 - Private `@portcn/core` package for future shared functionality.
 - GitHub Actions validation and Release Please version/changelog workflow for `portcn`.
 
@@ -33,6 +36,9 @@ pnpm install --frozen-lockfile
 pnpm build
 node apps/cli/dist/index.js --help
 pnpm test
+node apps/cli/dist/index.js list  # Linux, requires iproute2
+node apps/cli/dist/index.js inspect 3000  # Linux, read-only
+node apps/cli/dist/index.js list --interactive  # header, tabs, paginated table, and footer navigation
 ```
 
 Optional Docker Compose commands build and run the packaged CLI image. For example, `pnpm docker:cli -- --version` rebuilds the current artifact before running it. Unit tests and package checks run with the regular pnpm scripts.
@@ -41,7 +47,7 @@ Containers use their normal PID, network, and mount namespaces. The CLI can init
 
 Before each commit, Git hooks run staged Biome checks, Conventional Commit validation, and the full workspace validation suite with pnpm on the host. Pushes do not run local checks; CI runs its checks directly on GitHub Actions without Docker. For local Fumadocs development, run `pnpm dev`. See the [Portcn documentation](apps/docs/content/docs/index.mdx) for setup and reference, and [CONTRIBUTING.md](CONTRIBUTING.md) for the contributor policy.
 
-Running `pnpm docker:cli` without arguments currently displays help and foundation status. Port discovery and service management are not implemented yet. Use Conventional Commits when Release Please should calculate a version bump.
+Running `pnpm docker:cli` without arguments displays help. Port listing is read-only and sees only sockets within the current process/network namespace; running the CLI in Docker does not grant host inspection. Service management is not implemented. Use Conventional Commits when Release Please should calculate a version bump.
 
 To work on the documentation site:
 
@@ -87,7 +93,7 @@ The searchable [project documentation](apps/docs/content/docs/index.mdx) in `app
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for local development, checks, Conventional Commit messages, and pull request guidance.
 
-Release Please calculates SemVer from Conventional Commits and opens a release pull request. Before `1.0.0`, features and breaking changes advance the minor version, and fixes advance the patch version. Merging the release pull request updates the CLI and private root versions plus `CHANGELOG.md`, and creates a `v`-prefixed GitHub Release. npm publishing is not configured.
+Release Please calculates SemVer from Conventional Commits and opens a release pull request. Before `1.0.0`, features and breaking changes advance the minor version, and fixes advance the patch version. Merging the release pull request updates the CLI and private root versions plus `CHANGELOG.md`, and creates a `v`-prefixed GitHub Release. The release workflow publishes the unscoped `portcn` package to npmjs.com with Trusted Publishing; the published release workflow also publishes the scoped `@jayantrohila57/portcn` package to GitHub Packages. Both workflows verify the release version and skip an already-published matching version.
 
 ## License
 

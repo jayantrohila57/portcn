@@ -4,6 +4,22 @@
 
 ### Features
 
+- add machine-readable output <!-- task:feat/cli-json-output -->
+
+- add dashboard refresh and palette <!-- task:feat/dashboard-refresh-palette -->
+
+- add dashboard interaction controls <!-- task:feat/dashboard-interaction-controls -->
+
+- add terminal dashboard foundation <!-- task:feat/terminal-dashboard-foundation -->
+
+- add interactive port tabs <!-- task:feat/port-tabs -->
+
+- add bordered colored output <!-- task:feat/pretty-cli-output -->
+
+- inspect listeners by port <!-- task:feat/port-inspect -->
+
+- list listening tcp and udp ports <!-- task:feat/port-list -->
+
 - publish cli to github packages <!-- task:feat/github-packages-publishing -->
 
 - publish cli through release please <!-- task:feat/npm-trusted-publishing -->
@@ -11,6 +27,26 @@
 - Add default CLI output and support invocation through a global symlink. [#9](https://github.com/jayantrohila57/portcn/pull/9)
 
 ### Fixes
+
+- harden dashboard terminal rendering <!-- task:fix/dashboard-terminal-hardening -->
+
+- paginate interactive port tables <!-- task:fix/interactive-pagination -->
+
+- section interactive port layout <!-- task:fix/interactive-sectioned-layout -->
+
+- bound interactive table widths <!-- task:fix/compact-tab-layout -->
+
+- stabilize interactive tab layout <!-- task:fix/stable-tab-layout -->
+
+- gate publication on reconciliation <!-- task:fix/release-reconciliation-order -->
+
+- verify changelog reconciliation <!-- task:fix/release-changelog-verification -->
+
+- validate release workflow shell <!-- task:fix/release-workflow-validation -->
+
+- dispatch GitHub Packages publication <!-- task:fix/release-package-dispatch -->
+
+- allow secure fork contributions <!-- task:fix/allow-fork-contributions -->
 
 - configure github packages authentication <!-- task:fix/github-packages-auth -->
 
@@ -32,6 +68,12 @@
 ### Maintenance
 
 - establish single-checkout task safeguards <!-- task:chore/automate-development-lifecycle -->
+
+### Tests
+
+- cover dashboard terminal sizes <!-- task:test/dashboard-pty-matrix -->
+
+- cover dashboard pseudo terminal <!-- task:test/dashboard-pty-coverage -->
 
 ## Proposed 0.0.1 release candidate (not released)
 

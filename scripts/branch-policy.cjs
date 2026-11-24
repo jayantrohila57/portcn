@@ -17,16 +17,16 @@ function evaluateBranchPolicy({ eventName, pullRequest, commits = [] }) {
   const head = pullRequest.head?.ref;
   const baseRepository = pullRequest.base?.repo?.full_name;
   const headRepository = pullRequest.head?.repo?.full_name;
-  const sameRepository = Boolean(baseRepository && baseRepository === headRepository);
+  const repositoriesPresent = Boolean(baseRepository && headRepository);
   const titleIsConventional = conventionalHeader.test(pullRequest.title ?? '');
   const commitHeaders = commits.map(({ commit }) => headerOf(commit?.message));
   const commitsAreConventional =
     commitHeaders.length > 0 && commitHeaders.every((header) => conventionalHeader.test(header));
 
-  if (!sameRepository) {
+  if (!repositoriesPresent) {
     return {
       allowed: false,
-      reason: `PR head repository ${headRepository ?? '(missing)'} must match base repository ${baseRepository ?? '(missing)'}.`,
+      reason: 'PR base and head repositories are required.',
     };
   }
   if (!titleIsConventional) {
@@ -38,11 +38,17 @@ function evaluateBranchPolicy({ eventName, pullRequest, commits = [] }) {
 
   if (base === 'dev') {
     if (branchPattern.test(head) || head === 'main-to-dev-sync') {
-      return { allowed: true, reason: 'Task or documented synchronization PR to dev.' };
+      return {
+        allowed: true,
+        reason:
+          headRepository === baseRepository
+            ? 'Task or documented synchronization PR to dev.'
+            : 'Verified fork task PR to dev.',
+      };
     }
   }
 
-  if (base === 'main' && head === 'dev') {
+  if (base === 'main' && head === 'dev' && headRepository === baseRepository) {
     return { allowed: true, reason: 'Release promotion PR from dev to main.' };
   }
 

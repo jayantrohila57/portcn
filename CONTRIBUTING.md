@@ -1,6 +1,6 @@
 # Contributing to portcn
 
-Thanks for helping improve portcn. The CLI foundation is in place; port discovery and service management are not implemented yet.
+Thanks for helping improve portcn. The `dev` branch implements a first read-only Linux port listing command; process and service management are not implemented yet.
 
 ## Requirements and setup
 
@@ -32,7 +32,7 @@ For Fumadocs-only work, use `pnpm dev`; the docs app runs at `http://localhost:3
 5. Open the task PR to `dev`, with a summary, affected packages, release-note category, documentation summary listing changed pages (or justified `No documentation change required`), and checks. Use the Conventional PR title as the squash commit title. Routine task pushes and merges into `dev` are authorized after required checks pass. Before committing, run `node scripts/task-lifecycle.mjs changelog "feat(cli): describe the change"` and review the generated entry. After committing and running checks, run `node scripts/task-lifecycle.mjs submit "feat(cli): describe the change" /path/to/pr-body.md`. It pushes, creates or reuses a PR and requests auto-merge; resolve failures without bypassing protection. After the PR merges, run `node scripts/task-lifecycle.mjs finish` on the clean task branch to verify the merge and update local `dev`. It deletes only that verified local branch. Preserve blocked work and report the reason.
 6. Report current branch, status, checks, PR target, and remaining steps.
 
-Ordinary PR branches must belong to this repository. The `main-to-dev-sync` branch targets `dev`. The only PR routes to `main` are a `dev` promotion and a verified Release Please PR created by `github-actions[bot]` from the configured release branch. CI validates actual base/head repositories and branches, Conventional PR titles and commit headers, plus bot identity; titles do not grant a route exception. Branch policy runs on PR events only; pushes to `dev` and `main` still run full validation.
+Task PRs may come from contributor forks, but must use the approved branch pattern, target `dev`, and pass the same Conventional Commit, changelog, documentation, and validation checks. The `main-to-dev-sync` branch targets `dev`. The only PR routes to `main` are a same-repository `dev` promotion and a verified Release Please PR created by `github-actions[bot]` from the configured release branch. CI validates actual base/head repositories and branches, Conventional PR titles and commit headers, plus bot identity; titles do not grant a route exception. Branch policy runs on PR events only; pushes to `dev` and `main` still run full validation.
 
 ## Checks
 

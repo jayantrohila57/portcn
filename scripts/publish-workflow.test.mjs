@@ -9,6 +9,13 @@ test('publishes only after Release Please creates a release', () => {
   assert.match(workflow, /id: release/);
   assert.match(workflow, /if: steps\.release\.outputs\.release_created == 'true'/);
   assert.match(workflow, /ref: \$\{\{ steps\.release\.outputs\.tag_name \}\}/);
+  assert.match(workflow, /actions: write/);
+  assert.match(workflow, /gh workflow run github-packages\.yml --ref main -f tag=/);
+  assert.match(workflow, /Verify changelog reconciliation/);
+  assert.match(workflow, /reconcileRelease/);
+  assert.ok(workflow.indexOf('Verify changelog reconciliation') < workflow.indexOf('Verify and publish CLI package'));
+  const ci = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  assert.match(ci, /reconcileRelease/);
 });
 
 test('GitHub Packages workflow publishes only the scoped CLI from a verified release tag', () => {
