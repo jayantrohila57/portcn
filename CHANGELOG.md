@@ -28,6 +28,8 @@
 
 ### Fixes
 
+- skip commitlint for synchronized history <!-- task:fix/skip-commitlint-on-sync -->
+
 - allow synchronized release history <!-- task:fix/allow-main-sync-history -->
 
 - make version tests release aware <!-- task:fix/version-aware-cli-tests -->
