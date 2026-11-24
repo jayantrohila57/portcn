@@ -97,7 +97,7 @@ export function formatTabView(
   palette = false,
 ): string {
   const labels: Record<PortTab, string> = { all: 'ALL', tcp: 'TCP', udp: 'UDP', process: 'WITH PROCESS' };
-  const width = process.stdout.columns ?? 100;
+  const width = Math.max(40, process.stdout.columns ?? 100);
   const divider = `+${'-'.repeat(Math.max(1, width - 2))}+`;
   const framed = (text: string) => `| ${text.slice(0, Math.max(0, width - 4)).padEnd(Math.max(0, width - 4))} |`;
   const tabs = PORT_TABS.map(
