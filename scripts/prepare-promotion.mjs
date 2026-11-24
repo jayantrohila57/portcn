@@ -5,7 +5,13 @@ export function preparePromotion(run) {
   const git = (...args) => run('git', args);
   const gh = (...args) => run('gh', args);
   git('fetch', 'origin', 'dev', 'main');
-  git('merge-base', '--is-ancestor', 'origin/main', 'origin/dev');
+  try {
+    git('merge-base', '--is-ancestor', 'origin/main', 'origin/dev');
+  } catch {
+    throw new Error(
+      'main and dev have diverged; merge main into dev through the protected main-to-dev-sync PR before preparing promotion.',
+    );
+  }
   const integrated = new Set(git('rev-list', '--first-parent', 'origin/main..origin/dev').split('\n').filter(Boolean));
   const merged = JSON.parse(
     gh(
