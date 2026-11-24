@@ -71,7 +71,7 @@ Branch: `feat/release-management-changelog-whats-new`
 | 9               | Apply approved historical GitHub Release description drafts and verify immutable release metadata                                               | Complete               |       100% |
 | 10              | Prepare docs application and docs for an independent Vercel project; resolve lint and metadata build warnings                                   | Complete               |       100% |
 | 11              | Configure and deploy Vercel project after explicit owner authorization                                                                          | Authorization required |         0% |
-| 12              | Apply approved historical release descriptions; validate deployment preparation and release-path exclusions                                     | Validated, PR pending  |       100% |
+| 12              | Apply approved historical release descriptions; validate deployment preparation and release-path exclusions                                     | Complete (PR #126)     |       100% |
 
 ### Final follow-up verification
 
@@ -79,7 +79,7 @@ Branch: `feat/release-management-changelog-whats-new`
 - Fixed `PORTCN_TASK_ISSUE` and Vercel host variable lint findings by declaring the allowed variables in the shared Biome configuration. `apps/docs/app/layout.tsx` resolves canonical metadata from Vercel's production/deployment host values and uses `http://localhost:3000` for local builds; the Next build emitted no metadataBase warning.
 - Added independent deployment instructions for the docs workspace app. A Vercel project is still not configured; creation, settings, branch tracking, domains, and deployment remain approval-gated. The app retains server routes for search and `/whats-new` year filtering.
 - Expanded and validated Release Please `exclude-paths` for canonical changelog and root maintenance/configuration files. Local release preview remains `0.1.1` → `0.1.1`; no product release or package action was triggered.
-- PR #126 (`fix(docs): set deployment-aware metadata`) contains these changes and closes implementation issue #119 after protected checks pass. PR #121 remains open until a meaningful CLI/core release candidate is ready.
+- PR #126 (`fix(docs): set deployment-aware metadata`) merged to `dev` as `084f0b3` after `branch-policy` and `validate` passed. Issue #119 remains open until its protected `main` integration; PR #121 remains open until a meaningful CLI/core release candidate is ready.
 
 ## Approval gates
 
