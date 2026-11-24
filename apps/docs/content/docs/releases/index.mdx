@@ -54,6 +54,12 @@ tmp="$(mktemp -d)"; npm install --prefix "$tmp" --cache "$tmp/cache" -g "portcn@
 
 GitHub Packages is `@jayantrohila57/portcn` on `https://npm.pkg.github.com`. Its workflow verifies the exact tag commit, stages the same CLI files, skips an exact existing version, and publishes only the scoped package. Verify it with authenticated metadata and a clean install; configure public package visibility in repository settings where supported.
 
-The v0.1.0 GitHub Packages attempt remains unresolved: the workflow reached its release-tag guard and stopped before publication. Do not describe the mirror as published until an approved run records successful workflow, package metadata, and installation. The npm and GitHub Release artifacts are separate.
+The exact-tag GitHub Packages workflows successfully published `@jayantrohila57/portcn@0.0.1` ([run 45021457874](https://github.com/jayantrohila57/portcn/actions/runs/45021457874)), `@jayantrohila57/portcn@0.1.0` ([run 45404125212](https://github.com/jayantrohila57/portcn/actions/runs/45404125212)), and `@jayantrohila57/portcn@0.1.1` ([run 45410185155](https://github.com/jayantrohila57/portcn/actions/runs/45410185155)). Earlier `v0.1.0` attempts failed, but the later successful run recovered the existing version without moving its tag or creating another version. The current audit session cannot query authenticated package metadata because its token lacks `read:packages`; use a token with that scope and a clean install for independent registry verification.
+
+## Documentation site deployment
+
+Release Please excludes `apps/docs`, and the site has its own build, so a docs-only change does not require or create a CLI version. Once a docs hosting project is connected to this repository, documentation changes can be previewed on a task branch and deployed from `main` after the existing protected PR checks pass. Keep both `dev` and `main` rulesets unchanged; production still requires the normal PR into protected `main`.
+
+At the last repository audit, no Vercel project was visible to the connected account, and the repository had no deployment workflow, Vercel configuration, GitHub deployment record, or GitHub environment. Treat independent production deployment as technically compatible with the release model, but not configured or verified for this repository yet. Do not claim a live `/whats-new` deployment until the project linkage and production branch are confirmed.
 
 The public GitHub Release v0.1.0 points to commit `390d6495c98fe829ae9ffcff7fc7e2d4668a9a4b`, and `portcn@0.1.0` is present on npm. v0.0.1 remains immutable. Never overwrite a tag, GitHub Release, or package version.
