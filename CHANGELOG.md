@@ -69,6 +69,10 @@
 
 - establish single-checkout task safeguards <!-- task:chore/automate-development-lifecycle -->
 
+### Tests
+
+- cover dashboard pseudo terminal <!-- task:test/dashboard-pty-coverage -->
+
 ## Proposed 0.0.1 release candidate (not released)
 
 The corrected release candidate is commit `d495d5b0ce3b0e9fd5f9b4df4aec0f9ab7d204ee` on `dev`. It includes symlink-safe CLI execution and has not been tagged or published.
