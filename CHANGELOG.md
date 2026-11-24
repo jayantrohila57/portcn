@@ -4,6 +4,8 @@
 
 ### Features
 
+- add bordered colored output <!-- task:feat/pretty-cli-output -->
+
 - inspect listeners by port <!-- task:feat/port-inspect -->
 
 - list listening tcp and udp ports <!-- task:feat/port-list -->
