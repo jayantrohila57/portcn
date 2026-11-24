@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.1.1](https://github.com/jayantrohila57/portcn/compare/v0.1.0...v0.1.1) (2026-11-24)
+
+
+### Fixes
+
+* **ci:** permit synchronized merge commits in promotions ([#76](https://github.com/jayantrohila57/portcn/issues/76)) ([a5d0819](https://github.com/jayantrohila57/portcn/commit/a5d08197c416f63a68f772bfd3af4fd3c97a12a8))
+* **ci:** recognize synchronization merge commits ([#77](https://github.com/jayantrohila57/portcn/issues/77)) ([615c833](https://github.com/jayantrohila57/portcn/commit/615c8334184c72fc13208a858c29e0299f49ccce))
+* **lifecycle:** explain synchronization before promotion ([#75](https://github.com/jayantrohila57/portcn/issues/75)) ([a72c712](https://github.com/jayantrohila57/portcn/commit/a72c7125e81d6ad6d4600ccfd22bcebee9c78902))
+* **release:** accept lightweight and annotated package tags ([#71](https://github.com/jayantrohila57/portcn/issues/71)) ([b433b3c](https://github.com/jayantrohila57/portcn/commit/b433b3c747de2e3e88ddd6a7ade8006d7ac150aa))
+* **release:** build core before GitHub package ([#79](https://github.com/jayantrohila57/portcn/issues/79)) ([9205ed8](https://github.com/jayantrohila57/portcn/commit/9205ed8224064a3f1a31e71bac35d22e4855d5d7))
+* **release:** preserve legacy package compatibility ([#81](https://github.com/jayantrohila57/portcn/issues/81)) ([5c4c902](https://github.com/jayantrohila57/portcn/commit/5c4c9024a241357d091c140eafd3a9ef4bda4623))
+* **release:** reconcile historical changelog entries ([#85](https://github.com/jayantrohila57/portcn/issues/85)) ([357e6e2](https://github.com/jayantrohila57/portcn/commit/357e6e2e51398a7a85185ae52e416129f17a3738))
+* **release:** reconcile legacy release notes ([#90](https://github.com/jayantrohila57/portcn/issues/90)) ([98fc30e](https://github.com/jayantrohila57/portcn/commit/98fc30e5971b214fb78ca54c9bce175653a702c2))
+* **release:** reconcile notes across release history ([#87](https://github.com/jayantrohila57/portcn/issues/87)) ([2fee0c8](https://github.com/jayantrohila57/portcn/commit/2fee0c8f56321b6a80b685263f03122e054cd244))
+* **release:** support existing tag publication ([bd87eb3](https://github.com/jayantrohila57/portcn/commit/bd87eb3fa13635ebfbd9afe7b00505f67f5731bb))
+* **release:** verify annotated package tags ([9bc3e0e](https://github.com/jayantrohila57/portcn/commit/9bc3e0e486330fba70f15f857cab1ab68f15b524))
+
+
+### Documentation
+
+* document verified release publication procedure ([#70](https://github.com/jayantrohila57/portcn/issues/70)) ([6ca0445](https://github.com/jayantrohila57/portcn/commit/6ca04458ed6f8cead30f9118494da72b828816b1))
+* record verified npm publication ([#72](https://github.com/jayantrohila57/portcn/issues/72)) ([0fd3068](https://github.com/jayantrohila57/portcn/commit/0fd30687e6faff3aa04b9928564a0be2e5de1ef7))
+
 ## [0.1.0](https://github.com/jayantrohila57/portcn/compare/v0.0.1...v0.1.0) (2026-11-24)
 
 
