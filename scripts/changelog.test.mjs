@@ -82,6 +82,12 @@ test('reconciliation ignores stale Unreleased entries already present in earlier
   assert.doesNotThrow(() => reconcileRelease(source, '0.1.1'));
 });
 
+test('reconciliation preserves the historical trusted-publishing bootstrap exception', () => {
+  const source =
+    '# Changelog\n\n## [0.1.1]\n\n### Fixes\n\n* current fix\n\n## Unreleased\n\n- publish cli through release please <!-- task:feat/npm-trusted-publishing -->\n\n- Historical release note from the bootstrap process ([#9](https://example.test/9)).\n';
+  assert.doesNotThrow(() => reconcileRelease(source, '0.1.1'));
+});
+
 test('reconciliation clears the historical 0.0.1 bootstrap block for 0.1.0', () => {
   const source =
     '# Changelog\n\n## [0.1.0]\n\n### Features\n\n* add current work\n\n## Changelog\n\n## Unreleased\n\n- historical bootstrap <!-- task:feat/old -->\n\n## Proposed 0.0.1 release candidate (not released)\n\nlegacy notes\n';
