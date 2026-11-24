@@ -4,6 +4,8 @@
 
 ### Features
 
+- add machine-readable output <!-- task:feat/cli-json-output -->
+
 - add dashboard refresh and palette <!-- task:feat/dashboard-refresh-palette -->
 
 - add dashboard interaction controls <!-- task:feat/dashboard-interaction-controls -->

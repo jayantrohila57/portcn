@@ -78,5 +78,6 @@ describe('read-only Linux port listing', () => {
     const command = new Command().name('portcn');
     registerListCommand(command);
     expect(command.helpInformation()).toContain('list');
+    expect(command.commands[0]?.helpInformation()).toContain('--json');
   });
 });

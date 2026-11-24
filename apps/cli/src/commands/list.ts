@@ -104,10 +104,12 @@ export function registerListCommand(program: Command): void {
     .command('list')
     .description('List listening TCP and UDP ports (Linux)')
     .option('-i, --interactive', 'Switch between filtered port tabs with the keyboard')
-    .action(async (options: { interactive?: boolean }) => {
+    .option('--json', 'Print all listeners as JSON without terminal formatting or pagination')
+    .action(async (options: { interactive?: boolean; json?: boolean }) => {
       try {
         const ports = discoverListeningPorts();
-        if (options.interactive) await runTabbedList(ports, () => discoverListeningPorts());
+        if (options.json) process.stdout.write(`${JSON.stringify(ports)}\n`);
+        else if (options.interactive) await runTabbedList(ports, () => discoverListeningPorts());
         else process.stdout.write(`${formatListeningPorts(ports)}\n`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

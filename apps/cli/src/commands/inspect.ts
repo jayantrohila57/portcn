@@ -71,10 +71,12 @@ export function registerInspectCommand(program: Command): void {
   program
     .command('inspect <port>')
     .description('Inspect listeners on a TCP or UDP port (Linux)')
-    .action((value: string) => {
+    .option('--json', 'Print inspection results as JSON')
+    .action((value: string, options: { json?: boolean }) => {
       try {
         const port = parsePort(value);
-        process.stdout.write(`${formatInspectedPorts(inspectListeningPort(port))}\n`);
+        const results = inspectListeningPort(port);
+        process.stdout.write(`${options.json ? JSON.stringify(results) : formatInspectedPorts(results)}\n`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         process.stderr.write(`portcn: ${message}\n`);

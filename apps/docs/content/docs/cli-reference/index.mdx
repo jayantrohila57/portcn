@@ -14,7 +14,11 @@ For an interactive view, use ``--interactive``. The view is divided into an ASCI
 
 ```sh
 node apps/cli/dist/index.js list --interactive
+node apps/cli/dist/index.js list --json
+node apps/cli/dist/index.js inspect 3000 --json
 ```
+
+The `--json` forms always emit the complete result set without pagination, colors, or screen-control sequences.
 
 ## Root options
 

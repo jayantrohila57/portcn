@@ -59,6 +59,7 @@ describe('port inspect', () => {
   it('registers inspect in Commander help', () => {
     const command = new Command().name('portcn');
     registerInspectCommand(command);
-    expect(command.helpInformation()).toContain('inspect <port>');
+    expect(command.commands[0]?.helpInformation()).toContain('inspect [options] <port>');
+    expect(command.commands[0]?.helpInformation()).toContain('--json');
   });
 });

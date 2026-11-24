@@ -36,7 +36,7 @@ The dashboard is being delivered in focused slices so each terminal behavior rem
 2. **Interaction:** selection, search, sorting, command palette, and process detail panels.
 3. **Resilience:** refresh scheduling, discovery loading/error states, Unicode display widths, responsive column policies, and pseudo-terminal coverage across terminal sizes.
 
-The UI acceptance checklist for each slice is: no layout shift across tabs/pages, no clipped or wrapped table borders, correct page totals and visible ranges, restored cursor/raw mode on exit, graceful behavior for small or non-interactive terminals, and unchanged plain-text/JSON command output.
+The UI acceptance checklist for each slice is: no layout shift across tabs/pages, no clipped or wrapped table borders, correct page totals and visible ranges, restored cursor/raw mode on exit, graceful behavior for small or non-interactive terminals, and unchanged plain-text/JSON command output. `list --json` and `inspect --json` bypass the screen renderer and always return complete machine-readable results.
 
 The current implementation intentionally uses a small in-house renderer over Node's terminal APIs. A framework such as Ink or blessed would add a dependency and a second rendering model before Portcn has a component tree or event abstraction; the existing renderer already supports deterministic output, raw-mode cleanup, and focused Vitest coverage. We will reassess that choice when selection, search, dialogs, and asynchronous refresh require shared stateful components.
 
