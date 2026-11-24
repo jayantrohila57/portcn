@@ -75,6 +75,8 @@
 
 ### Fixes
 
+- permit synchronized merge commits in promotions <!-- task:fix/promotion-merge-policy -->
+
 - explain synchronization before promotion <!-- task:fix/lifecycle-sync-guard -->
 
 - accept lightweight and annotated package tags <!-- task:fix/release-tag-verification -->

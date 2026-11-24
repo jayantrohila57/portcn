@@ -20,9 +20,12 @@ function evaluateBranchPolicy({ eventName, pullRequest, commits = [] }) {
   const repositoriesPresent = Boolean(baseRepository && headRepository);
   const titleIsConventional = conventionalHeader.test(pullRequest.title ?? '');
   const commitHeaders = commits.map(({ commit }) => headerOf(commit?.message));
+  const authoredCommitHeaders = commits
+    .filter(({ commit }) => (commit?.parents?.length ?? 1) < 2)
+    .map(({ commit }) => headerOf(commit?.message));
   const commitsAreConventional =
     head === 'main-to-dev-sync' ||
-    (commitHeaders.length > 0 && commitHeaders.every((header) => conventionalHeader.test(header)));
+    (authoredCommitHeaders.length > 0 && authoredCommitHeaders.every((header) => conventionalHeader.test(header)));
 
   if (!repositoriesPresent) {
     return {
