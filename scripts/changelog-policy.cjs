@@ -101,6 +101,12 @@ function reconcileRelease(source, version) {
     );
   const start = source.indexOf('## Unreleased\n');
   if (start < 0) return source;
+  if (version === '0.1.0' && source.includes('## Proposed 0.0.1 release candidate (not released)')) {
+    const changelogStart = source.indexOf('\n## Changelog', start);
+    return changelogStart < 0
+      ? `${source.slice(0, start)}## Unreleased\n`
+      : `${source.slice(0, changelogStart)}\n## Unreleased\n`;
+  }
   const end = source.indexOf('\n## ', start + 1);
   const actualEnd = end < 0 ? source.length : end;
   const section = source.slice(start, actualEnd);

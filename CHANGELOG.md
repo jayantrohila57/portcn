@@ -28,6 +28,8 @@
 
 ### Fixes
 
+- reconcile initial release history <!-- task:fix/reconcile-initial-release-history -->
+
 - recognize Release Please bot identity <!-- task:fix/recognize-release-bot-identity -->
 
 - skip sync commit validation <!-- task:fix/skip-sync-commit-validation -->
