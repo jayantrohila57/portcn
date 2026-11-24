@@ -194,19 +194,76 @@ export async function runTabbedList(ports: ListeningPort[], refresh?: () => List
   let detail: ListeningPort | null = null;
   let autoRefresh = false;
   let refreshTimer: NodeJS.Timeout | undefined;
-  const render = () =>
+  const stdin = process.stdin;
+  let settled = false;
+  let resolveInteraction: (() => void) | undefined;
+  let rejectInteraction: ((error: unknown) => void) | undefined;
+  let onKey: (chunk: Buffer) => void = () => {};
+  const render = () => {
+    if (settled) return;
+    const filtered = sortPorts(searchPorts(filterPorts(currentPorts, current), query), sort);
+    const pageSize = calculatePageSize(process.stdout.rows ?? 24);
+    selected = clampSelection(selected, filtered.length);
+    page = Math.floor(selected / pageSize);
+    if (detail && !filtered.includes(detail)) detail = null;
     process.stdout.write(
       `\u001b[2J\u001b[3J\u001b[H\u001b[?25l${formatTabView(currentPorts, current, page, process.stdout.rows ?? 24, query, sort, selected, detail, palette)}\n`,
     );
-  const stdin = process.stdin;
-  const onResize = () => render();
-  stdin.setRawMode?.(true);
-  stdin.resume();
-  process.stdout.on('resize', onResize);
-  render();
-  await new Promise<void>((resolve) => {
-    const onKey = (chunk: Buffer) => {
+  };
+  const onResize = () => {
+    try {
+      render();
+    } catch (error) {
+      fail(error);
+    }
+  };
+  const onSignal = () => {
+    process.exitCode = 130;
+    finish();
+  };
+  const interaction = new Promise<void>((resolve, reject) => {
+    resolveInteraction = resolve;
+    rejectInteraction = reject;
+  });
+  const finish = () => {
+    if (settled) return;
+    settled = true;
+    if (refreshTimer) clearInterval(refreshTimer);
+    stdin.off('data', onKey);
+    process.stdout.off('resize', onResize);
+    process.off('SIGINT', onSignal);
+    try {
+      if (stdin.isTTY) stdin.setRawMode?.(false);
+    } catch {
+      // Continue restoring the remaining terminal state if raw-mode teardown fails.
+    }
+    try {
+      stdin.pause();
+    } catch {
+      // The process must still make a best effort to show the cursor.
+    }
+    try {
+      process.stdout.write('\u001b[?25h\n');
+    } catch {
+      // There is no further recovery if the output stream itself has failed.
+    } finally {
+      resolveInteraction?.();
+    }
+  };
+  const fail = (error: unknown) => {
+    process.exitCode = 1;
+    rejectInteraction?.(error);
+    finish();
+  };
+  onKey = (chunk) => {
+    if (settled) return;
+    try {
       const key = chunk.toString();
+      if (key === '\u0003') {
+        process.exitCode = 130;
+        finish();
+        return;
+      }
       if (palette) {
         const action = paletteActionForKey(key);
         if (action === 'close') palette = false;
@@ -227,12 +284,19 @@ export async function runTabbedList(ports: ListeningPort[], refresh?: () => List
             refreshTimer = setInterval(() => {
               try {
                 currentPorts = refresh();
-                render();
               } catch {
-                /* retain last good snapshot */
+                return;
+              }
+              try {
+                render();
+              } catch (error) {
+                fail(error);
               }
             }, 5_000);
-          else if (refreshTimer) clearInterval(refreshTimer);
+          else if (refreshTimer) {
+            clearInterval(refreshTimer);
+            refreshTimer = undefined;
+          }
           palette = false;
         }
         render();
@@ -243,8 +307,8 @@ export async function runTabbedList(ports: ListeningPort[], refresh?: () => List
         else if (key === '\u001b') {
           searching = false;
           query = '';
-        } else if (key === '\u007f') query = query.slice(0, -1);
-        else if (key.length === 1 && key >= ' ') query += key;
+        } else if (key === '\u007f') query = [...query].slice(0, -1).join('');
+        else if ([...key].length === 1 && key >= ' ') query += key;
         selected = 0;
         page = 0;
         render();
@@ -272,11 +336,9 @@ export async function runTabbedList(ports: ListeningPort[], refresh?: () => List
         render();
         return;
       }
-      const nextSelection = selectionForKey(
-        key,
-        selected,
-        searchPorts(filterPorts(currentPorts, current), query).length,
-      );
+      const filtered = sortPorts(searchPorts(filterPorts(currentPorts, current), query), sort);
+      selected = clampSelection(selected, filtered.length);
+      const nextSelection = selectionForKey(key, selected, filtered.length);
       if (nextSelection !== selected || key === 'j' || key === 'k' || key === '\u001b[A' || key === '\u001b[B') {
         selected = nextSelection;
         page = Math.floor(selected / calculatePageSize(process.stdout.rows ?? 24));
@@ -285,12 +347,7 @@ export async function runTabbedList(ports: ListeningPort[], refresh?: () => List
       }
       const next = tabForKey(key, current);
       if (next === 'quit') {
-        stdin.off('data', onKey);
-        process.stdout.off('resize', onResize);
-        stdin.setRawMode?.(false);
-        stdin.pause();
-        process.stdout.write('\u001b[?25h\n');
-        resolve();
+        finish();
       } else if (next) {
         current = next;
         page = 0;
@@ -299,13 +356,25 @@ export async function runTabbedList(ports: ListeningPort[], refresh?: () => List
         const pageAction = pageForKey(key);
         if (pageAction) {
           const pageSize = calculatePageSize(process.stdout.rows ?? 24);
-          const pageCount = Math.max(1, Math.ceil(filterPorts(currentPorts, current).length / pageSize));
+          const pageCount = pageCountFor(filtered.length, pageSize);
           page = pageAction === 'next' ? (page + 1) % pageCount : (page - 1 + pageCount) % pageCount;
+          selected = Math.min(page * pageSize, Math.max(0, filtered.length - 1));
           render();
         }
       }
-    };
+    } catch (error) {
+      fail(error);
+    }
+  };
+  try {
+    process.stdout.on('resize', onResize);
     stdin.on('data', onKey);
-  });
-  if (refreshTimer) clearInterval(refreshTimer);
+    process.on('SIGINT', onSignal);
+    stdin.setRawMode?.(true);
+    stdin.resume();
+    render();
+    await interaction;
+  } finally {
+    finish();
+  }
 }

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { test } from 'node:test';
 
-function runInPty(columns, rows) {
+function runInPty(columns, rows, input = 'q') {
   return new Promise((resolve, reject) => {
     const child = spawn(
       'script',
@@ -18,9 +18,11 @@ function runInPty(columns, rows) {
     child.once('error', reject);
     child.once('exit', () => {
       clearTimeout(timer);
-      resolve(output);
+      resolve({ output, code: child.exitCode });
     });
-    setTimeout(() => child.stdin.write('q'), 200);
+    [...input].forEach((key, index) => {
+      setTimeout(() => child.stdin.write(key), 200 + index * 80);
+    });
   });
 }
 
@@ -30,8 +32,22 @@ test('interactive dashboard starts and exits cleanly across terminal sizes', { t
     [80, 24],
     [140, 40],
   ]) {
-    const output = await runInPty(columns, rows);
+    const { output } = await runInPty(columns, rows);
     assert.match(output, /PORTCN/);
     assert.equal(output.includes('\u001b[?25h'), true);
   }
+});
+
+test('interactive dashboard restores terminal state on Ctrl+C', { timeout: 10_000 }, async () => {
+  const { output, code } = await runInPty(40, 12, '\u0003');
+  assert.match(output, /PORTCN/);
+  assert.equal(output.includes('\u001b[?25h'), true);
+  assert.equal(code, 130);
+});
+
+test('interactive dashboard accepts Unicode search input in a narrow PTY', { timeout: 10_000 }, async () => {
+  const { output, code } = await runInPty(40, 12, '/界\rq');
+  assert.match(output, /PORTCN/);
+  assert.equal(output.includes('\u001b[?25h'), true);
+  assert.equal(code, 0);
 });

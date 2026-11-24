@@ -12,6 +12,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Fixed
 
+- restore terminal state on interrupt ([#94](https://github.com/jayantrohila57/portcn/issues/94)) <!-- task:fix/tui-terminal-cleanup -->
+
 - stabilize dashboard navigation and terminal lifecycle ([#94](https://github.com/jayantrohila57/portcn/issues/94)) <!-- task:fix/tui-dashboard-stability -->
 
 - set deployment-aware metadata ([#119](https://github.com/jayantrohila57/portcn/issues/119)) <!-- task:fix/docs-vercel-deployment-readiness -->
