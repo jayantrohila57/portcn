@@ -69,6 +69,13 @@ jobs:
           npm pack --json > /tmp/github-package.json
           archive="$(node -p "JSON.parse(require('fs').readFileSync('/tmp/github-package.json','utf8'))[0].filename")"
           echo "archive=$stage/$archive" >> "$GITHUB_OUTPUT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const files = new Set(JSON.parse(fs.readFileSync('/tmp/github-package.json', 'utf8'))[0].files.map((entry) => entry.path));
+          for (const required of ['package.json', 'README.md', 'LICENSE', 'dist/index.js', 'dist/index.js.map']) {
+            if (!files.has(required)) throw new Error(`GitHub package is missing ${required}`);
+          }
+          NODE
           node -e "const p=require('./package.json'); if (p.name !== process.env.PACKAGE_NAME || p.version !== process.env.RELEASE_TAG.slice(1)) process.exit(1)"
       - name: Publish scoped package idempotently
         env:
