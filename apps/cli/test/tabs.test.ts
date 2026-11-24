@@ -11,7 +11,9 @@ import {
   sortPorts,
   stableColumnWidths,
   tabForKey,
+  visibleColumnsForWidth,
 } from '../src/commands/tabs.js';
+import { displayWidth, sanitizeTerminalText } from '../src/terminal.js';
 
 const ports: ListeningPort[] = [
   { protocol: 'tcp', state: 'LISTEN', address: '127.0.0.1', port: 3000, pid: 10, processName: 'node' },
@@ -43,6 +45,16 @@ describe('interactive port tabs', () => {
   it('renders palette and selected process details without changing table geometry', () => {
     expect(formatTabView(ports, 'all', 0, 24, '', 'port', 0, ports[0], true)).toContain('Command palette');
     expect(formatTabView(ports, 'all', 0, 24, '', 'port', 0, ports[0])).toContain('Detail: node | PID 10');
+  });
+
+  it('keeps hostile and narrow-terminal content bounded', () => {
+    expect(sanitizeTerminalText('node\u001b[31m')).not.toContain('\u001b');
+    expect(displayWidth('界')).toBe(2);
+    expect(visibleColumnsForWidth(50)).toEqual([0, 1, 2]);
+    expect(visibleColumnsForWidth(70)).toEqual([0, 1, 2, 3, 4]);
+    expect(visibleColumnsForWidth(100)).toHaveLength(6);
+    const narrow = formatTabView([{ ...ports[0], address: '界'.repeat(40), processName: 'node\u001b[31m' }], 'all');
+    expect(Math.max(...narrow.split('\n').map((line) => line.length))).toBeLessThanOrEqual(100);
   });
 
   it('filters unnecessary ports by protocol and process visibility', () => {

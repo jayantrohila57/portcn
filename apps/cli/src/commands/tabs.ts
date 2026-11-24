@@ -79,6 +79,12 @@ export function calculatePageSize(terminalHeight: number, chromeLines = 8, table
   return Math.max(1, terminalHeight - chromeLines - tableFrameLines);
 }
 
+export function visibleColumnsForWidth(terminalWidth: number): number[] {
+  if (terminalWidth < 58) return [0, 1, 2];
+  if (terminalWidth < 78) return [0, 1, 2, 3, 4];
+  return [0, 1, 2, 3, 4, 5];
+}
+
 export function formatTabView(
   ports: ListeningPort[],
   tab: PortTab,
@@ -105,6 +111,7 @@ export function formatTabView(
   const table = formatListeningPorts(visible, {
     columnWidths: stableColumnWidths(ports, width),
     selectedRow: Math.max(0, selected - currentPage * pageSize),
+    visibleColumns: visibleColumnsForWidth(width),
   });
   const detailLine = detail
     ? `Detail: ${detail.processName ?? 'unknown process'} | PID ${detail.pid ?? 'unavailable'} | ${detail.protocol.toUpperCase()} ${detail.address}:${detail.port}`
