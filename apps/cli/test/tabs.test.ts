@@ -5,6 +5,9 @@ import {
   filterPorts,
   formatTabView,
   pageForKey,
+  searchPorts,
+  selectionForKey,
+  sortPorts,
   stableColumnWidths,
   tabForKey,
 } from '../src/commands/tabs.js';
@@ -23,6 +26,15 @@ describe('interactive port tabs', () => {
     expect(tabForKey('q')).toBe('quit');
     expect(pageForKey('n')).toBe('next');
     expect(pageForKey('p')).toBe('previous');
+    expect(selectionForKey('j', 0, 2)).toBe(1);
+    expect(selectionForKey('k', 0, 2)).toBe(1);
+  });
+
+  it('searches and sorts without mutating discovery results', () => {
+    expect(searchPorts(ports, '5353')[0]?.port).toBe(5353);
+    expect(sortPorts([...ports].reverse(), 'protocol').map((port) => port.protocol)).toEqual(['tcp', 'udp']);
+    expect(formatTabView(ports, 'all', 0, 24, 'node')).toContain('3000');
+    expect(formatTabView(ports, 'all', 0, 24, 'node')).not.toContain('5353');
   });
 
   it('filters unnecessary ports by protocol and process visibility', () => {

@@ -2,6 +2,7 @@ export interface TableOptions {
   color?: boolean;
   columnColors?: Record<number, string>;
   columnWidths?: number[];
+  selectedRow?: number;
 }
 
 const ansi = {
@@ -34,6 +35,7 @@ export function formatTable(headers: string[], rows: string[][], options: TableO
         const clipped = value.length > width ? `${value.slice(0, Math.max(1, width - 1))}~` : value;
         const padded = clipped.padEnd(width);
         if (header) return paint(padded, ansi.cyan + ansi.bold, color);
+        if (options.selectedRow === rows.indexOf(values)) return paint(padded, ansi.yellow, color);
         return options.columnColors?.[index] ? paint(padded, options.columnColors[index], color) : padded;
       })
       .join(' | ')} |`;

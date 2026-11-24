@@ -39,3 +39,5 @@ The dashboard is being delivered in focused slices so each terminal behavior rem
 The UI acceptance checklist for each slice is: no layout shift across tabs/pages, no clipped or wrapped table borders, correct page totals and visible ranges, restored cursor/raw mode on exit, graceful behavior for small or non-interactive terminals, and unchanged plain-text/JSON command output.
 
 The current implementation intentionally uses a small in-house renderer over Node's terminal APIs. A framework such as Ink or blessed would add a dependency and a second rendering model before Portcn has a component tree or event abstraction; the existing renderer already supports deterministic output, raw-mode cleanup, and focused Vitest coverage. We will reassess that choice when selection, search, dialogs, and asynchronous refresh require shared stateful components.
+
+The current interaction map includes `/` to search, `Enter` to finish a query, `Esc` to cancel it, `j`/`k` or arrow keys to select rows, and `s` to cycle port/protocol/process sorting. Selection and search reset predictably when changing tabs or pages.
