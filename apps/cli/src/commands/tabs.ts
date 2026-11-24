@@ -25,7 +25,25 @@ export function formatTabView(ports: ListeningPort[], tab: PortTab): string {
   const tabs = PORT_TABS.map(
     (name, index) => `${name === tab ? '[' : ' '} ${index + 1}:${labels[name]} ${name === tab ? ']' : ' '}`,
   ).join('  ');
-  return `${tabs}\nKeys: 1-4 switch tabs · Tab next · q quit\n\n${formatListeningPorts(filterPorts(ports, tab))}`;
+  const table = formatListeningPorts(filterPorts(ports, tab), { columnWidths: stableColumnWidths(ports) });
+  return `${tabs}\n\n${table}\n\nKeys: 1-4 switch tabs · Tab next · q quit`;
+}
+
+export function stableColumnWidths(ports: ListeningPort[], terminalWidth = process.stdout.columns ?? 100): number[] {
+  const rows = ports.map((port) => [
+    port.protocol.toUpperCase(),
+    port.state,
+    String(port.port),
+    port.address,
+    port.pid === null ? '-' : String(port.pid),
+    port.processName ?? '-',
+  ]);
+  const headers = ['PROTO', 'STATE', 'PORT', 'LOCAL ADDRESS', 'PID', 'PROCESS'];
+  const widths = headers.map((header, index) => Math.max(header.length, ...rows.map((row) => row[index]?.length ?? 0)));
+  const used = widths.reduce((sum, width) => sum + width, 0) + widths.length * 3 - 1;
+  const extra = Math.max(0, terminalWidth - used);
+  widths[widths.length - 1] = (widths[widths.length - 1] ?? 0) + extra;
+  return widths;
 }
 
 export async function runTabbedList(ports: ListeningPort[]): Promise<void> {

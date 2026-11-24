@@ -1,6 +1,7 @@
 export interface TableOptions {
   color?: boolean;
   columnColors?: Record<number, string>;
+  columnWidths?: number[];
 }
 
 const ansi = {
@@ -17,7 +18,10 @@ function paint(value: string, color: string, enabled: boolean): string {
 
 export function formatTable(headers: string[], rows: string[][], options: TableOptions = {}): string {
   const color = options.color ?? Boolean(process.stdout.isTTY);
-  const widths = headers.map((header, index) => Math.max(header.length, ...rows.map((row) => row[index]?.length ?? 0)));
+  const naturalWidths = headers.map((header, index) =>
+    Math.max(header.length, ...rows.map((row) => row[index]?.length ?? 0)),
+  );
+  const widths = naturalWidths.map((width, index) => Math.max(width, options.columnWidths?.[index] ?? width));
   const border = `+${widths.map((width) => '-'.repeat(width + 2)).join('+')}+`;
   const formatRow = (values: string[], header = false) =>
     `| ${values
