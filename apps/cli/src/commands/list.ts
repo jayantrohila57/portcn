@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import type { Command } from 'commander';
+import { formatEmpty, formatTable } from '../terminal.js';
 
 export interface ListeningPort {
   protocol: 'tcp' | 'udp';
@@ -83,7 +84,7 @@ export function discoverListeningPorts({
 }
 
 export function formatListeningPorts(ports: ListeningPort[]): string {
-  if (ports.length === 0) return 'No listening TCP or UDP ports found.';
+  if (ports.length === 0) return formatEmpty('No listening TCP or UDP ports found.');
 
   const headers = ['PROTO', 'STATE', 'PORT', 'LOCAL ADDRESS', 'PID', 'PROCESS'];
   const rows = ports.map((port) => [
@@ -94,13 +95,7 @@ export function formatListeningPorts(ports: ListeningPort[]): string {
     port.pid === null ? '-' : String(port.pid),
     port.processName ?? '-',
   ]);
-  const widths = headers.map((header, index) => Math.max(header.length, ...rows.map((row) => row[index]?.length ?? 0)));
-  const formatRow = (row: string[]) =>
-    row
-      .map((cell, index) => cell.padEnd(widths[index] ?? 0))
-      .join('  ')
-      .trimEnd();
-  return [formatRow(headers), ...rows.map(formatRow)].join('\n');
+  return formatTable(headers, rows, { columnColors: { 0: '\u001b[36m', 1: '\u001b[32m' } });
 }
 
 export function registerListCommand(program: Command): void {

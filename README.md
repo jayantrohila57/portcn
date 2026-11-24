@@ -15,6 +15,7 @@ Early development. The `dev` branch includes read-only Linux `portcn list` and `
 - `portcn` CLI package with branded default/help/version output and a Node.js executable.
 - Read-only `portcn list` on Linux (development branch): listening TCP/UDP ports, local addresses, and process details when visible; requires `ss` from `iproute2`.
 - Read-only `portcn inspect <port>` on Linux (development branch): protocol, state, local address, PID, process name, and best-effort `/proc` details for all visible listeners on a validated port.
+- Human-readable list and inspect output uses bordered ASCII tables with colors in interactive terminals and plain text when piped.
 - Private `@portcn/core` package for future shared functionality.
 - GitHub Actions validation and Release Please version/changelog workflow for `portcn`.
 

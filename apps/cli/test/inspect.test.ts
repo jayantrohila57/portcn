@@ -39,7 +39,9 @@ describe('port inspect', () => {
       'No listeners found for the requested port.',
     );
     const result = inspectListeningPort(parsePort('5353'), { discover: () => listeners, readDetails: () => null });
-    expect(formatInspectedPorts(result)).toMatch(/UDP\s+UNCONN\s+0\.0\.0\.0\s+-\s+-\s+unavailable/);
+    expect(formatInspectedPorts(result)).toMatch(
+      /UDP\s+\|\s+UNCONN\s+\|\s+0\.0\.0\.0\s+\|\s+-\s+\|\s+-\s+\|\s+unavailable/,
+    );
   });
 
   it('reads proc details without requiring permissions and tolerates missing files', () => {

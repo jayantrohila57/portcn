@@ -30,7 +30,7 @@ describe('read-only Linux port listing', () => {
     expect(result).toContain('3000');
     expect(result).toContain('321');
     expect(result).toContain('node');
-    expect(result).toMatch(/5353\s+0\.0\.0\.0\s+-\s+-/);
+    expect(result).toMatch(/5353\s+\|\s+0\.0\.0\.0\s+\|\s+-\s+\|\s+-/);
   });
 
   it('shows an informative empty state', () => {
