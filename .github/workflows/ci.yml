@@ -13,7 +13,7 @@ permissions:
 jobs:
   branch-policy:
     name: branch-policy
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'main-to-dev-sync'
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -81,7 +81,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Validate commit messages
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'main-to-dev-sync'
         run: node scripts/check-commit-messages.mjs "$PR_BASE_SHA" "$PR_HEAD_SHA"
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}

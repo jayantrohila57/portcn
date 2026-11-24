@@ -28,6 +28,8 @@
 
 ### Fixes
 
+- skip sync commit validation <!-- task:fix/skip-sync-commit-validation -->
+
 - skip commitlint for synchronized history <!-- task:fix/skip-commitlint-on-sync -->
 
 - allow synchronized release history <!-- task:fix/allow-main-sync-history -->
