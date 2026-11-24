@@ -8,7 +8,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!node_modules", "!.next", "!dist", "!build", "!.source", "!next-env.d.ts"]
+    "includes": ["**", "!node_modules", "!.next", "!dist", "!build", "!.source", "!next-env.d.ts", "!CHANGELOG.md"]
   },
   "formatter": {
     "indentStyle": "space",
