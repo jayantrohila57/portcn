@@ -91,7 +91,14 @@ function reconcileRelease(source, version) {
   const releaseLines = source
     .slice(releaseStart, releaseEnd)
     .split('\n')
-    .map((line) => line.trim().toLowerCase());
+    .map((line) =>
+      line
+        .trim()
+        .toLowerCase()
+        .replace(/^\*\s+/, '- ')
+        .replace(/^(-\s+)\*\*[^*]+:\*\*\s+/, '$1')
+        .replace(/\s*\(?\[[^\]]+\]\([^)]+\)\)?/g, ''),
+    );
   const start = source.indexOf('## Unreleased\n');
   if (start < 0) return source;
   const end = source.indexOf('\n## ', start + 1);
@@ -105,7 +112,7 @@ function reconcileRelease(source, version) {
   for (const line of lines) {
     const text = line
       .replace(/\s*<!-- task:[^>]+ -->/g, '')
-      .replace(/\s*\[#\d+\]\([^)]+\)/g, '')
+      .replace(/\s*\(?\[#\d+\]\([^)]+\)\)?/g, '')
       .slice(2)
       .trim()
       .toLowerCase();
