@@ -40,7 +40,9 @@ test('handles breaking changes and refuses duplicates or empty releases', () => 
   assert.throws(
     () =>
       renderRelease({
-        source: source.replace(/- modernize release management and changelog[^\n]*\n/, ''),
+        source: source
+          .replace(/- modernize release management and changelog[^\n]*\n/, '')
+          .replace(/- exclude tooling from release eligibility[^\n]*\n/, ''),
         version: '0.1.2',
         previousVersion: '0.1.1',
         title: 'Dashboard improvements',
@@ -51,7 +53,9 @@ test('handles breaking changes and refuses duplicates or empty releases', () => 
   assert.throws(
     () =>
       renderRelease({
-        source: source.replace(/- modernize release management and changelog[^\n]*\n/, ''),
+        source: source
+          .replace(/- modernize release management and changelog[^\n]*\n/, '')
+          .replace(/- exclude tooling from release eligibility[^\n]*\n/, ''),
         version: '0.2.0',
         previousVersion: '0.1.1',
         title: 'Dashboard improvements',
