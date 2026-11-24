@@ -26,6 +26,8 @@
 
 ### Fixes
 
+- harden dashboard terminal rendering <!-- task:fix/dashboard-terminal-hardening -->
+
 - paginate interactive port tables <!-- task:fix/interactive-pagination -->
 
 - section interactive port layout <!-- task:fix/interactive-sectioned-layout -->
