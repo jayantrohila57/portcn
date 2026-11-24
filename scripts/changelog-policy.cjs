@@ -99,6 +99,20 @@ function reconcileRelease(source, version) {
         .replace(/^(-\s+)\*\*[^*]+:\*\*\s+/, '$1')
         .replace(/\s*\(?\[[^\]]+\]\([^)]+\)\)?/g, ''),
     );
+  const historicalLines = source
+    .slice(0, releaseStart)
+    .split(/\n## (?=\[?v?\d+\.)/)
+    .slice(1)
+    .join('\n')
+    .split('\n')
+    .map((line) =>
+      line
+        .trim()
+        .toLowerCase()
+        .replace(/^\*\s+/, '- ')
+        .replace(/^-\s+\*\*[^*]+:\*\*\s+/, '- ')
+        .replace(/\s*\(?\[[^\]]+\]\([^)]+\)\)?/g, ''),
+    );
   const start = source.indexOf('## Unreleased\n');
   if (start < 0) return source;
   if (version === '0.1.0' && source.includes('## Proposed 0.0.1 release candidate (not released)')) {
@@ -122,7 +136,11 @@ function reconcileRelease(source, version) {
       .slice(2)
       .trim()
       .toLowerCase();
-    if (!text || !releaseLines.some((line) => line === `- ${text}` || line === `* ${text}`))
+    if (
+      !text ||
+      (!releaseLines.some((line) => line === `- ${text}` || line === `* ${text}`) &&
+        !historicalLines.some((line) => line === `- ${text}` || line === `* ${text}`))
+    )
       throw new Error(`Release notes do not contain pending entry: ${text}`);
   }
   return `${source.slice(0, start)}## Unreleased\n${source.slice(actualEnd)}`;

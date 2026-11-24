@@ -75,6 +75,8 @@
 
 ### Fixes
 
+- reconcile historical changelog entries <!-- task:fix/release-reconciliation-history -->
+
 - preserve legacy package compatibility <!-- task:fix/legacy-package-content -->
 
 - build core before GitHub package <!-- task:fix/github-packages-build-order -->
