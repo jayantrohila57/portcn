@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import type { Command } from 'commander';
 import { formatEmpty, formatTable } from '../terminal.js';
+import { runTabbedList } from './tabs.js';
 
 export interface ListeningPort {
   protocol: 'tcp' | 'udp';
@@ -102,9 +103,12 @@ export function registerListCommand(program: Command): void {
   program
     .command('list')
     .description('List listening TCP and UDP ports (Linux)')
-    .action(() => {
+    .option('-i, --interactive', 'Switch between filtered port tabs with the keyboard')
+    .action(async (options: { interactive?: boolean }) => {
       try {
-        process.stdout.write(`${formatListeningPorts(discoverListeningPorts())}\n`);
+        const ports = discoverListeningPorts();
+        if (options.interactive) await runTabbedList(ports);
+        else process.stdout.write(`${formatListeningPorts(ports)}\n`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         process.stderr.write(`portcn: ${message}\n`);

@@ -4,6 +4,8 @@
 
 ### Features
 
+- add interactive port tabs <!-- task:feat/port-tabs -->
+
 - add bordered colored output <!-- task:feat/pretty-cli-output -->
 
 - inspect listeners by port <!-- task:feat/port-inspect -->
