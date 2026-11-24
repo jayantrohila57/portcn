@@ -107,7 +107,7 @@ export function registerListCommand(program: Command): void {
     .action(async (options: { interactive?: boolean }) => {
       try {
         const ports = discoverListeningPorts();
-        if (options.interactive) await runTabbedList(ports);
+        if (options.interactive) await runTabbedList(ports, () => discoverListeningPorts());
         else process.stdout.write(`${formatListeningPorts(ports)}\n`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

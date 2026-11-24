@@ -25,7 +25,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(resolve(p
   if (process.argv.length === 2) {
     if (process.stdin.isTTY && process.stdout.isTTY) {
       try {
-        await runTabbedList(discoverListeningPorts());
+        await runTabbedList(discoverListeningPorts(), () => discoverListeningPorts());
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         process.stderr.write(`portcn: ${message}\n`);
