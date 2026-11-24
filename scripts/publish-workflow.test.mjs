@@ -34,6 +34,8 @@ test('GitHub Packages workflow publishes only the scoped CLI from a verified rel
   assert.ok(
     githubWorkflow.indexOf('pnpm --filter @portcn/core build') < githubWorkflow.indexOf('pnpm --filter portcn build'),
   );
+  assert.match(githubWorkflow, /check-cli-package\.mjs --legacy-release/);
+  assert.match(githubWorkflow, /RELEASE_TAG !== 'v0\.1\.0'/);
 });
 
 test('uses npm trusted publishing and verifies the released CLI version', () => {
