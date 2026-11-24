@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { isValidPortNumber, type PortNumber } from '@portcn/core';
 import type { Command } from 'commander';
+import { formatEmpty, formatTable } from '../terminal.js';
 import { discoverListeningPorts, type ListeningPort } from './list.js';
 
 export interface ProcessDetails {
@@ -53,7 +54,7 @@ export function inspectListeningPort(
 }
 
 export function formatInspectedPorts(ports: InspectedPort[]): string {
-  if (ports.length === 0) return 'No listeners found for the requested port.';
+  if (ports.length === 0) return formatEmpty('No listeners found for the requested port.');
   const headers = ['PROTO', 'STATE', 'LOCAL ADDRESS', 'PID', 'PROCESS', 'DETAILS'];
   const rows = ports.map((port) => [
     port.protocol.toUpperCase(),
@@ -63,13 +64,7 @@ export function formatInspectedPorts(ports: InspectedPort[]): string {
     port.processName ?? '-',
     port.details?.command ?? 'unavailable',
   ]);
-  const widths = headers.map((header, index) => Math.max(header.length, ...rows.map((row) => row[index]?.length ?? 0)));
-  const row = (values: string[]) =>
-    values
-      .map((value, index) => value.padEnd(widths[index] ?? 0))
-      .join('  ')
-      .trimEnd();
-  return [row(headers), ...rows.map(row)].join('\n');
+  return formatTable(headers, rows, { columnColors: { 0: '\u001b[36m', 1: '\u001b[32m' } });
 }
 
 export function registerInspectCommand(program: Command): void {
