@@ -48,7 +48,7 @@ export function formatTable(headers: string[], rows: string[][], options: TableO
       )
     : naturalWidths;
   const border = `+${widths.map((width) => '-'.repeat(width + 2)).join('+')}+`;
-  const formatRow = (values: string[], header = false) =>
+  const formatRow = (values: string[], rowIndex: number, header = false) =>
     `| ${values
       .map((value, index) => {
         const width = widths[index] ?? displayWidth(value);
@@ -56,13 +56,17 @@ export function formatTable(headers: string[], rows: string[][], options: TableO
           displayWidth(value) > width ? `${[...value].slice(0, Math.max(1, width - 1)).join('')}~` : value;
         const padded = clipped + ' '.repeat(Math.max(0, width - displayWidth(clipped)));
         if (header) return paint(padded, ansi.cyan + ansi.bold, color);
-        if (options.selectedRow === rows.indexOf(values)) return paint(padded, ansi.yellow, color);
+        if (!header && options.selectedRow === rowIndex) return paint(padded, ansi.yellow, color);
         return options.columnColors?.[index] ? paint(padded, options.columnColors[index], color) : padded;
       })
       .join(' | ')} |`;
-  return [border, formatRow(visibleHeaders, true), border, ...visibleRows.map((row) => formatRow(row)), border].join(
-    '\n',
-  );
+  return [
+    border,
+    formatRow(visibleHeaders, -1, true),
+    border,
+    ...visibleRows.map((row, index) => formatRow(row, index)),
+    border,
+  ].join('\n');
 }
 
 export function formatEmpty(message: string, options: TableOptions = {}): string {
