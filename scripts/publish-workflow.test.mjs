@@ -8,7 +8,7 @@ const githubWorkflow = readFileSync(new URL('../.github/workflows/github-package
 test('publishes only after Release Please creates a release', () => {
   assert.match(workflow, /id: release/);
   assert.match(workflow, /if: steps\.release\.outputs\.release_created == 'true'/);
-  assert.match(workflow, /ref: \$\{\{ steps\.release\.outputs\.tag_name \}\}/);
+  assert.match(workflow, /ref: \$\{\{ (?:inputs\.tag \|\| )?steps\.release\.outputs\.tag_name \}\}/);
   assert.match(workflow, /actions: write/);
   assert.match(workflow, /gh workflow run github-packages\.yml --ref main -f tag=/);
   assert.match(workflow, /Verify changelog reconciliation/);
