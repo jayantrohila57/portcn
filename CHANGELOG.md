@@ -28,6 +28,8 @@
 
 ### Fixes
 
+- recognize Release Please bot identity <!-- task:fix/recognize-release-bot-identity -->
+
 - skip sync commit validation <!-- task:fix/skip-sync-commit-validation -->
 
 - skip commitlint for synchronized history <!-- task:fix/skip-commitlint-on-sync -->
