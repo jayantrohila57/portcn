@@ -75,6 +75,8 @@
 
 ### Fixes
 
+- accept lightweight and annotated package tags <!-- task:fix/release-tag-verification -->
+
 - verify annotated package tags <!-- task:fix/github-packages-tag-verification -->
 
 - support existing tag publication <!-- task:fix/manual-release-publication -->

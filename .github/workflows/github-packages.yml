@@ -45,9 +45,10 @@ jobs:
         run: |
           set -euo pipefail
           test "${RELEASE_TAG#v}" != "$RELEASE_TAG"
-          test "$(git cat-file -t "$RELEASE_TAG")" = tag
-          test "$(git describe --exact-match --tags HEAD)" = "$RELEASE_TAG"
-          test "$(git rev-parse "$RELEASE_TAG^{commit}")" = "$(git rev-parse HEAD^{commit})"
+          test -n "$RELEASE_TAG"
+          tagged_commit="$(git rev-parse --verify "$RELEASE_TAG^{commit}")"
+          checked_out_commit="$(git rev-parse --verify HEAD^{commit})"
+          test "$tagged_commit" = "$checked_out_commit"
           pnpm install --frozen-lockfile
       - name: Build and validate CLI
         run: |
