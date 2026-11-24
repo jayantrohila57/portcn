@@ -70,6 +70,12 @@ test('reconciliation does not accept a pending entry as a substring of another e
   assert.throws(() => reconcileRelease(source, '0.1.0'), /do not contain/);
 });
 
+test('reconciliation accepts Release Please PR reference formatting', () => {
+  const source =
+    '# Changelog\n\n## Unreleased\n\n- add machine-readable output <!-- task:feat/example -->\n\n## [0.1.0](https://example.test)\n\n* **cli:** add machine-readable output ([#41](https://github.com/example/issues/41)) ([abc1234](https://github.com/example/commit/abc1234))\n';
+  assert.doesNotThrow(() => reconcileRelease(source, '0.1.0'));
+});
+
 test('reconciliation refuses to discard prose or unsupported list entries', () => {
   const source = '# Changelog\n\n## Unreleased\n\nPending context\n\n## 0.1.0\n\n- item\n';
   assert.throws(() => reconcileRelease(source, '0.1.0'), /cannot be safely reconciled/);
