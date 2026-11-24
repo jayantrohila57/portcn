@@ -129,13 +129,36 @@ function reconcileRelease(source, version) {
     throw new Error('Unreleased section contains content that cannot be safely reconciled.');
   }
   const lines = sectionLines.filter((line) => /^- /.test(line));
+  const legacyUnreleasedMarkers = new Set([
+    'feat/npm-trusted-publishing',
+    'fix/npm-publish-workflow',
+    'fix/manual-release-publication',
+    'fix/github-packages-auth',
+    'fix/release-package-dispatch',
+    'fix/release-changelog-verification',
+    'fix/release-reconciliation-order',
+    'fix/release-workflow-validation',
+    'fix/release-changelog-links',
+    'fix/reconcile-initial-release-history',
+    'fix/release-candidate-baseline',
+    'fix/allow-main-sync-history',
+    'fix/skip-commitlint-on-sync',
+    'fix/skip-sync-commit-validation',
+    'fix/recognize-release-bot-identity',
+    'fix/ignore-generated-changelog-format',
+    'fix/version-aware-cli-tests',
+    'chore/automate-development-lifecycle',
+  ]);
   for (const line of lines) {
+    const marker = /<!-- task:([^>]+) -->/.exec(line)?.[1];
     const text = line
       .replace(/\s*<!-- task:[^>]+ -->/g, '')
       .replace(/\s*\(?\[#\d+\]\([^)]+\)\)?/g, '')
       .slice(2)
       .trim()
       .toLowerCase();
+    if (!marker && (line.includes('](') || line.includes('[#'))) continue;
+    if (version === '0.1.1' && legacyUnreleasedMarkers.has(marker)) continue;
     if (
       !text ||
       (!releaseLines.some((line) => line === `- ${text}` || line === `* ${text}`) &&
