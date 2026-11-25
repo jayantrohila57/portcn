@@ -4,6 +4,7 @@ import { registerConfigCommand } from './config.js';
 import { registerDiagnoseCommand } from './diagnose.js';
 import { registerDockerCommand } from './docker.js';
 import { registerEndpointVerificationCommand } from './endpoint-verification.js';
+import { registerEndpointCommands } from './endpoints.js';
 import { registerExposureCommand } from './exposure.js';
 import { registerInspectCommand } from './inspect.js';
 import { registerListCommand } from './list.js';
@@ -17,6 +18,7 @@ export function registerCommands(program: Command): void {
   registerAvailabilityCommands(program);
   registerProcessAssessmentCommand(program);
   registerEndpointVerificationCommand(program);
+  registerEndpointCommands(program);
   registerConfigCommand(program);
   registerDockerCommand(program);
   registerExposureCommand(program);

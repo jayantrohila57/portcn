@@ -3,16 +3,17 @@ title: CLI reference
 description: Portcn port listing, inspection, conflict diagnosis, ownership evidence, output, and exit codes.
 ---
 
-The published ``v0.3.0`` Linux CLI provides read-only ``portcn list``, ``portcn inspect``, and ``portcn diagnose`` commands. The development branch adds ``check`` and ``suggest`` for point-in-time listener overlap checks, bounded port suggestions, ``config`` for local user-authored saved service details, ``docker`` for read-only container and published-port inventory, and ``exposure`` for bind-scope classification; these commands will ship in a later package release.
+The published ``v0.4.0`` Linux CLI includes read-only listener and process diagnostics, versioned JSON, project evidence, saved services, Docker inventory, and bind-scope reports. The `docker` and `exposure` commands ship in v0.4.0. The development branch extends ``config`` with ``--url`` and adds `endpoint` and `open`; ``check`` and ``suggest`` are also available in v0.4.0.
 
 ## ``portcn config``
 
 Save service identities using their protocol, bind address, and port. A service can have a favorite, alias, note, and memberships in multiple groups. The identity includes protocol and the exact bind address, so TCP/UDP and wildcard/specific binds remain distinct. Use `add`, `edit`, and `remove` for saved services, and `group` to manage group records.
 
 ```sh
-portcn config add tcp 127.0.0.1 3000 --favorite --alias web --group local --group projects
+portcn config add tcp 127.0.0.1 3000 --favorite --alias web --group local --group projects --url http://127.0.0.1:3000/
 portcn config group add projects
-portcn config edit tcp://127.0.0.1:3000 --favorite false --note "development server"
+portcn config edit tcp://127.0.0.1:3000 --favorite false --note "development server" --url https://localhost:3000/
+portcn config edit tcp://127.0.0.1:3000 --clear-url
 portcn config list
 portcn config list --json
 portcn config remove tcp://127.0.0.1:3000
@@ -20,7 +21,21 @@ portcn config group remove local
 portcn config recover
 ```
 
-The configuration is stored at ``$XDG_CONFIG_HOME/portcn/config.json`` or ``~/.config/portcn/config.json`` when ``XDG_CONFIG_HOME`` is unset. Portcn restricts the directory to owner access and the file to mode ``0600``. Writes use a same-directory temporary file and retain the preceding valid version as ``config.json.bak``. Config version 0 favorites migrate to version 1 when loaded. If the primary file is invalid, the CLI uses a valid backup with a warning; ``recover`` explicitly restores that backup. Invalid config without a valid backup is reported and left untouched. Saved status is ``online`` or ``offline`` only when listener discovery succeeds; it is ``unknown`` when discovery is unavailable. Process metadata and discovery results are never persisted.
+The configuration is stored at ``$XDG_CONFIG_HOME/portcn/config.json`` or ``~/.config/portcn/config.json`` when ``XDG_CONFIG_HOME`` is unset. Portcn restricts the directory to owner access and the file to mode ``0600``. Writes use a same-directory temporary file and retain the preceding valid version as ``config.json.bak``. Config versions 0 and 1 migrate to version 2; old services receive no URL override. URL overrides require HTTP(S), an explicit matching port, no URL credentials, and a localhost, loopback, or service-bind host. A host address is offered only when it belongs to a local interface. If the primary file is invalid, the CLI uses a valid backup with a warning; ``recover`` explicitly restores that backup. Invalid config without a valid backup is reported and left untouched. Saved status is ``online`` or ``offline`` only when listener discovery succeeds; it is ``unknown`` when discovery is unavailable. Process metadata and discovery results are never persisted.
+
+## ``portcn endpoint`` and ``portcn open``
+
+Endpoint candidates come only from currently observed local listeners and use saved service details when available. Wildcard IPv4 and IPv6 binds map to loopback URLs; a TCP candidate without a user override is marked ``unverified`` because a port does not establish HTTP(S). UDP services and services without an eligible local address are marked ``non-web``. ``endpoint list`` never probes a service; JSON output includes the candidate state and verification status.
+
+```sh
+portcn endpoint list
+portcn endpoint list --json
+portcn endpoint check tcp://127.0.0.1:3000
+portcn endpoint check tcp://127.0.0.1:3000 --timeout 2500 --json
+portcn open tcp://127.0.0.1:3000
+```
+
+``endpoint check`` sends one HTTP ``HEAD`` request to the selected saved service, with a default 1500 ms timeout capped at 5000 ms. It reports an HTTP response, timeout, TLS validation failure, or unreachable endpoint; it does not claim application readiness. Redirects are not followed, and HTTPS uses Node's default certificate validation. ``open`` is an explicit action and invokes ``xdg-open`` without a shell, with the validated local URL as one argument. Terminal output uses OSC 8 hyperlinks only when stdout is a TTY; piped output contains plain URLs. JSON output uses schema version 1. The request and browser action do not visit remote hosts.
 
 ## ``portcn docker``
 
