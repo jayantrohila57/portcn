@@ -8,7 +8,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!node_modules", "!.next", "!dist", "!build", "!.source", "!next-env.d.ts", "!CHANGELOG.md"]
+    "includes": ["**", "!node_modules", "!.next", "!dist", "!build", "!.source", "!next-env.d.ts"]
   },
   "formatter": {
     "indentStyle": "space",
@@ -25,7 +25,15 @@
     "enabled": true,
     "rules": {
       "preset": "recommended",
-      "complexity": { "noImportantStyles": "off" }
+      "complexity": { "noImportantStyles": "off" },
+      "suspicious": {
+        "noUndeclaredEnvVars": {
+          "level": "warn",
+          "options": {
+            "allowedEnvVars": ["PORTCN_TASK_ISSUE", "VERCEL_PROJECT_PRODUCTION_URL", "VERCEL_URL"]
+          }
+        }
+      }
     },
     "domains": {
       "next": "recommended",

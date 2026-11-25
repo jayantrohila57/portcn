@@ -4,66 +4,33 @@
   "include-v-in-tag": true,
   "include-component-in-tag": false,
   "bump-minor-pre-major": true,
-  "changelog-sections": [
-    {
-      "type": "feat",
-      "section": "Features",
-      "hidden": false
-    },
-    {
-      "type": "fix",
-      "section": "Fixes",
-      "hidden": false
-    },
-    {
-      "type": "perf",
-      "section": "Performance",
-      "hidden": false
-    },
-    {
-      "type": "revert",
-      "section": "Reverts",
-      "hidden": false
-    },
-    {
-      "type": "docs",
-      "section": "Documentation",
-      "hidden": false
-    },
-    {
-      "type": "refactor",
-      "section": "Improvements",
-      "hidden": false
-    },
-    {
-      "type": "build",
-      "section": "Build system",
-      "hidden": false
-    },
-    {
-      "type": "ci",
-      "section": "CI",
-      "hidden": false
-    },
-    {
-      "type": "test",
-      "section": "Tests",
-      "hidden": false
-    },
-    {
-      "type": "chore",
-      "section": "Maintenance",
-      "hidden": true
-    }
-  ],
   "packages": {
     ".": {
       "release-type": "node",
+      "skip-changelog": true,
       "package-name": "portcn",
       "initial-version": "0.0.1",
       "component": "portcn",
       "include-component-in-tag": false,
-      "exclude-paths": ["apps/docs", ".github", "docs", "scripts"],
+      "exclude-paths": [
+        "apps/docs",
+        ".github",
+        "docs",
+        "scripts",
+        "CHANGELOG.md",
+        "AGENTS.md",
+        "CONTRIBUTING.md",
+        "README.md",
+        "RELEASE-DESCRIPTION-DRAFTS",
+        "RELEASE-HISTORY-AUDIT.md",
+        "RELEASE-MANAGEMENT-PLAN.md",
+        "biome.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "release-please-config.json",
+        "turbo.json"
+      ],
       "extra-files": [
         {
           "type": "json",

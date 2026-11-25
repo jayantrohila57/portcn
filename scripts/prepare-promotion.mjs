@@ -32,17 +32,17 @@ export function preparePromotion(run) {
       /^(feat|fix|refactor|chore|docs|test|build|ci|perf)\//.test(pr.headRefName) &&
       integrated.has(pr.mergeCommit?.oid),
   );
-  if (tasks.length < 3)
-    return `Promotion not prepared: ${tasks.length} integrated task PRs since main; threshold is 3.`;
   const open = JSON.parse(
     gh('pr', 'list', '--state', 'open', '--base', 'main', '--head', 'dev', '--limit', '100', '--json', 'number,url'),
   );
   if (open.length > 1) throw new Error('Multiple promotion PRs exist; resolve them before continuing.');
   const changelog = git('show', 'origin/dev:CHANGELOG.md');
   const unreleased = changelog.split('## Unreleased\n')[1]?.split(/\n## /)[0]?.trim();
-  if (!unreleased) throw new Error('Unreleased changelog is missing or empty.');
   const candidate = JSON.parse(run('node', ['scripts/release-preview.mjs', 'origin/dev']));
-  const body = `## Promotion summary\n\nProposed version: ${candidate.proposedVersion} (preview; Release Please is authoritative).\n\nIntegrated task PRs: ${tasks.map((pr) => `#${pr.number}`).join(', ')}.\n\n## Unreleased\n\n${unreleased}\n\n## Documentation\n\nSee the [release guide](https://github.com/jayantrohila57/portcn/blob/dev/apps/docs/content/docs/releases/index.mdx).\n\nDo not merge without explicit authorization. Preserve task commits.\n`;
+  if (candidate.proposedVersion === candidate.currentVersion)
+    return `Promotion not prepared: ${tasks.length} task PRs are integrated, but none changes shipped CLI or core behavior with a feature, fix, performance improvement, or breaking change.`;
+  if (!unreleased) throw new Error('Unreleased changelog is missing or empty.');
+  const body = `## Promotion summary\n\nProposed version: ${candidate.proposedVersion} (calculated from Conventional Commits; Release Please remains authoritative).\n\nIntegrated task PRs: ${tasks.map((pr) => `#${pr.number}`).join(', ')}.\n\n## Unreleased\n\n${unreleased}\n\n## Documentation\n\nSee the [release guide](https://github.com/jayantrohila57/portcn/blob/dev/apps/docs/content/docs/releases/index.mdx). Before the Release Please PR is approved, run \`node scripts/generate-release-notes.mjs ${candidate.proposedVersion} ${candidate.currentVersion} "<meaningful release title>"\` in that PR branch, review the categorized dated output, and commit it there so the Release Please candidate receives normal protected CI checks.\n\nDo not merge without explicit authorization. Preserve task commits.\n`;
   if (open.length) {
     gh('pr', 'edit', String(open[0].number), '--body', body);
     return `Updated promotion PR ${open[0].url}.`;

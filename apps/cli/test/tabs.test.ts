@@ -1,11 +1,14 @@
-import { describe, expect, it } from 'vitest';
-import type { ListeningPort } from '../src/commands/list.js';
+import { describe, expect, it, vi } from 'vitest';
+import { formatListeningPorts, type ListeningPort } from '../src/commands/list.js';
 import {
   calculatePageSize,
+  clampSelection,
   filterPorts,
   formatTabView,
+  pageCountFor,
   pageForKey,
   paletteActionForKey,
+  runTabbedList,
   searchPorts,
   selectionForKey,
   sortPorts,
@@ -75,6 +78,59 @@ describe('interactive port tabs', () => {
     expect(formatTabView(manyPorts, 'all', 6, 15)).toContain('Page 7/7');
     expect(formatTabView(manyPorts, 'all', 0, 15)).toContain('3000');
     expect(formatTabView(manyPorts, 'all', 0, 15)).not.toContain('3005');
+  });
+
+  it('clamps selection and calculates pages from the active result set', () => {
+    expect(clampSelection(4, 0)).toBe(0);
+    expect(clampSelection(4, 3)).toBe(2);
+    expect(pageCountFor(0, 5)).toBe(1);
+    expect(pageCountFor(11, 5)).toBe(3);
+    expect(formatTabView(ports, 'all', 0, 24, 'not-found', 'port', 50)).toContain('Page 1/1  |  0 records');
+  });
+
+  it('highlights the selected row with a stable row index', () => {
+    const rendered = formatListeningPorts(ports, { color: true, selectedRow: 1 });
+    expect(rendered).toContain('\u001b[33m');
+    const rows = rendered.split('\n').filter((line) => line.includes('\u001b[33m'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toContain('5353');
+    expect(rows[0]).not.toContain('3000');
+  });
+
+  it('restores terminal state when the first render fails', async () => {
+    const stdin = process.stdin as NodeJS.ReadStream & { setRawMode?: (mode: boolean) => void };
+    const stdout = process.stdout;
+    const originalInputTty = Object.getOwnPropertyDescriptor(stdin, 'isTTY');
+    const originalOutputTty = Object.getOwnPropertyDescriptor(stdout, 'isTTY');
+    const originalRawMode = Object.getOwnPropertyDescriptor(stdin, 'setRawMode');
+    const inputListeners = stdin.listenerCount('data');
+    const resizeListeners = stdout.listenerCount('resize');
+    const signalListeners = process.listenerCount('SIGINT');
+    const setRawMode = vi.fn();
+    Object.defineProperty(stdin, 'isTTY', { configurable: true, value: true });
+    Object.defineProperty(stdout, 'isTTY', { configurable: true, value: true });
+    Object.defineProperty(stdin, 'setRawMode', { configurable: true, value: setRawMode });
+    const write = vi.spyOn(stdout, 'write').mockImplementation(() => {
+      throw new Error('simulated terminal write failure');
+    });
+
+    try {
+      await expect(runTabbedList(ports)).rejects.toThrow('simulated terminal write failure');
+      expect(setRawMode).toHaveBeenNthCalledWith(1, true);
+      expect(setRawMode).toHaveBeenNthCalledWith(2, false);
+      expect(stdin.listenerCount('data')).toBe(inputListeners);
+      expect(stdout.listenerCount('resize')).toBe(resizeListeners);
+      expect(process.listenerCount('SIGINT')).toBe(signalListeners);
+      expect(write).toHaveBeenCalledTimes(2);
+    } finally {
+      write.mockRestore();
+      if (originalInputTty) Object.defineProperty(stdin, 'isTTY', originalInputTty);
+      else Reflect.deleteProperty(stdin, 'isTTY');
+      if (originalOutputTty) Object.defineProperty(stdout, 'isTTY', originalOutputTty);
+      else Reflect.deleteProperty(stdout, 'isTTY');
+      if (originalRawMode) Object.defineProperty(stdin, 'setRawMode', originalRawMode);
+      else Reflect.deleteProperty(stdin, 'setRawMode');
+    }
   });
 
   it('keeps column widths stable and fills the requested terminal width', () => {

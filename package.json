@@ -15,6 +15,7 @@
     "branch-policy:check": "node scripts/check-branch-policy.mjs",
     "boundaries:check": "node scripts/check-workspace-boundaries.mjs",
     "release:check": "node scripts/check-package-versions.mjs",
+    "release:notes": "node scripts/generate-release-notes.mjs",
     "package:check": "node scripts/check-cli-package.mjs",
     "docs:check": "node scripts/check-docs.mjs",
     "precommit:check": "pnpm lifecycle:test && pnpm lint && pnpm format:check && pnpm check-types && pnpm test && pnpm build && pnpm package:check && pnpm boundaries:check && pnpm release:check && pnpm docs:check",
@@ -25,10 +26,10 @@
     "docker:commitlint": "docker compose -p portcn-dev -f infra/docker/compose.yaml --profile hooks run --build --rm commitlint pnpm exec commitlint --edit",
     "docker:clean": "docker compose -p portcn-dev -f infra/docker/compose.yaml --profile cli --profile test --profile hooks down --rmi local --volumes --remove-orphans",
     "prepare": "husky",
-    "lifecycle:test": "node --test scripts/lifecycle.test.mjs scripts/release-preview.test.mjs scripts/changelog.test.mjs scripts/prepare-promotion.test.mjs scripts/publish-workflow.test.mjs scripts/workflow-validation.test.mjs scripts/check-commit-messages.test.mjs"
+    "lifecycle:test": "node --test scripts/lifecycle.test.mjs scripts/release-preview.test.mjs scripts/changelog.test.mjs scripts/generate-release-notes.test.mjs scripts/release-publication.test.mjs scripts/release-drafts.test.mjs scripts/whats-new.test.mjs scripts/prepare-promotion.test.mjs scripts/publish-workflow.test.mjs scripts/workflow-validation.test.mjs scripts/check-commit-messages.test.mjs"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,cjs,mjs,json,jsonc,css,md,mdx,graphql}": "biome check --write"
+    "*.{js,jsx,ts,tsx,cjs,mjs,json,jsonc,css,md,graphql}": "biome check --write"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.8",

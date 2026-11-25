@@ -1,5 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
 
 function isValidSemver(version) {
   if (typeof version !== 'string') return false;
@@ -86,11 +89,52 @@ for (const [current, change, breaking, expected] of [
 const root = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const manifest = JSON.parse(readFileSync(new URL('../.release-please-manifest.json', import.meta.url), 'utf8'));
 const config = JSON.parse(readFileSync(new URL('../release-please-config.json', import.meta.url), 'utf8'));
+const { parseChangelog, validateRelease } = require(new URL('./changelog-policy.cjs', import.meta.url).pathname);
 const releasePath = '.';
 if (manifest['.'] === '0.0.1' && config['bootstrap-sha'] !== 'd495d5b0ce3b0e9fd5f9b4df4aec0f9ab7d204ee') {
   throw new Error('Release Please bootstrap boundary must match the proposed 0.0.1 baseline.');
 }
 const cliManifestPath = new URL('../apps/cli/package.json', import.meta.url);
+const changelog = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8');
+const parsedChangelog = parseChangelog(changelog);
+if (!/^# Changelog\n/m.test(changelog) || !changelog.includes('Dates use India Standard Time (IST).')) {
+  throw new Error('CHANGELOG.md must identify its title and IST date convention.');
+}
+const requiredSections = ['Added', 'Changed', 'Fixed', 'Deprecated', 'Removed', 'Security'];
+if (
+  !parsedChangelog.unreleased ||
+  requiredSections.some((section) => !new RegExp(`^### ${section}$`, 'm').test(parsedChangelog.unreleased.content))
+) {
+  throw new Error('Unreleased must include all Keep a Changelog categories.');
+}
+const releaseVersions = parsedChangelog.releases.map(({ version }) => version);
+if (new Set(releaseVersions).size !== releaseVersions.length || !releaseVersions.includes(manifest['.'])) {
+  throw new Error('Changelog versions must be unique and include the release manifest version.');
+}
+for (const { version } of parsedChangelog.releases) {
+  const result = validateRelease(changelog, version);
+  if (!result.allowed) throw new Error(result.reason);
+}
+let previousReleaseDate = '9999-12-31';
+for (const release of parsedChangelog.releases) {
+  const date = new Date(`${release.date}T00:00:00.000Z`);
+  if (
+    Number.isNaN(date.valueOf()) ||
+    date.toISOString().slice(0, 10) !== release.date ||
+    release.date > previousReleaseDate
+  ) {
+    throw new Error(`Changelog release ${release.version} has an invalid or out-of-order IST date.`);
+  }
+  previousReleaseDate = release.date;
+  if (
+    !new RegExp(
+      `^\\[${release.version.replaceAll('.', '\\.')}\\]: https://github\\.com/jayantrohila57/portcn/(?:compare|releases/tag)/`,
+      'm',
+    ).test(changelog)
+  ) {
+    throw new Error(`Changelog release ${release.version} must include a GitHub release or comparison link.`);
+  }
+}
 
 if (!root.private || root.name !== '@portcn/workspace') {
   throw new Error('The root package must be private and named @portcn/workspace.');
@@ -108,11 +152,30 @@ if (Object.keys(config.packages).length !== 1) {
 }
 
 const cliConfig = config.packages[releasePath];
+const releaseExcludedPaths = [
+  'apps/docs',
+  '.github',
+  'docs',
+  'scripts',
+  'CHANGELOG.md',
+  'AGENTS.md',
+  'CONTRIBUTING.md',
+  'README.md',
+  'RELEASE-DESCRIPTION-DRAFTS',
+  'RELEASE-HISTORY-AUDIT.md',
+  'RELEASE-MANAGEMENT-PLAN.md',
+  'biome.json',
+  'package.json',
+  'pnpm-lock.yaml',
+  'pnpm-workspace.yaml',
+  'release-please-config.json',
+  'turbo.json',
+];
 if (
   cliConfig['release-type'] !== 'node' ||
   cliConfig['package-name'] !== 'portcn' ||
   cliConfig.component !== 'portcn' ||
-  JSON.stringify(cliConfig['exclude-paths']) !== JSON.stringify(['apps/docs', '.github', 'docs', 'scripts']) ||
+  JSON.stringify(cliConfig['exclude-paths']) !== JSON.stringify(releaseExcludedPaths) ||
   cliConfig['initial-version'] !== '0.0.1' ||
   config['include-v-in-tag'] !== true ||
   config['include-component-in-tag'] !== false
@@ -122,29 +185,14 @@ if (
   );
 }
 
-const changelogSections = new Map(
-  config['changelog-sections'].map(({ type, section, hidden }) => [type, { section, hidden }]),
-);
-for (const [type, section] of [
-  ['feat', 'Features'],
-  ['fix', 'Fixes'],
-  ['perf', 'Performance'],
-  ['refactor', 'Improvements'],
-  ['docs', 'Documentation'],
-]) {
-  if (changelogSections.get(type)?.section !== section || changelogSections.get(type)?.hidden !== false) {
-    throw new Error(`Release changelog must show ${type} commits under ${section}.`);
-  }
-}
-if (changelogSections.get('chore')?.hidden !== true) {
-  throw new Error('Chore commits must stay out of user-facing release notes.');
-}
+if (cliConfig['skip-changelog'] !== true)
+  throw new Error('Release Please must not generate a competing changelog history.');
 if (
   'paths' in cliConfig ||
   !cliConfig['exclude-paths'].includes('apps/docs') ||
   !cliConfig['exclude-paths'].includes('docs')
 ) {
-  throw new Error('Release Please must use supported exclude-paths for documentation-only changes.');
+  throw new Error('Release Please must exclude docs, changelog, and root maintenance paths from CLI release parsing.');
 }
 const extraVersionFiles = new Set(cliConfig['extra-files'].map(({ path }) => path));
 for (const path of ['package.json', 'apps/cli/package.json']) {
@@ -207,7 +255,9 @@ if (latestTagVersion && compareSemver(latestTagVersion, manifest[releasePath]) >
 }
 
 console.log(`Root package ${root.name} is private and synchronized with portcn ${packageMetadata.version}.`);
-console.log('Release scope is the single portcn release unit; docs, workflows, and scripts are excluded.');
+console.log(
+  'Release scope is the single portcn release unit; docs, changelog, and root maintenance paths are excluded.',
+);
 console.log(
   latestTagVersion
     ? `Latest release tag is v${latestTagVersion}; manifest ${manifest[releasePath]}${latestTagVersion === manifest[releasePath] ? ' matches it' : ' is a valid release candidate'}.`

@@ -19,6 +19,11 @@ test('uses paths and breaking footers, and deduplicates by commit', () => {
   };
   assert.equal(parseCommit(commit).breaking, true);
   assert.equal(parseCommit({ ...commit, files: ['apps/docs/content/docs/index.mdx'] }).releaseRelevant, false);
+  assert.equal(parseCommit({ ...commit, files: ['.github/workflows/release.yml'] }).releaseRelevant, false);
+  for (const file of ['scripts/release-preview.mjs', 'release-please-config.json', '.github/AGENTS.md']) {
+    assert.equal(parseCommit({ ...commit, files: [file] }).releaseRelevant, false, file);
+  }
+  assert.equal(parseCommit({ ...commit, files: ['packages/core/src/port.ts'] }).releaseRelevant, true);
   const result = preview({ version: '0.0.1', commits: [commit, commit] });
   assert.equal(result.proposedVersion, '0.1.0');
   assert.equal(result.changes.length, 1);

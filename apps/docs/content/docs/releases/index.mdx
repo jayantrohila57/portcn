@@ -3,22 +3,34 @@ title: Releases
 description: The canonical Portcn release and publication procedure.
 ---
 
-This page is the single source of truth for releases. `AGENTS.md`, `CONTRIBUTING.md`, and workflow comments link here rather than maintaining separate procedures. Release Please is authoritative for versions, official changelog sections, tags, and GitHub Releases.
+This page is the single source of truth for releases. `CHANGELOG.md` is the canonical release history. The docs site renders its published sections directly at [`/whats-new`](https://github.com/jayantrohila57/portcn/tree/main/apps/docs/app/whats-new); do not maintain a second release list.
 
 ## Protected release flow
 
-1. Merge validated task PRs into protected `dev`. Every release-relevant task has a generated `Unreleased` entry.
-2. Prepare and review a `dev` → `main` promotion PR after the configured task threshold. Merge only with explicit authorization and required checks.
-3. Release Please calculates SemVer from actual Conventional Commits, opens the release PR, and updates both package manifests, the manifest file, and `CHANGELOG.md`. Before `1.0.0`, `feat` and breaking changes advance the minor version; `fix` and `perf` advance the patch version. Docs and maintenance changes do not bump a release unless configured as release-relevant.
-4. Merge the Release Please PR only after version, notes, package contents, and CI agree. Never edit versions or move an existing tag manually.
-5. Verify the tag and release, publish npm and GitHub Packages independently, and record registry and installation results.
-6. Open the authorized `main` → `dev` synchronization PR and merge it after checks pass. Clean only verified merged task branches.
+1. Merge each validated task PR into protected `dev`. A single completed feature or fix can qualify for a release; do not wait for a task-count threshold. The promotion preview requires a real SemVer bump from a change to shipped source under `apps/cli/` or `packages/core/`. Documentation, workflows, and release tooling do not qualify on their own.
+   Documentation-only task PRs can update contributor and release guidance without adding an `Unreleased` entry. Keep the changelog focused on shipped changes; the task and CI validators accept an unchanged changelog only when every changed path is documentation.
+   Staged Biome checks cover supported Markdown files and exclude Fumadocs MDX; `pnpm docs:check` and the docs build validate MDX content and links.
+2. Prepare a `dev` → `main` promotion PR after a meaningful release candidate is ready. Preserve task commits. Run the workspace checks and review the changelog candidate. Merge only after the repository owner explicitly approves.
+3. Release Please runs on `main`, calculates SemVer from Conventional Commits, and opens a release PR. It remains authoritative for the version manifest, root and CLI package versions, release PR, Git tag, and GitHub Release. Before `1.0.0`, features and breaking changes advance the minor version; fixes and performance changes advance patch; from `1.0.0`, breaking changes advance major.
+4. Write user-facing notes into `CHANGELOG.md` using Keep a Changelog headings: `Unreleased`, then `Added`, `Changed`, `Fixed`, `Deprecated`, `Removed`, and `Security`. Version headings use `## [X.Y.Z] - YYYY-MM-DD`; dates are IST. Include an issue reference where one exists and a version comparison link. Use `node scripts/task-lifecycle.mjs changelog "feat(cli): describe the change" <issue-number>` to add a concise pending entry.
+5. Before approving the Release Please PR, run `node scripts/generate-release-notes.mjs <new-version> <previous-version> "<meaningful release title>"` from its candidate branch. Review and commit the dated canonical section there so protected checks validate the final candidate. Review the exact version, package files, comparison link, changelog, and CI together. Do not edit versions manually or create/move/delete tags. Existing release history is immutable; correct mistakes by fixing forward.
+6. After the approved Release Please PR merges, verify the GitHub Release and that `v<version>^{commit}` resolves to its exact release commit. Publish npm and GitHub Packages independently using the approved, exact-tag workflows. Each skips an exact version that already exists and stops on a conflicting version or an unknown registry result.
+7. Recover a failed publication against the existing tag; do not create another version or tag. For npm, use the release workflow’s `workflow_dispatch` exact-tag recovery. GitHub Packages can be dispatched using `gh workflow run github-packages.yml --ref main -f tag=v<version>`. Verify each registry independently.
+8. Open the documented `main` → `dev` synchronization PR and merge after its required checks pass.
 
-Build dependencies in order with the frozen lockfile: `pnpm install --frozen-lockfile`, `pnpm --filter @portcn/core build`, then `pnpm --filter portcn build`. A release tag may be lightweight or annotated; checkout must resolve `v<version>^{commit}` to the release commit and must never move or recreate an existing tag.
+## SemVer and release notes
 
-## Package verification
+Conventional Commit types drive automatic version calculation: `feat` is minor before 1.0.0 and minor afterward; `fix`/`perf` are patch; `!` or `BREAKING CHANGE:` selects the breaking bump (minor before 1.0.0, major from 1.0.0). Docs, tests, build, CI, refactor, and maintenance-only commits do not bump the CLI release unless the change is explicitly classified as user-facing.
 
-The public npm package is the unscoped `portcn` package from `apps/cli`. The private workspace root and `@portcn/core` are never published. Before publication, run `npm pack --dry-run --json` and require `package.json`, `README.md`, `LICENSE`, the executable, source map, and bundled runtime dependencies. The consumer-facing [CLI README](https://github.com/jayantrohila57/portcn/blob/main/apps/cli/README.md) must describe only implemented behavior and is included in both release tarballs. Workflow validation rejects missing documentation or license files.
+`CHANGELOG.md` is the only hand-authored release history. `scripts/generate-release-notes.mjs <version> <previous-version> "<meaningful release title>"` generates a release section from Conventional Commits and their PR/issue references. The generator uses the IST calendar date, requires an editorial title, rejects duplicate release versions, and resets `Unreleased` only after creating the versioned entry. Release Please is configured not to generate a parallel changelog section. Its `GITHUB_TOKEN` cannot push a follow-up changelog commit and retrigger the protected PR checks, so the candidate branch update must be made and committed by an authorized reviewer before approval.
+
+For historical audits, verify every release boundary against tags, GitHub Releases, merged PRs, issues, and source snapshots. Record discrepancies and prepare exact Release description drafts; obtain explicit approval before changing an already-published GitHub Release and verify immutable metadata afterward. See [`RELEASE-HISTORY-AUDIT.md`](https://github.com/jayantrohila57/portcn/blob/main/RELEASE-HISTORY-AUDIT.md) for the current audit and applied descriptions.
+
+Historical v0.0.1, v0.1.0, and v0.1.1 notes have been retained from their existing published GitHub Release/tag records. Do not rewrite those artifacts. The current release notes may be editorially improved only when their shipped behavior and references remain accurate.
+
+## Package verification and publication recovery
+
+The public npm package is the unscoped `portcn` package from `apps/cli`. The private workspace root and `@portcn/core` are never published. Before publication, run `npm pack --dry-run --json` and require the executable, source map, bundled runtime dependencies, README, and license.
 
 For npm Trusted Publishing, verify ownership and configuration before the release:
 
@@ -28,30 +40,26 @@ npm trust github portcn --repo jayantrohila57/portcn --file release-please.yml -
 npm trust list portcn
 ```
 
-Publication uses OIDC provenance, checks for an existing exact version, and treats an exact existing version as an idempotent retry. A conflicting version or unknown registry response stops publication.
+Publication uses OIDC provenance, checks for an existing exact version, and treats that exact version as an idempotent retry. Conflicting metadata or an unknown registry response stops publication.
 
-npm metadata can lag a successful publish because registries and local caches are eventually consistent. Use bounded retries with backoff (for example, five attempts with increasing delays), then verify all three surfaces:
+Verify each registry and a fresh install independently:
 
 ```sh
 npm view portcn@<version> version --prefer-online --registry=https://registry.npmjs.org/
 curl --fail --silent https://registry.npmjs.org/portcn/<version>
-tmp="$(mktemp -d)"; npm install --prefix "$tmp" --cache "$tmp/cache" -g portcn@<version>
+tmp="$(mktemp -d)"; npm install --prefix "$tmp" --cache "$tmp/cache" -g "portcn@<version>"
 "$tmp/bin/portcn" --version
 "$tmp/bin/portcn" --help
 ```
 
-If publication fails after the Release Please release exists, recover that release instead of creating another version or tag:
+GitHub Packages is `@jayantrohila57/portcn` on `https://npm.pkg.github.com`. Its workflow verifies the exact tag commit, stages the same CLI files, skips an exact existing version, and publishes only the scoped package. Verify it with authenticated metadata and a clean install; configure public package visibility in repository settings where supported.
 
-```sh
-gh workflow run release-please.yml --ref main -f tag=v<version>
-```
+The exact-tag GitHub Packages workflows successfully published `@jayantrohila57/portcn@0.0.1` ([run 45021457874](https://github.com/jayantrohila57/portcn/actions/runs/45021457874)), `@jayantrohila57/portcn@0.1.0` ([run 45404125212](https://github.com/jayantrohila57/portcn/actions/runs/45404125212)), and `@jayantrohila57/portcn@0.1.1` ([run 45410185155](https://github.com/jayantrohila57/portcn/actions/runs/45410185155)). Earlier `v0.1.0` attempts failed, but the later successful run recovered the existing version without moving its tag or creating another version. The current audit session cannot query authenticated package metadata because its token lacks `read:packages`; use a token with that scope and a clean install for independent registry verification.
 
-## GitHub Packages
+## Documentation site deployment
 
-The mirror package is scoped as `@jayantrohila57/portcn` and is published to `https://npm.pkg.github.com` with `GITHUB_TOKEN`, `contents: read`, and `packages: write`. The workflow stages the same CLI files, verifies the exact release commit, checks the tarball, skips an exact existing version, and publishes only the scoped package. Verify it independently with authenticated metadata and a clean install; set package visibility to public in repository Packages settings where supported.
+Release Please excludes the docs app, canonical changelog, and root maintenance/configuration paths, so documentation and release-tooling changes alone do not create a CLI version. The exact exclusion list is checked by `pnpm release:check`. Once a docs hosting project is connected to this repository, documentation changes can be previewed on a task branch and deployed from `main` after the existing protected PR checks pass. Keep both `dev` and `main` rulesets unchanged; production still requires the normal PR into protected `main`.
 
-The v0.1.0 GitHub Packages attempt remains unresolved: the workflow reached its release-tag guard and stopped before publication. Do not describe the mirror as successfully published until a later approved run records a successful workflow, package metadata, and installation. This does not invalidate the npm or GitHub Release artifact.
+The app is prepared for a separate Vercel project. Project configuration and deployment are intentionally deferred until explicitly requested. Preserve the [deployment setup guide](https://github.com/jayantrohila57/portcn/blob/main/apps/docs/DEPLOYMENT.md) for future use: set the project root to `apps/docs`, include source files outside that root, and track protected `main` for production. The app uses Next.js runtime routes; do not enable static export. At the last audit no Vercel project was visible to the connected account, and the repository had no deployment workflow, Vercel config, GitHub deployment record, or GitHub environment. Do not claim a live `/whats-new` deployment until project linkage and production branch are confirmed.
 
-## Verified releases
-
-The public GitHub Release `v0.1.0` points to commit `390d6495c98fe829ae9ffcff7fc7e2d4668a9a4b`, and `portcn@0.1.0` is present on npm. The first release `v0.0.1` remains immutable. Never overwrite an existing tag, release, or package version; repeat the metadata, provenance, and fresh-cache installation checks for every future version.
+The public GitHub Release v0.1.0 points to commit `390d6495c98fe829ae9ffcff7fc7e2d4668a9a4b`, and `portcn@0.1.0` is present on npm. Preserve all release tags, package versions, commit targets, assets, and publication timestamps. Historical descriptions may be updated only through the approval and verification process above.

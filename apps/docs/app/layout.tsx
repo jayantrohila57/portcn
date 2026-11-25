@@ -1,5 +1,6 @@
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import './global.css';
+import type { Metadata } from 'next';
 import { Instrument_Sans, JetBrains_Mono } from 'next/font/google';
 
 const sans = Instrument_Sans({
@@ -11,7 +12,11 @@ const mono = JetBrains_Mono({
   subsets: ['latin'],
 });
 
-export const metadata = {
+const deploymentHost = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
+const metadataBase = new URL(deploymentHost ? `https://${deploymentHost}` : 'http://localhost:3000');
+
+export const metadata: Metadata = {
+  metadataBase,
   title: {
     default: 'portcn — Know what’s running.',
     template: '%s | portcn',

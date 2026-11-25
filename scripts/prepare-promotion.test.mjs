@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { preparePromotion } from './prepare-promotion.mjs';
 
-function fixture({ count = 3, open = [] } = {}) {
+function fixture({ count = 1, open = [], proposedVersion = '0.1.0' } = {}) {
   const calls = [];
   const run = (command, args) => {
     calls.push([command, ...args]);
@@ -15,16 +15,24 @@ function fixture({ count = 3, open = [] } = {}) {
           .map((oid, index) => ({ number: index + 1, headRefName: `feat/task-${index}`, mergeCommit: { oid } })),
       );
     if (command === 'gh' && args.includes('open')) return JSON.stringify(open);
-    if (command === 'node') return JSON.stringify({ proposedVersion: '0.1.0' });
+    if (command === 'node') return JSON.stringify({ currentVersion: '0.0.1', proposedVersion });
     if (command === 'gh' && args.includes('create')) return 'https://example.test/pr/1';
     return '';
   };
   return { calls, run };
 }
-test('prepares or updates a promotion only after three integrated tasks', () => {
-  const small = fixture({ count: 2 });
-  assert.match(preparePromotion(small.run), /threshold/);
-  assert(!small.calls.some((call) => call.includes('create')));
+test('prepares a promotion for one meaningful task and skips changes without a version bump', () => {
+  const one = fixture({ count: 1 });
+  const body = preparePromotion(one.run);
+  assert.match(body, /Prepared promotion/);
+  assert(one.calls.some((call) => call.includes('create')));
+  assert(
+    one.calls.some((call) => call.some((arg) => typeof arg === 'string' && arg.includes('generate-release-notes.mjs'))),
+  );
+  assert(one.calls.some((call) => call.includes('create')));
+  const docsOnly = fixture({ count: 1, proposedVersion: '0.0.1' });
+  assert.match(preparePromotion(docsOnly.run), /none changes shipped CLI or core behavior/);
+  assert(!docsOnly.calls.some((call) => call.includes('create')));
   const first = fixture();
   assert.match(preparePromotion(first.run), /Prepared promotion/);
   assert(first.calls.some((call) => call.includes('create')));
