@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- associate listening services with projects and worktrees ([#96](https://github.com/jayantrohila57/portcn/issues/96)) <!-- task:feat/project-worktree-evidence -->
+
 - check port availability and suggest alternatives ([#99](https://github.com/jayantrohila57/portcn/issues/99)) <!-- task:feat/port-availability -->
 
 - add versioned JSON contracts ([#98](https://github.com/jayantrohila57/portcn/issues/98)) <!-- task:feat/agent-json-diagnostics -->

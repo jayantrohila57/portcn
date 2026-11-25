@@ -5,6 +5,7 @@ import { formatEmpty, formatTable } from '../terminal.js';
 import { InvalidPortError, inspectProcessDetails, type ProcessDetailStatus, parsePort } from './inspect.js';
 import { JSON_SCHEMA_VERSION, jsonSchemaIsSupported, UnsupportedJsonVersionError, versionedJsonError } from './json.js';
 import { discoverListeningPorts, type ListeningOwner, type ListeningPort } from './list.js';
+import { inspectProjectContext, type ProjectContext } from './project-context.js';
 
 const compareText = (left: string, right: string): number => (left < right ? -1 : left > right ? 1 : 0);
 
@@ -14,6 +15,7 @@ export interface DiagnosedOwner {
   command: string | null;
   user: string | null;
   detailsStatus: ProcessDetailStatus;
+  projectContext: ProjectContext;
 }
 
 export interface DiagnosedListener {
@@ -39,6 +41,7 @@ export interface PortDiagnosis {
 export interface DiagnosisOptions {
   discover?: () => ListeningPort[];
   inspectProcess?: (pid: number) => ReturnType<typeof inspectProcessDetails>;
+  inspectProject?: (pid: number) => ProjectContext;
   readNamespace?: (namespace: 'net' | 'pid') => string | null;
 }
 
@@ -86,6 +89,7 @@ function ownerMessage(listener: DiagnosedListener, owner: DiagnosedOwner, port: 
 export function diagnoseListeningPort(port: number, options: DiagnosisOptions = {}): PortDiagnosis {
   const discover = options.discover ?? (() => discoverListeningPorts());
   const inspectProcess = options.inspectProcess ?? inspectProcessDetails;
+  const inspectProject = options.inspectProject ?? inspectProjectContext;
   const readNamespace = options.readNamespace ?? readCurrentNamespace;
   const namespace = { network: readNamespace('net'), pid: readNamespace('pid') };
   const visiblePorts = discover()
@@ -110,6 +114,7 @@ export function diagnoseListeningPort(port: number, options: DiagnosisOptions = 
         command: details.details?.command ?? null,
         user: details.details?.user ?? null,
         detailsStatus: details.status,
+        projectContext: inspectProject(owner.pid),
       };
     }),
   }));
@@ -161,15 +166,33 @@ export function formatDiagnosis(diagnosis: PortDiagnosis): string {
       owner?.command ?? '-',
       owner?.user ?? '-',
       owner?.detailsStatus ?? 'owner hidden',
+      owner?.projectContext.projectRoot ?? 'unknown project',
+      owner?.projectContext.status ?? 'unknown',
     ]);
   });
   const lines = [`Port diagnosis: ${diagnosis.port}`, ...diagnosis.messages];
   if (rows.length) {
     lines.push(
-      formatTable(['PROTO', 'STATE', 'FAMILY', 'BIND ADDRESS', 'PID', 'PROCESS', 'COMMAND', 'USER', 'DETAILS'], rows, {
-        columnWidths: [6, 8, 7, 24, 8, 16, 32, 12, 17],
-        columnColors: { 0: '\u001b[36m', 1: '\u001b[32m' },
-      }),
+      formatTable(
+        [
+          'PROTO',
+          'STATE',
+          'FAMILY',
+          'BIND ADDRESS',
+          'PID',
+          'PROCESS',
+          'COMMAND',
+          'USER',
+          'DETAILS',
+          'PROJECT',
+          'PROJECT STATUS',
+        ],
+        rows,
+        {
+          columnWidths: [6, 8, 7, 24, 8, 16, 32, 12, 17, 30, 12],
+          columnColors: { 0: '\u001b[36m', 1: '\u001b[32m' },
+        },
+      ),
     );
   } else {
     lines.push(formatEmpty('No visible listeners.'));
