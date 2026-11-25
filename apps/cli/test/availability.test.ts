@@ -184,4 +184,21 @@ describe('read-only port availability', () => {
     expect(process.exitCode).toBe(2);
     process.exitCode = 0;
   });
+
+  it('reports watch timeouts as timeout errors in JSON mode', async () => {
+    const output: string[] = [];
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      output.push(String(chunk));
+      return true;
+    });
+    const program = new Command();
+    registerAvailabilityCommands(program, { discover: () => [loopbackListener] });
+    await program.parseAsync(['node', 'portcn', 'wait', '3000', '--timeout', '1', '--json']);
+    expect(JSON.parse(output.at(-1) ?? '')).toMatchObject({
+      schemaVersion: 1,
+      event: 'timeout',
+      error: { code: 'WATCH_TIMEOUT', port: '3000' },
+    });
+    expect(process.exitCode).toBe(1);
+  });
 });

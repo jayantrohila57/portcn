@@ -18,6 +18,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Fixed
 
+- report port wait timeouts accurately ([#139](https://github.com/jayantrohila57/portcn/issues/139)) <!-- task:fix/port-wait-timeout-json -->
+
 ### Deprecated
 
 ### Removed

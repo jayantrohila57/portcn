@@ -227,7 +227,7 @@ node apps/cli/dist/index.js wait 3000 --interval 500 --timeout 60000 --json
 node apps/cli/dist/index.js wait 3000 --protocol udp --address ::1 --json-version 1
 ```
 
-JSON mode writes version 1 JSON Lines: ``state-change`` events followed by an ``available`` result, or a final ``timeout``, ``cancelled``, or ``error`` event. Timeout returns status 1, cancellation returns 130, invalid input returns 2, and observed availability returns 0. “No conflict observed” is only a point-in-time result; another process can claim the port before it is bound.
+JSON mode writes version 1 JSON Lines: ``state-change`` events followed by an ``available`` result, or a final ``timeout``, ``cancelled``, or ``error`` event. Timeout uses ``WATCH_TIMEOUT``; cancellation uses ``WATCH_CANCELLED``. Timeout returns status 1, cancellation returns 130, invalid input returns 2, and observed availability returns 0. “No conflict observed” is only a point-in-time result; another process can claim the port before it is bound.
 
 Both commands return status ``0`` when a check completes, including an ``unknown`` check or when no suggestions are found; status ``1`` indicates discovery failure; status ``2`` indicates invalid input or an unsupported JSON schema version. JSON errors use the version 1 ``error`` object and sanitized messages.
 
