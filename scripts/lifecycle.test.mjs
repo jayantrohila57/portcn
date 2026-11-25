@@ -56,6 +56,10 @@ test('submit creates or reuses a PR and requests auto merge', () => {
   f.lifecycle.submit('feat(cli): example', 'body.md');
   assert.equal(f.calls.filter((call) => call[1] === 'pr' && call[2] === 'create').length, 1);
   assert(f.calls.some((call) => call.includes('--auto')));
+  assert.deepEqual(
+    f.calls.find((call) => call[1] === 'pr' && call[2] === 'merge'),
+    ['gh', 'pr', 'merge', '1', '--auto', '--squash'],
+  );
 });
 test('submit refuses draft, conflicts, failed checks and duplicate PRs', () => {
   for (const [prs, pattern] of [
