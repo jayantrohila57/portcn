@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { chmod, mkdir, open, readFile, rename, rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { validateServiceUrl } from './endpoint-url.js';
 
 export interface SavedService {
   id: string;
@@ -12,9 +13,10 @@ export interface SavedService {
   alias: string | null;
   note: string | null;
   groups: string[];
+  url: string | null;
 }
 export interface ServiceConfig {
-  version: 1;
+  version: 2;
   services: SavedService[];
   groups: string[];
 }
@@ -30,7 +32,7 @@ export function configPath(env: NodeJS.ProcessEnv = process.env): string {
 function validate(input: unknown): ServiceConfig {
   if (!input || typeof input !== 'object') throw new Error('Config must be a JSON object.');
   const data = input as Record<string, unknown>;
-  if (data.version !== 0 && data.version !== 1) throw new Error('Unsupported config version.');
+  if (data.version !== 0 && data.version !== 1 && data.version !== 2) throw new Error('Unsupported config version.');
   if (data.version === 0) {
     if (!Array.isArray(data.favorites)) throw new Error('Version 0 config requires a favorites array.');
     const services = data.favorites.map((item) => {
@@ -54,9 +56,10 @@ function validate(input: unknown): ServiceConfig {
         alias: null,
         note: null,
         groups: [],
+        url: null,
       } as SavedService;
     });
-    return { version: 1, services, groups: [] };
+    return { version: 2, services, groups: [] };
   }
   if (
     !Array.isArray(data.services) ||
@@ -76,6 +79,7 @@ function validate(input: unknown): ServiceConfig {
     if (!raw || typeof raw !== 'object') throw new Error('Config service entry is invalid.');
     const item = raw as Record<string, unknown>;
     const { protocol, address, port, favorite, alias, note, groups: members } = item;
+    const url = data.version === 2 ? item.url : null;
     if (
       (protocol !== 'tcp' && protocol !== 'udp') ||
       typeof address !== 'string' ||
@@ -86,6 +90,7 @@ function validate(input: unknown): ServiceConfig {
       typeof favorite !== 'boolean' ||
       (alias !== null && (typeof alias !== 'string' || alias.length > 120)) ||
       (note !== null && (typeof note !== 'string' || note.length > 1000)) ||
+      (url !== null && typeof url !== 'string') ||
       !Array.isArray(members) ||
       members.some((name) => typeof name !== 'string' || !groups.includes(name))
     )
@@ -93,6 +98,8 @@ function validate(input: unknown): ServiceConfig {
     const id = serviceId(protocol, address, Number(port));
     if (item.id !== id || seen.has(id)) throw new Error('Config service identity is invalid or duplicated.');
     seen.add(id);
+    const normalizedUrl =
+      typeof url === 'string' ? validateServiceUrl(url, { protocol, address, port: Number(port) }) : null;
     return {
       id,
       protocol,
@@ -102,9 +109,10 @@ function validate(input: unknown): ServiceConfig {
       alias,
       note,
       groups: [...new Set(members as string[])],
+      url: normalizedUrl,
     } as SavedService;
   });
-  return { version: 1, services, groups: [...groups] as string[] };
+  return { version: 2, services, groups: [...groups] as string[] };
 }
 
 export async function readConfig(file = configPath()): Promise<{ config: ServiceConfig; recovered: boolean }> {
@@ -118,7 +126,7 @@ export async function readConfig(file = configPath()): Promise<{ config: Service
       return { config: await parse(`${file}.bak`), recovered: true };
     } catch {
       if ((primaryError as NodeJS.ErrnoException).code === 'ENOENT')
-        return { config: { version: 1, services: [], groups: [] }, recovered: false };
+        return { config: { version: 2, services: [], groups: [] }, recovered: false };
       throw new Error('Config and backup are invalid. Run "portcn config recover" after restoring a valid backup.');
     }
   }

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import type { Command } from 'commander';
 import { configPath, readConfig, type SavedService, serviceId, writeConfig } from './config-store.js';
+import { validateServiceUrl } from './endpoint-url.js';
 import { discoverListeningPorts } from './list.js';
 
 function requiredText(value: string, label: string, maximum: number): string {
@@ -24,6 +25,7 @@ function service(protocol: string, address: string, portText: string): SavedServ
     alias: null,
     note: null,
     groups: [],
+    url: null,
   };
 }
 
@@ -85,12 +87,13 @@ export function registerConfigCommand(program: Command): void {
     .option('--alias <text>', 'Set an alias')
     .option('--note <text>', 'Set a note')
     .option('--group <name...>', 'Add to groups')
+    .option('--url <url>', 'Set a local HTTP(S) endpoint URL')
     .action(
       async (
         protocol: string,
         address: string,
         portText: string,
-        options: { favorite?: boolean; alias?: string; note?: string; group?: string[] },
+        options: { favorite?: boolean; alias?: string; note?: string; group?: string[]; url?: string },
       ) => {
         try {
           const entry = service(protocol, address, portText);
@@ -98,6 +101,7 @@ export function registerConfigCommand(program: Command): void {
           entry.alias = options.alias ? requiredText(options.alias, 'Alias', 120) : null;
           entry.note = options.note ? requiredText(options.note, 'Note', 1000) : null;
           entry.groups = (options.group ?? []).map((name) => requiredText(name, 'Group', 80));
+          entry.url = options.url === undefined ? null : validateServiceUrl(options.url, entry);
           const config = await current(configPath());
           const existing = config.services.find((item) => item.id === entry.id);
           if (existing) throw new Error(`Service already exists: ${entry.id}`);
@@ -119,6 +123,8 @@ export function registerConfigCommand(program: Command): void {
     .option('--clear-alias', 'Clear alias')
     .option('--note <text>', 'Set note')
     .option('--clear-note', 'Clear note')
+    .option('--url <url>', 'Set a local HTTP(S) endpoint URL')
+    .option('--clear-url', 'Clear the endpoint URL override')
     .option('--add-group <name...>', 'Add group memberships')
     .option('--remove-group <name...>', 'Remove group memberships')
     .action(
@@ -130,6 +136,8 @@ export function registerConfigCommand(program: Command): void {
           clearAlias?: boolean;
           note?: string;
           clearNote?: boolean;
+          url?: string;
+          clearUrl?: boolean;
           addGroup?: string[];
           removeGroup?: string[];
         },
@@ -147,6 +155,8 @@ export function registerConfigCommand(program: Command): void {
           if (options.clearAlias) item.alias = null;
           if (options.note !== undefined) item.note = requiredText(options.note, 'Note', 1000);
           if (options.clearNote) item.note = null;
+          if (options.url !== undefined) item.url = validateServiceUrl(options.url, item);
+          if (options.clearUrl) item.url = null;
           for (const name of options.addGroup ?? []) {
             const clean = requiredText(name, 'Group', 80);
             config.groups.push(clean);
