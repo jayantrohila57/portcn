@@ -2,6 +2,7 @@ export const JSON_SCHEMA_VERSION = 1;
 
 export type JsonErrorCode =
   | 'INVALID_PORT'
+  | 'INVALID_INPUT'
   | 'UNSUPPORTED_JSON_VERSION'
   | 'UNSUPPORTED_PLATFORM'
   | 'MISSING_DEPENDENCY'
@@ -23,28 +24,39 @@ export class UnsupportedJsonVersionError extends Error {
   }
 }
 
+export class InvalidAvailabilityInputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidAvailabilityInputError';
+  }
+}
+
 export function versionedJsonError(error: unknown, port?: string): VersionedJsonError {
   const message = error instanceof Error ? error.message : String(error);
   const code: JsonErrorCode =
     error instanceof Error && error.name === 'InvalidPortError'
       ? 'INVALID_PORT'
-      : error instanceof UnsupportedJsonVersionError
-        ? 'UNSUPPORTED_JSON_VERSION'
-        : message.includes('Linux only')
-          ? 'UNSUPPORTED_PLATFORM'
-          : message.includes('ss command is missing')
-            ? 'MISSING_DEPENDENCY'
-            : 'DISCOVERY_FAILED';
+      : error instanceof InvalidAvailabilityInputError
+        ? 'INVALID_INPUT'
+        : error instanceof UnsupportedJsonVersionError
+          ? 'UNSUPPORTED_JSON_VERSION'
+          : message.includes('Linux only')
+            ? 'UNSUPPORTED_PLATFORM'
+            : message.includes('ss command is missing')
+              ? 'MISSING_DEPENDENCY'
+              : 'DISCOVERY_FAILED';
   const stableMessage =
     code === 'INVALID_PORT'
       ? 'Port must be an integer between 1 and 65535.'
-      : code === 'UNSUPPORTED_JSON_VERSION'
-        ? 'Supported JSON schema version: 1.'
-        : code === 'UNSUPPORTED_PLATFORM'
-          ? 'Port discovery currently supports Linux only.'
-          : code === 'MISSING_DEPENDENCY'
-            ? 'The ss command is required. Install iproute2.'
-            : 'Port discovery failed. Check permissions, iproute2, and namespace visibility.';
+      : code === 'INVALID_INPUT'
+        ? message
+        : code === 'UNSUPPORTED_JSON_VERSION'
+          ? 'Supported JSON schema version: 1.'
+          : code === 'UNSUPPORTED_PLATFORM'
+            ? 'Port discovery currently supports Linux only.'
+            : code === 'MISSING_DEPENDENCY'
+              ? 'The ss command is required. Install iproute2.'
+              : 'Port discovery failed. Check permissions, iproute2, and namespace visibility.';
   return {
     schemaVersion: JSON_SCHEMA_VERSION,
     error: { code, message: stableMessage, ...(port === undefined ? {} : { port }) },
