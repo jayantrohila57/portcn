@@ -6,8 +6,6 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
-- diagnose port conflicts with owner and namespace details ([#95](https://github.com/jayantrohila57/portcn/issues/95)) <!-- task:feat/port-conflict-diagnosis -->
-
 ### Changed
 
 ### Fixed
@@ -17,6 +15,18 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 ### Removed
 
 ### Security
+
+## [0.3.0] - 2026-11-25
+
+[0.3.0]: https://github.com/jayantrohila57/portcn/compare/v0.2.0...v0.3.0
+
+**Title:** Port conflict diagnosis
+
+**Terminal demo:** `portcn diagnose 3000 --json`
+
+### Added
+
+- diagnose port conflicts with owner and namespace details ([#95](https://github.com/jayantrohila57/portcn/issues/95)) <!-- task:feat/port-conflict-diagnosis -->
 
 ## [0.2.0] - 2026-11-25
 
