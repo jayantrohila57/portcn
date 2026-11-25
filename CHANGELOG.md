@@ -12,6 +12,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Fixed
 
+- deduplicate runtime observations by scoped identity ([#182](https://github.com/jayantrohila57/portcn/issues/182)) <!-- task:feat/container-deduplication -->
+
 ### Deprecated
 
 ### Removed
