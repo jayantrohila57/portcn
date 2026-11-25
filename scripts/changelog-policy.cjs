@@ -107,8 +107,31 @@ function isDocumentationOnly(files) {
   );
 }
 
+function isReleaseExcludedMaintenance(files) {
+  return (
+    files.length > 0 &&
+    files.every(
+      (file) =>
+        file !== 'CHANGELOG.md' &&
+        (file === 'package.json' ||
+          file === 'pnpm-workspace.yaml' ||
+          file === 'AGENTS.md' ||
+          file.startsWith('.github/') ||
+          file.startsWith('scripts/') ||
+          /^apps\/docs\/content\/docs\/.*\.mdx$/.test(file) ||
+          /(?:^|\/)(?:AGENTS\.md|CONTRIBUTING\.md|PRODUCT-ROADMAP\.md|README\.md|RELEASE-[^/]+\.md|[^/]+\.mdx)$/.test(
+            file,
+          )),
+    )
+  );
+}
+
 function validate(base, head, title, branch, issue, files = []) {
   if (base === head && isDocumentationOnly(files)) return { allowed: true };
+  if (isReleaseExcludedMaintenance(files))
+    return head === base
+      ? { allowed: true }
+      : { allowed: false, reason: 'Release-excluded maintenance PRs must leave CHANGELOG.md unchanged.' };
   try {
     const expected = update(base, title, branch, issue);
     if (expected === base) return { allowed: false, reason: 'Task changelog entry already exists in base.' };
