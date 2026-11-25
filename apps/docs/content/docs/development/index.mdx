@@ -10,6 +10,10 @@ corepack enable
 pnpm install --frozen-lockfile
 ```
 
+## Runtime requirements
+
+The workspace requires Node.js 24 or later. The CLI runtime has been separately validated on Node.js 22.21.1 using its packed npm artifact and MCP stdio tools, so the development package metadata now declares Node.js 22 or later. The CLI build target remains Node 24, and the CI `Node 22 packaged runtime` job checks installation, version/help output, MCP initialization, tool discovery, and structured tool errors. The published `v0.5.0` package keeps its existing Node 24 engine declaration until a later release. See the [Node.js release schedule](https://nodejs.org/en/about/previous-releases).
+
 ## Run the workspace
 
 ```sh
