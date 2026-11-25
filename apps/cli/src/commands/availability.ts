@@ -55,9 +55,20 @@ export interface AvailabilityDependencies {
   readNamespace?: () => string | null;
 }
 
+export interface PortWatchOptions extends AvailabilityDependencies {
+  protocol?: string;
+  address?: string;
+  intervalMs?: number;
+  timeoutMs?: number;
+  signal?: AbortSignal;
+  onChange?: (result: PortAvailability) => void;
+  sleep?: (milliseconds: number, signal?: AbortSignal) => Promise<void>;
+}
+
 interface AvailabilityOptions extends AvailabilityDependencies {
   protocol?: string;
   address?: string;
+  platform?: NodeJS.Platform;
 }
 
 function compareText(left: string, right: string): number {
@@ -170,11 +181,13 @@ function overlapReason(
   return null;
 }
 
-function limitations(namespace: string | null): string[] {
+function limitations(namespace: string | null, platform: NodeJS.Platform = process.platform): string[] {
   return [
-    namespace
-      ? `Discovery is limited to the current network namespace (${namespace}); other namespaces are not inspected.`
-      : 'The current network namespace could not be identified; discovery still covers only the namespace visible to this process.',
+    platform === 'darwin'
+      ? 'Discovery covers sockets visible to the current macOS host process; other hosts are not inspected.'
+      : namespace
+        ? `Discovery is limited to the current network namespace (${namespace}); other namespaces are not inspected.`
+        : 'The current network namespace could not be identified; discovery still covers only the namespace visible to this process.',
     'This read-only snapshot observes listeners only. It does not bind or reserve the port, and another process can claim it after the check.',
     'Wildcard availability across IPv4 and IPv6 can be uncertain because dual-stack socket settings may vary.',
   ];
@@ -187,6 +200,7 @@ function assessFromListeners(
   family: AddressFamily,
   listeners: ListeningPort[],
   namespace: string | null,
+  platform: NodeJS.Platform = process.platform,
 ): PortAvailability {
   const relevant = listeners
     .filter((listener) => listener.port === port && listener.protocol === protocol)
@@ -231,7 +245,7 @@ function assessFromListeners(
     conflicts,
     message,
     namespace,
-    limitations: limitations(namespace),
+    limitations: limitations(namespace, platform),
   };
 }
 
@@ -240,8 +254,64 @@ export function checkPortAvailability(port: number, options: AvailabilityOptions
   const protocol = normalizeProtocol(options.protocol);
   const { address, family } = normalizeAddress(options.address);
   const discover = options.discover ?? (() => discoverListeningPorts());
-  const namespace = (options.readNamespace ?? (() => readCurrentNamespace('net')))();
-  return assessFromListeners(port, protocol, address, family, discover(), namespace);
+  const namespace = (
+    options.readNamespace ??
+    (() => ((options.platform ?? process.platform) === 'linux' ? readCurrentNamespace('net') : null))
+  )();
+  return assessFromListeners(port, protocol, address, family, discover(), namespace, options.platform);
+}
+
+export class PortWatchTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`Port watch timed out after ${timeoutMs} ms.`);
+    this.name = 'PortWatchTimeoutError';
+  }
+}
+
+export class PortWatchCancelledError extends Error {
+  constructor() {
+    super('Port watch was cancelled.');
+    this.name = 'PortWatchCancelledError';
+  }
+}
+
+function delay(milliseconds: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(new PortWatchCancelledError());
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', cancel);
+      resolve();
+    }, milliseconds);
+    const cancel = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', cancel);
+      reject(new PortWatchCancelledError());
+    };
+    signal?.addEventListener('abort', cancel, { once: true });
+  });
+}
+
+export async function watchPortAvailability(port: number, options: PortWatchOptions = {}): Promise<PortAvailability> {
+  const intervalMs = options.intervalMs ?? 250;
+  const timeoutMs = options.timeoutMs ?? 30_000;
+  if (!Number.isInteger(intervalMs) || intervalMs < 50 || intervalMs > 5_000)
+    throw new InvalidAvailabilityInputError('Watch interval must be an integer between 50 and 5000 ms.');
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 300_000)
+    throw new InvalidAvailabilityInputError('Watch timeout must be an integer between 1 and 300000 ms.');
+  const check = () => checkPortAvailability(port, options);
+  const sleep = options.sleep ?? delay;
+  const startedAt = Date.now();
+  let previous: AvailabilityStatus | undefined;
+  while (true) {
+    if (options.signal?.aborted) throw new PortWatchCancelledError();
+    const result = check();
+    if (result.status !== previous) options.onChange?.(result);
+    previous = result.status;
+    if (result.status === 'no-conflict-observed') return result;
+    const remaining = timeoutMs - (Date.now() - startedAt);
+    if (remaining <= 0) throw new PortWatchTimeoutError(timeoutMs);
+    await sleep(Math.min(intervalMs, remaining), options.signal);
+  }
 }
 
 function parseRange(range: string | undefined): { start: number; end: number } {
@@ -272,7 +342,10 @@ export function suggestAvailablePorts(
   if (!Number.isInteger(limit) || limit < 1 || limit > 20)
     throw new InvalidAvailabilityInputError('Suggestion limit must be an integer between 1 and 20.');
   const discover = options.discover ?? (() => discoverListeningPorts());
-  const namespace = (options.readNamespace ?? (() => readCurrentNamespace('net')))();
+  const namespace = (
+    options.readNamespace ??
+    (() => ((options.platform ?? process.platform) === 'linux' ? readCurrentNamespace('net') : null))
+  )();
   const listeners = discover();
   const suggestions: number[] = [];
   for (let port = from; port <= range.end && suggestions.length < limit; port += 1) {
@@ -286,7 +359,7 @@ export function suggestAvailablePorts(
     range,
     suggestions,
     namespace,
-    limitations: limitations(namespace),
+    limitations: limitations(namespace, options.platform),
   };
 }
 
@@ -318,6 +391,88 @@ export function formatPortSuggestions(result: PortSuggestions): string {
 }
 
 export function registerAvailabilityCommands(program: Command, dependencies: AvailabilityDependencies = {}): void {
+  program
+    .command('wait <port>')
+    .description('Wait until no overlapping listener is observed; does not reserve the port')
+    .option('--protocol <protocol>', 'Protocol to check (tcp or udp)', 'tcp')
+    .option('--address <address>', 'IPv4 or IPv6 bind address to check', '127.0.0.1')
+    .option('--interval <milliseconds>', 'Polling interval (50-5000 ms)', '250')
+    .option('--timeout <milliseconds>', 'Maximum wait (1-300000 ms)', '30000')
+    .option('--json', 'Print versioned state changes and final result as JSON lines')
+    .option('--json-version <version>', 'Print versioned state changes and final result as JSON lines (supported: 1)')
+    .action(
+      async (
+        value: string,
+        options: {
+          protocol?: string;
+          address?: string;
+          interval?: string;
+          timeout?: string;
+          json?: boolean;
+          jsonVersion?: string;
+        },
+      ) => {
+        const controller = new AbortController();
+        const cancel = () => controller.abort();
+        process.once('SIGINT', cancel);
+        process.once('SIGTERM', cancel);
+        const json = options.json || options.jsonVersion !== undefined;
+        try {
+          if (!jsonSchemaIsSupported(options.jsonVersion)) throw new UnsupportedJsonVersionError();
+          const intervalMs = Number(options.interval);
+          const timeoutMs = Number(options.timeout);
+          if (!/^\d+$/.test(options.interval ?? '') || !/^\d+$/.test(options.timeout ?? ''))
+            throw new InvalidAvailabilityInputError('Watch interval and timeout must be integer milliseconds.');
+          const result = await watchPortAvailability(parsePort(value), {
+            ...options,
+            intervalMs,
+            timeoutMs,
+            ...dependencies,
+            signal: controller.signal,
+            onChange: (state) => {
+              if (json)
+                process.stdout.write(
+                  `${JSON.stringify({ schemaVersion: JSON_SCHEMA_VERSION, event: 'state-change', status: state.status, port: state.port, protocol: state.protocol, address: state.address, observedAt: new Date().toISOString() })}\n`,
+                );
+              else process.stdout.write(`${state.status}: ${state.message}\n`);
+            },
+          });
+          if (json)
+            process.stdout.write(
+              `${JSON.stringify({ ...result, event: 'available', observedAt: new Date().toISOString() })}\n`,
+            );
+          else
+            process.stdout.write(
+              `Port ${result.port} has no observed ${result.protocol.toUpperCase()} listener overlap. Another process may claim it before you bind.\n`,
+            );
+        } catch (error) {
+          if (json && error instanceof PortWatchTimeoutError)
+            process.stdout.write(
+              `${JSON.stringify({ schemaVersion: JSON_SCHEMA_VERSION, event: 'timeout', error: { code: 'WATCH_TIMEOUT', message: error.message, port: value } })}\n`,
+            );
+          else if (json && error instanceof PortWatchCancelledError)
+            process.stdout.write(
+              `${JSON.stringify({ schemaVersion: JSON_SCHEMA_VERSION, event: 'cancelled', error: { code: 'WATCH_CANCELLED', message: error.message, port: value } })}\n`,
+            );
+          else if (json)
+            process.stdout.write(`${JSON.stringify({ ...versionedJsonError(error, value), event: 'error' })}\n`);
+          else if (!(error instanceof PortWatchCancelledError))
+            process.stderr.write(`portcn: ${error instanceof Error ? error.message : String(error)}\n`);
+          process.exitCode =
+            error instanceof InvalidPortError ||
+            error instanceof InvalidAvailabilityInputError ||
+            error instanceof UnsupportedJsonVersionError
+              ? 2
+              : error instanceof PortWatchCancelledError
+                ? 130
+                : 1;
+        } finally {
+          process.removeListener('SIGINT', cancel);
+          process.removeListener('SIGTERM', cancel);
+        }
+      },
+    );
+
   program
     .command('check <port>')
     .description('Check for visible TCP or UDP listener overlap without reserving the port (Linux)')

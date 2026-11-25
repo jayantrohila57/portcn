@@ -34,6 +34,7 @@ export interface ProjectContext {
 }
 
 export interface ProjectContextDependencies {
+  platform?: NodeJS.Platform;
   readFile?: (path: string, encoding: BufferEncoding) => string;
   readLink?: (path: string) => string;
   runGit?: (cwd: string) => GitMetadata | null;
@@ -308,6 +309,23 @@ function inspectProcess(pid: number, dependencies: ProjectContextDependencies): 
 }
 
 export function inspectProjectContext(pid: number, dependencies: ProjectContextDependencies = {}): ProjectContext {
+  if ((dependencies.platform ?? process.platform) !== 'linux') {
+    return {
+      status: 'unavailable',
+      confidence: 'none',
+      source: null,
+      cwd: null,
+      executable: null,
+      projectRoot: null,
+      gitDir: null,
+      gitCommonDir: null,
+      checkoutBranch: null,
+      checkoutCommit: null,
+      worktree: null,
+      ancestors: [],
+      evidence: ['Process project details are unavailable on this platform.'],
+    };
+  }
   if (!Number.isInteger(pid) || pid < 1) {
     return {
       status: 'unavailable',

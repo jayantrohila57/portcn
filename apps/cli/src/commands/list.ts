@@ -20,6 +20,8 @@ export interface ListeningOwner {
 }
 
 const SS_ARGS = ['--no-header', '--listening', '--tcp', '--udp', '--numeric', '--processes'];
+const LSOF_TCP_ARGS = ['-nP', '-iTCP', '-sTCP:LISTEN', '-F0pcPn'];
+const LSOF_UDP_ARGS = ['-nP', '-iUDP', '-F0pcPn'];
 const compareText = (left: string, right: string): number => (left < right ? -1 : left > right ? 1 : 0);
 
 export function parseSsOutput(output: string): ListeningPort[] {
@@ -65,33 +67,122 @@ export function parseSsOutput(output: string): ListeningPort[] {
   );
 }
 
+export function parseLsofOutput(output: string): ListeningPort[] {
+  const ports = new Map<string, ListeningPort>();
+  let pid: number | null = null;
+  let processName: string | null = null;
+  let protocol: ListeningPort['protocol'] | null = null;
+
+  for (const field of output.split(/[\0\r\n]+/)) {
+    if (!field) continue;
+    const identifier = field[0];
+    const value = field.slice(1);
+    if (identifier === 'p') {
+      pid = /^\d+$/.test(value) ? Number(value) : null;
+      processName = null;
+      protocol = null;
+      continue;
+    }
+    if (identifier === 'c') {
+      processName = value || null;
+      continue;
+    }
+    if (identifier === 'P') {
+      const normalized = value.toLowerCase();
+      protocol = normalized === 'tcp' ? 'tcp' : normalized === 'udp' ? 'udp' : null;
+      continue;
+    }
+    if (identifier !== 'n' || !protocol || value.includes('->')) continue;
+
+    const endpoint = value.replace(/\s+\([^)]*\)$/, '');
+    const separator = endpoint.lastIndexOf(':');
+    const rawPort = endpoint.slice(separator + 1);
+    const port = Number(rawPort);
+    if (separator < 0 || !/^\d+$/.test(rawPort) || !Number.isInteger(port) || port < 1 || port > 65_535) {
+      continue;
+    }
+
+    let address = endpoint.slice(0, separator);
+    if (address.includes(':') && !address.startsWith('[')) address = `[${address}]`;
+    const state = protocol === 'tcp' ? 'LISTEN' : 'UNCONN';
+    const key = `${protocol}\0${state}\0${address}\0${port}`;
+    let listener = ports.get(key);
+    if (!listener) {
+      listener = { protocol, state, address, port, pid: null, processName: null, owners: [] };
+      ports.set(key, listener);
+    }
+    if (pid !== null && processName && !listener.owners?.some((owner) => owner.pid === pid)) {
+      listener.owners?.push({ pid, processName });
+    }
+  }
+
+  return [...ports.values()]
+    .map((listener) => {
+      const owners = [...(listener.owners ?? [])].sort(
+        (left, right) => left.pid - right.pid || compareText(left.processName, right.processName),
+      );
+      const owner = owners[0];
+      return {
+        ...listener,
+        pid: owner?.pid ?? null,
+        processName: owner?.processName ?? null,
+        owners,
+      };
+    })
+    .sort(
+      (left, right) =>
+        left.port - right.port ||
+        compareText(left.protocol, right.protocol) ||
+        compareText(left.address, right.address),
+    );
+}
+
 export function discoverListeningPorts({
   platform = process.platform,
   runSs = (args) => execFileSync('ss', args, { encoding: 'utf8', timeout: 10_000, maxBuffer: 8 * 1024 * 1024 }),
+  runLsof = (args) => execFileSync('lsof', args, { encoding: 'utf8', timeout: 10_000, maxBuffer: 8 * 1024 * 1024 }),
 }: {
   platform?: NodeJS.Platform;
   runSs?: (args: string[]) => string;
+  runLsof?: (args: string[]) => string;
 } = {}): ListeningPort[] {
-  if (platform !== 'linux') {
-    throw new Error('Port listing currently supports Linux only.');
-  }
-
   let output: string;
-  try {
-    output = runSs(SS_ARGS);
-  } catch (error) {
-    const failure = error as NodeJS.ErrnoException;
-    if (failure.code === 'ENOENT') {
-      throw new Error('The ss command is missing. Install iproute2 (Ubuntu: sudo apt install iproute2).');
+  if (platform === 'linux') {
+    try {
+      output = runSs(SS_ARGS);
+    } catch (error) {
+      const failure = error as NodeJS.ErrnoException;
+      if (failure.code === 'ENOENT') {
+        throw new Error('The ss command is missing. Install iproute2 (Ubuntu: sudo apt install iproute2).');
+      }
+      if (failure.code === 'ETIMEDOUT') {
+        throw new Error('The ss command timed out while listing ports.');
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Unable to list ports using ss: ${message}`);
     }
-    if (failure.code === 'ETIMEDOUT') {
-      throw new Error('The ss command timed out while listing ports.');
-    }
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Unable to list ports using ss: ${message}`);
+    return parseSsOutput(output);
   }
-
-  return parseSsOutput(output);
+  if (platform === 'darwin') {
+    const runQuery = (args: string[]) => {
+      try {
+        return runLsof(args);
+      } catch (error) {
+        const failure = error as NodeJS.ErrnoException;
+        if (failure.code === 'ENOENT') throw new Error('The lsof command is missing from this macOS installation.');
+        if (failure.code === 'ETIMEDOUT') throw new Error('The lsof command timed out while listing ports.');
+        if (
+          (error as { status?: number }).status === 1 &&
+          !String((error as { stderr?: string | Buffer }).stderr ?? '').trim()
+        )
+          return '';
+        throw new Error('Unable to list visible ports with lsof; process permissions may limit this snapshot.');
+      }
+    };
+    output = `${runQuery(LSOF_TCP_ARGS)}\n${runQuery(LSOF_UDP_ARGS)}`;
+    return parseLsofOutput(output);
+  }
+  throw new Error(`Port listing currently supports Linux and macOS; ${platform} is unsupported.`);
 }
 
 export function formatListeningPorts(ports: ListeningPort[], options: TableOptions = {}): string {
@@ -118,7 +209,7 @@ export function registerListCommand(
 ): void {
   program
     .command('list')
-    .description('List listening TCP and UDP ports (Linux)')
+    .description('List listening TCP and UDP ports (Linux and macOS)')
     .option('-i, --interactive', 'Switch between filtered port tabs with the keyboard')
     .option('--json', 'Print all listeners as JSON without terminal formatting or pagination')
     .option('--json-version <version>', 'Print versioned JSON (supported: 1)')

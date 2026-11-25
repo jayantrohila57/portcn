@@ -26,6 +26,8 @@ test('prepares a promotion for one meaningful task and skips changes without a v
   const body = preparePromotion(one.run);
   assert.match(body, /Prepared promotion/);
   assert(one.calls.some((call) => call.includes('create')));
+  assert(!one.calls.some((call) => call[1] === 'pr' && call[2] === 'merge'));
+  assert.match(one.calls.find((call) => call.includes('create')).join(' '), /true merge commit/);
   assert(
     one.calls.some((call) => call.some((arg) => typeof arg === 'string' && arg.includes('generate-release-notes.mjs'))),
   );

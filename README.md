@@ -64,7 +64,7 @@ node apps/cli/dist/index.js endpoint check tcp://127.0.0.1:3000 # one bounded HT
 node apps/cli/dist/index.js open tcp://127.0.0.1:3000 # explicit local browser open on dev
 ```
 
-Optional Docker Compose commands build and run the packaged CLI image. For example, `pnpm docker:cli -- --version` rebuilds the current artifact before running it. Unit tests and package checks run with the regular pnpm scripts.
+Optional Docker Compose commands build and run the packaged CLI image. For example, `pnpm docker:cli --version` rebuilds the current artifact before running it. Unit tests and package checks run with the regular pnpm scripts.
 
 Containers use their normal PID, network, and mount namespaces. The CLI can initially observe only the processes and ports in its own container; host discovery is not enabled. No service uses privileged mode, host networking, host PID, or a Docker socket mount.
 

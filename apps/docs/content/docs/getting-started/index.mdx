@@ -6,7 +6,7 @@ description: Install Portcn's development workspace and list listening Linux por
 Portcn is under active development. This guide runs the CLI from a source checkout; it does not describe a published npm installation.
 
 <Callout title="Current capabilities" type="info">
-The published `v0.4.0` package supports `--help`, `--version`, and read-only Linux listener, process, project, and service diagnostics. It also includes saved services, Docker inventory, and bind-scope reports. Discovery requires `ss` from `iproute2`. Process termination and service management are not implemented.
+The published `v0.5.0` package supports `--help`, `--version`, and read-only Linux listener, process, project, and service diagnostics. It also includes saved services, Docker inventory, and bind-scope reports. Discovery requires `ss` from `iproute2`. The development branch adds macOS listener discovery for `list`, `inspect`, and `diagnose` through `lsof`, plus a read-only stdio MCP server; these changes will be available in a later package release. On macOS, process command lines, user IDs, project context, and agent markers are unavailable. Process termination and service management are not implemented.
 </Callout>
 
 ## Requirements
@@ -14,6 +14,8 @@ The published `v0.4.0` package supports `--help`, `--version`, and read-only Lin
 - Node.js 24 or later
 - pnpm 12.3.4 (the repository pins this version through Corepack)
 - Git
+
+These requirements apply to building the source workspace. The CLI package itself supports Node.js 22 or later in the development branch; the published `v0.5.0` package retains its Node.js 24 requirement until a later release.
 
 ## Build and run Portcn
 
@@ -67,7 +69,7 @@ pnpm build
 ```sh
 node apps/cli/dist/index.js --help
 node apps/cli/dist/index.js --version
-node apps/cli/dist/index.js list # Linux only, iproute2 required
+node apps/cli/dist/index.js list # Linux: iproute2; macOS: lsof
 node apps/cli/dist/index.js diagnose 3000 # published in v0.4.0
 ```
 
@@ -86,4 +88,4 @@ Open `http://localhost:3000/docs`. For another port:
 pnpm --filter @portcn/docs exec next dev --port 3001
 ```
 
-See [CLI Reference](/docs/cli-reference), [Development](/docs/development), and [Docker](/docs/docker).
+See [CLI Reference](/docs/cli-reference), [MCP server for coding agents](/docs/guides/mcp), [Development](/docs/development), and [Docker](/docs/docker).

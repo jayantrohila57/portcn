@@ -41,6 +41,7 @@ export interface PortDiagnosis {
 }
 
 export interface DiagnosisOptions {
+  platform?: NodeJS.Platform;
   discover?: () => ListeningPort[];
   inspectProcess?: (pid: number) => ReturnType<typeof inspectProcessDetails>;
   inspectProject?: (pid: number) => ProjectContext;
@@ -90,12 +91,16 @@ function ownerMessage(listener: DiagnosedListener, owner: DiagnosedOwner, port: 
 }
 
 export function diagnoseListeningPort(port: number, options: DiagnosisOptions = {}): PortDiagnosis {
+  const platform = options.platform ?? process.platform;
   const discover = options.discover ?? (() => discoverListeningPorts());
-  const inspectProcess = options.inspectProcess ?? inspectProcessDetails;
-  const inspectProject = options.inspectProject ?? inspectProjectContext;
-  const inspectAgent = options.inspectAgent ?? inspectAgentAttribution;
+  const inspectProcess = options.inspectProcess ?? ((pid: number) => inspectProcessDetails(pid, undefined, platform));
+  const inspectProject = options.inspectProject ?? ((pid: number) => inspectProjectContext(pid, { platform }));
+  const inspectAgent =
+    options.inspectAgent ??
+    ((pid: number, ancestors: ProjectContext['ancestors']) => inspectAgentAttribution(pid, ancestors, { platform }));
   const readNamespace = options.readNamespace ?? readCurrentNamespace;
-  const namespace = { network: readNamespace('net'), pid: readNamespace('pid') };
+  const namespace =
+    platform === 'linux' ? { network: readNamespace('net'), pid: readNamespace('pid') } : { network: null, pid: null };
   const visiblePorts = discover()
     .filter((listener) => listener.port === port)
     .sort(
@@ -147,12 +152,16 @@ export function diagnoseListeningPort(port: number, options: DiagnosisOptions = 
   }
 
   const limitations = [
-    namespace.network
-      ? `Socket discovery is limited to the current network namespace (${namespace.network}); the host and other network namespaces are not inspected.`
-      : 'The current network namespace could not be identified; discovery still covers only the namespace visible to this process.',
-    namespace.pid
-      ? `PIDs and /proc details use the current PID namespace (${namespace.pid}); other PID namespaces may expose different or incomplete process information.`
-      : 'The current PID namespace could not be identified; process IDs are reported as provided by the current namespace.',
+    platform !== 'linux'
+      ? 'Socket discovery uses the current macOS host view; Linux network namespace identifiers do not apply.'
+      : namespace.network
+        ? `Socket discovery is limited to the current network namespace (${namespace.network}); the host and other network namespaces are not inspected.`
+        : 'The current network namespace could not be identified; discovery still covers only the namespace visible to this process.',
+    platform !== 'linux'
+      ? 'Process command lines, user IDs, project paths, and agent environment markers are unavailable on macOS; visible PIDs and process names come from lsof.'
+      : namespace.pid
+        ? `PIDs and /proc details use the current PID namespace (${namespace.pid}); other PID namespaces may expose different or incomplete process information.`
+        : 'The current PID namespace could not be identified; process IDs are reported as provided by the current namespace.',
     'This is a read-only point-in-time snapshot. A listener can stop or a new process can bind after diagnosis completes.',
   ];
 

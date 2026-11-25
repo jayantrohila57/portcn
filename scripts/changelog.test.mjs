@@ -18,7 +18,7 @@ test('generates one categorized user-facing entry, includes issue refs, and pres
   assert.equal(validate(base, next, 'feat(cli): add example', 'feat/example', '119').allowed, true);
   assert.equal(validate(base, base, 'feat(cli): add example', 'feat/example').allowed, false);
 });
-test('allows documentation-only PRs to leave the release changelog unchanged', () => {
+test('allows documentation and release-excluded maintenance PRs to leave the release changelog unchanged', () => {
   const files = [
     'apps/docs/content/docs/releases/index.mdx',
     'PRODUCT-ROADMAP.md',
@@ -35,6 +35,22 @@ test('allows documentation-only PRs to leave the release changelog unchanged', (
     validate(base, base, 'docs(release): record verified lifecycle status', 'docs/release-status', undefined, [
       ...files,
       'scripts/task-lifecycle.mjs',
+    ]).allowed,
+    true,
+  );
+  assert.equal(
+    validate(base, base, 'ci(release): enforce lifecycle merge strategies', 'ci/merge-strategy-policy', undefined, [
+      ...files,
+      'scripts/task-lifecycle.mjs',
+      '.github/PULL_REQUEST_TEMPLATE.md',
+      'package.json',
+    ]).allowed,
+    true,
+  );
+  assert.equal(
+    validate(base, base, 'ci(release): enforce lifecycle merge strategies', 'ci/merge-strategy-policy', undefined, [
+      'scripts/task-lifecycle.mjs',
+      'apps/cli/src/index.ts',
     ]).allowed,
     false,
   );

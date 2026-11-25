@@ -4,8 +4,11 @@ import {
   checkPortAvailability,
   formatPortAvailability,
   formatPortSuggestions,
+  PortWatchCancelledError,
+  PortWatchTimeoutError,
   registerAvailabilityCommands,
   suggestAvailablePorts,
+  watchPortAvailability,
 } from '../src/commands/availability.js';
 import type { ListeningPort } from '../src/commands/list.js';
 
@@ -40,6 +43,13 @@ describe('read-only port availability', () => {
     );
     expect(checkPortAvailability(3001, { discover: () => sockets }).status).toBe('no-conflict-observed');
     expect(conflict.limitations.join(' ')).toContain('does not bind or reserve');
+  });
+
+  it('describes macOS host-view scope without claiming a Linux namespace', () => {
+    const result = checkPortAvailability(3000, { platform: 'darwin', discover: () => sockets });
+    expect(result.namespace).toBeNull();
+    expect(result.limitations.join('\n')).toContain('current macOS host process');
+    expect(result.limitations.join('\n')).not.toContain('network namespace could not be identified');
   });
 
   it('orders multiple overlapping listeners deterministically', () => {
@@ -105,6 +115,49 @@ describe('read-only port availability', () => {
     );
   });
 
+  it('watches until a listener disappears and emits only state changes', async () => {
+    let calls = 0;
+    const changes: string[] = [];
+    const result = await watchPortAvailability(3000, {
+      discover: () => (++calls < 2 ? [loopbackListener] : []),
+      sleep: async () => {},
+      onChange: ({ status }) => changes.push(status),
+    });
+    expect(result.status).toBe('no-conflict-observed');
+    expect(changes).toEqual(['conflict-observed', 'no-conflict-observed']);
+  });
+
+  it('times out while availability remains uncertain or conflicting', async () => {
+    await expect(
+      watchPortAvailability(3000, {
+        discover: () => [loopbackListener],
+        intervalMs: 50,
+        timeoutMs: 1,
+        sleep: async () => {},
+      }),
+    ).rejects.toBeInstanceOf(PortWatchTimeoutError);
+  });
+
+  it('cancels promptly and validates watch bounds', async () => {
+    const controller = new AbortController();
+    await expect(
+      watchPortAvailability(3000, {
+        discover: () => [loopbackListener],
+        signal: controller.signal,
+        sleep: async (_ms, signal) => {
+          controller.abort();
+          if (signal?.aborted) throw new PortWatchCancelledError();
+        },
+      }),
+    ).rejects.toBeInstanceOf(PortWatchCancelledError);
+    await expect(watchPortAvailability(3000, { intervalMs: 1, discover: () => [] })).rejects.toThrow(
+      'between 50 and 5000',
+    );
+    await expect(watchPortAvailability(3000, { timeoutMs: 0, discover: () => [] })).rejects.toThrow(
+      'between 1 and 300000',
+    );
+  });
+
   it('emits stable versioned JSON for check and suggestions and structured errors', async () => {
     const output: string[] = [];
     vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
@@ -130,5 +183,22 @@ describe('read-only port availability', () => {
     });
     expect(process.exitCode).toBe(2);
     process.exitCode = 0;
+  });
+
+  it('reports watch timeouts as timeout errors in JSON mode', async () => {
+    const output: string[] = [];
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      output.push(String(chunk));
+      return true;
+    });
+    const program = new Command();
+    registerAvailabilityCommands(program, { discover: () => [loopbackListener] });
+    await program.parseAsync(['node', 'portcn', 'wait', '3000', '--timeout', '1', '--json']);
+    expect(JSON.parse(output.at(-1) ?? '')).toMatchObject({
+      schemaVersion: 1,
+      event: 'timeout',
+      error: { code: 'WATCH_TIMEOUT', port: '3000' },
+    });
+    expect(process.exitCode).toBe(1);
   });
 });

@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
 const { validate } = createRequire(import.meta.url)('./changelog-policy.cjs');
+const { requestMerge } = createRequire(import.meta.url)('./merge-strategy.cjs');
 
 export const namePattern = /^(feat|fix|refactor|chore|docs|test|build|ci|perf)\/[a-z0-9][a-z0-9-]*$/;
 export function createLifecycle(run) {
@@ -99,7 +100,7 @@ export function createLifecycle(run) {
       )
     )
       throw new Error('PR has failing checks; fix them before retrying.');
-    run('gh', ['pr', 'merge', String(pr.number), '--auto', '--squash']);
+    requestMerge(run, pr.number, pr, { auto: true });
     return 'Auto-merge requested; run finish after GitHub reports the PR merged.';
   }
   function changelog(title, issue) {
