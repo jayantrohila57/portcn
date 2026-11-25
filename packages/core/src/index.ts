@@ -1,7 +1,27 @@
-/** A TCP/UDP port number that can be represented in an IP socket address. */
-export type PortNumber = number & { readonly __portNumber: unique symbol };
-
-/** Checks the numeric range used by IP port fields without probing the host. */
-export function isValidPortNumber(value: unknown): value is PortNumber {
-  return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 65_535;
-}
+export {
+  type AnyDiscoveryObservation,
+  type CorrelationType,
+  createDiscoverySnapshot,
+  DISCOVERY_SCHEMA_VERSION,
+  type DiscoveryConfidence,
+  type DiscoveryCorrelation,
+  type DiscoveryEvidence,
+  type DiscoveryIdentity,
+  type DiscoveryObservation,
+  type DiscoveryObservationState,
+  type DiscoveryProvider,
+  type DiscoveryProviderName,
+  type DiscoveryProviderRequest,
+  type DiscoveryProviderResult,
+  type DiscoveryRuntime,
+  type DiscoveryScope,
+  type DiscoverySnapshot,
+  discoveryIdentityKey,
+  type EvidenceFreshness,
+  type EvidenceProvenance,
+  evidenceFreshness,
+  type ProviderIssue,
+  type ProviderResultStatus,
+  type UnidentifiedDiscoveryObservation,
+} from './discovery.js';
+export { isValidPortNumber, type PortNumber } from './port-number.js';

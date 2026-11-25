@@ -1,6 +1,12 @@
 const categories = ['Added', 'Changed', 'Fixed', 'Deprecated', 'Removed', 'Security'];
 const commitCategory = { feat: 'Added', fix: 'Fixed', perf: 'Changed', refactor: 'Changed', revert: 'Changed' };
 const issueUrl = (number) => `https://github.com/jayantrohila57/portcn/issues/${number}`;
+const architectureContractFiles = new Set([
+  'packages/core/src/discovery.ts',
+  'packages/core/src/index.ts',
+  'packages/core/src/port-number.ts',
+  'packages/core/test/discovery.test.ts',
+]);
 
 function parseCategories(content) {
   const result = [];
@@ -116,6 +122,7 @@ function isReleaseExcludedMaintenance(files) {
         (file === 'package.json' ||
           file === 'pnpm-workspace.yaml' ||
           file === 'AGENTS.md' ||
+          architectureContractFiles.has(file) ||
           file.startsWith('.github/') ||
           file.startsWith('scripts/') ||
           /^apps\/docs\/content\/docs\/.*\.mdx$/.test(file) ||
