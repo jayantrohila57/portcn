@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- discover visible service and socket units ([#185](https://github.com/jayantrohila57/portcn/issues/185)) <!-- task:feat/systemd-discovery -->
+
 - discover local Nginx services and listeners ([#184](https://github.com/jayantrohila57/portcn/issues/184)) <!-- task:feat/nginx-discovery -->
 
 - attribute rootlessport forwarding processes ([#183](https://github.com/jayantrohila57/portcn/issues/183)) <!-- task:feat/rootlessport-attribution -->

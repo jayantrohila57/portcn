@@ -59,7 +59,7 @@ Sequence work by these dependencies. The owner authorized the next service-disco
 | 1     | Define unified Linux service identity, provider interfaces, provenance, freshness, confidence, and partial-result rules               | #180             | Complete with architecture contract and deterministic tests; no provider integration                 |
 | 2     | Integrate native processes and existing Docker observations with Podman discovery                                                     | #95, #101, #181  | Read-only Podman inventory implemented on `dev`; unified provider migration remains pending          |
 | 3     | Deduplicate Docker/Podman observations and attribute `rootlessport` forwarding processes                                              | #182, #183       | Complete on `dev`; identity and mapping correlation in #182, scoped process attribution in #183      |
-| 4     | Discover Nginx and systemd services without confusing configured state with live observations                                         | #184, #185       | Nginx configuration evidence implemented on `dev`; systemd discovery pending                         |
+| 4     | Discover Nginx and systemd services without confusing configured state with live observations                                         | #184, #185       | Nginx configuration evidence implemented on `dev`; systemd discovery implemented on `dev`            |
 | 5     | Integrate provider results in one Linux service-oriented terminal dashboard                                                           | #187             | Pending; depends on #180–#185; preserve existing TUI and JSON behavior                               |
 | 6     | Represent evidence-backed service relationships and dependencies                                                                      | #186             | Pending; depends on provider identities and relationships from #180–#185                             |
 | 7     | Add CPU and memory monitoring by service/project with units, sampling intervals, PID reuse protection, and duplicate-process handling | #112             | Pending; depends on stable service identity                                                          |
@@ -71,13 +71,13 @@ Sequence work by these dependencies. The owner authorized the next service-disco
 
 ### Remaining issue states
 
-- **Pending (11):** #105, #106, #110, #112, #113, #115, #116, #144, and new Linux work #185–#187.
+- **Pending (10):** #105, #106, #110, #112, #113, #115, #116, #144, and new Linux work #186–#187.
 - **Partially implemented (1):** #117. Local HTTP(S) requests already use strict TLS validation and report failures; certificate metadata and explicit certificate-state inspection are missing.
 - **Deferred (1):** #141 Windows support, until the Linux product is complete.
 - **Blocked (0):** No currently open issue is blocked on an external dependency. Process-management implementation remains gated on owner approval after the design is complete.
-- **Completed (30 of 43 tracked issues):** 19 previously completed issues were verified during reconciliation; #180–#184 deliver shared architecture, Podman inventory, safe reconciliation, rootlessport attribution, and Nginx configuration discovery on `dev`. Systemd and dashboard integrations remain open in #185–#187.
+- **Completed (31 of 43 tracked issues):** 19 previously completed issues were verified during reconciliation; #180–#185 deliver shared architecture, Podman inventory, safe reconciliation, rootlessport attribution, Nginx configuration, and systemd discovery on `dev`. Dashboard integration remains open in #186–#187.
 
-Verified issue-level roadmap completion is **25 of 37 Linux-first capability issues (67.6%)**. This counts #180's architecture deliverable plus #181–#184 merged implementations on `dev`; it does not imply a released unified runtime discovery feature. The denominator excludes documentation/release-process/runtime-compatibility research and deferred Windows issue #141; partial #117 is not complete.
+Verified issue-level roadmap completion is **26 of 37 Linux-first capability issues (70.3%)**. This counts #180's architecture deliverable plus #181–#185 merged implementations on `dev`; it does not imply a released unified runtime discovery feature. The denominator excludes documentation/release-process/runtime-compatibility research and deferred Windows issue #141; partial #117 is not complete.
 
 ## Release, docs, and development policy
 
