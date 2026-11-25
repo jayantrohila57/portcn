@@ -3,7 +3,7 @@ title: CLI reference
 description: Portcn port listing, inspection, conflict diagnosis, output, and exit codes.
 ---
 
-The published ``v0.3.0`` Linux CLI provides read-only ``portcn list``, ``portcn inspect``, and ``portcn diagnose`` commands. Future features are proposals until implemented and included in a release.
+The published ``v0.3.0`` Linux CLI provides read-only ``portcn list``, ``portcn inspect``, and ``portcn diagnose`` commands. The development branch adds ``check`` and ``suggest`` for point-in-time listener overlap checks and bounded port suggestions; these commands will ship in a later package release.
 
 ```sh
 node apps/cli/dist/index.js --help
@@ -84,6 +84,32 @@ node apps/cli/dist/index.js diagnose 3000 --json-version 1
 ```
 
 Version 1 returns ``{"schemaVersion":1,"listeners":[...]}`` for ``list``, ``{"schemaVersion":1,"port":3000,"listeners":[...]}`` for ``inspect``, and the existing versioned diagnosis object for ``diagnose``. Listener and owner order is deterministic. Invalid ports and discovery failures in JSON mode produce one JSON error object on stdout and a nonzero exit status; errors use stable codes and sanitized messages.
+
+## ``portcn check <port>``
+
+Checks for visible listener overlap for the requested protocol and bind address. It does not bind, reserve, or connect to the port. The default is TCP on ``127.0.0.1``; use ``--protocol udp`` or an IPv4/IPv6 literal with ``--address`` to check another case.
+
+```sh
+node apps/cli/dist/index.js check 3000
+node apps/cli/dist/index.js check 3000 --protocol tcp --address 0.0.0.0 --json
+node apps/cli/dist/index.js check 3000 --address ::1 --json-version 1
+```
+
+The version 1 result contains ``schemaVersion``, ``port``, ``protocol``, ``address``, ``status``, ``conflicts``, ``message``, ``namespace``, and ``limitations``. Status is ``conflict-observed``, ``no-conflict-observed``, or ``unknown``. Wildcard checks across IPv4 and IPv6 can be uncertain because dual-stack settings differ. “No conflict observed” is a snapshot, not a guarantee that a later bind will succeed.
+
+## ``portcn suggest``
+
+Scans a bounded range using the same read-only listener snapshot and returns candidates with no observed overlap. By default it checks TCP on ``127.0.0.1``, scans ``3000-3999``, and returns up to five suggestions. ``--range`` accepts at most 1024 ports; ``--limit`` accepts 1 through 20. Unknown candidates are omitted.
+
+```sh
+node apps/cli/dist/index.js suggest
+node apps/cli/dist/index.js suggest --range 4000-4100 --from 4000 --limit 3 --json
+node apps/cli/dist/index.js suggest --protocol udp --address ::1 --range 5000-5100 --json-version 1
+```
+
+The result contains ``schemaVersion``, ``protocol``, ``address``, ``range``, ``suggestions``, ``namespace``, and ``limitations``. A suggestion is not reserved and may be claimed immediately by another process.
+
+Both commands return status ``0`` when a check completes, including an ``unknown`` check or when no suggestions are found; status ``1`` indicates discovery failure; status ``2`` indicates invalid input or an unsupported JSON schema version. JSON errors use the version 1 ``error`` object and sanitized messages.
 
 The JSON result has ``schemaVersion``, ``port``, ``namespace``, ``listeners``, ``messages``, and ``limitations`` fields. Each listener includes ``protocol``, ``state``, ``bindAddress``, ``addressFamily``, and ``owners``. Owner fields include ``pid``, ``processName``, ``command``, ``user``, and ``detailsStatus`` (``available``, ``permission-denied``, ``process-exited``, or ``unavailable``). Sensitive command-line options, secret-like environment assignments, and URL passwords are redacted from process command details. When no process ID is visible, the listener's ``owners`` array is empty and the messages explain that permissions or namespace boundaries can hide ownership.
 

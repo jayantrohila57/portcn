@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- check port availability and suggest alternatives ([#99](https://github.com/jayantrohila57/portcn/issues/99)) <!-- task:feat/port-availability -->
+
 - add versioned JSON contracts ([#98](https://github.com/jayantrohila57/portcn/issues/98)) <!-- task:feat/agent-json-diagnostics -->
 
 ### Changed

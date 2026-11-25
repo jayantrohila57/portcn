@@ -6,7 +6,7 @@ An open-source, developer-first CLI for understanding local development services
 
 ## Development status
 
-Portcn `v0.3.0` is published. It provides read-only Linux commands to list listeners, inspect a port, and diagnose visible owners and namespace limits. Process termination is not implemented.
+Portcn `v0.3.0` is published. It provides read-only Linux commands to list listeners, inspect a port, and diagnose visible owners and namespace limits. The development branch adds versioned JSON output plus point-in-time port checks and suggestions. Process termination is not implemented.
 
 ## Implemented
 
@@ -16,6 +16,7 @@ Portcn `v0.3.0` is published. It provides read-only Linux commands to list liste
 - Read-only `portcn list` on Linux: listening TCP/UDP ports, local addresses, and process details when visible; requires `ss` from `iproute2`.
 - Read-only `portcn inspect <port>` on Linux: protocol, state, local address, PID, process name, and best-effort `/proc` details for all visible listeners on a validated port.
 - Read-only `portcn diagnose <port>` on Linux: visible listeners, owners, address families, and namespace/permission visibility limits. Missing listeners do not guarantee a later bind will succeed.
+- Development branch: `portcn check <port>` reports visible listener overlap for a TCP/UDP protocol and bind address; `portcn suggest` returns bounded candidate ports without observed conflicts. Neither command binds or reserves ports.
 - Human-readable list and inspect output uses bordered ASCII tables with colors in interactive terminals and plain text when piped.
 - Private `@portcn/core` package for future shared functionality.
 - GitHub Actions validation and Release Please version/changelog workflow for `portcn`.
@@ -42,6 +43,8 @@ node apps/cli/dist/index.js inspect 3000  # Linux, read-only
 node apps/cli/dist/index.js list --interactive  # header, tabs, paginated table, and footer navigation
 node apps/cli/dist/index.js diagnose 3000 --json # visible listeners and diagnostic limits
 node apps/cli/dist/index.js list --json-version 1 # stable versioned JSON on dev
+node apps/cli/dist/index.js check 3000            # read-only listener overlap check on dev
+node apps/cli/dist/index.js suggest               # bounded port suggestions on dev
 ```
 
 Optional Docker Compose commands build and run the packaged CLI image. For example, `pnpm docker:cli -- --version` rebuilds the current artifact before running it. Unit tests and package checks run with the regular pnpm scripts.

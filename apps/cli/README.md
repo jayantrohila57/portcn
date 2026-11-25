@@ -23,6 +23,8 @@ portcn inspect 3000            # details for every visible listener on port 3000
 portcn inspect 3000 --json     # machine-readable inspection
 portcn diagnose 3000           # owners, address families, and visibility limits
 portcn diagnose 3000 --json    # machine-readable diagnosis
+portcn check 3000              # dev: point-in-time TCP bind overlap check
+portcn suggest                 # dev: bounded alternative port suggestions
 ```
 
 All discovery is read-only. `diagnose` reports each visible TCP/UDP socket, bind address, IPv4/IPv6 family, every visible PID/process owner, best-effort `/proc` details, and the current network/PID namespaces. It explains when permissions or namespaces hide information. A missing listener is not a guarantee that a later bind will succeed. Port numbers must be between 1 and 65535.
@@ -35,7 +37,7 @@ In `portcn list --interactive`, use `1`/`2`/`3`/`4` to switch All, TCP, UDP, and
 
 ## Documentation and contributions
 
-The current published version is `0.3.0` and includes all three commands listed above. An opt-in versioned JSON contract is being added on `dev` and will ship in a later package release. Future capabilities in the [product roadmap](https://github.com/jayantrohila57/portcn/blob/dev/PRODUCT-ROADMAP.md) are proposals until released and documented as implemented.
+The current published version is `0.3.0` and includes the first three commands listed above. The `dev` branch adds `--json-version 1` plus read-only `check` and `suggest` commands; they will ship in a later package release. Future capabilities in the [product roadmap](https://github.com/jayantrohila57/portcn/blob/dev/PRODUCT-ROADMAP.md) are proposals until released and documented as implemented.
 
 The complete command reference and release policy are in the [Portcn documentation](https://jayantrohila57.github.io/portcn/). Development setup, checks, and contributor rules are in the repository [CONTRIBUTING.md](https://github.com/jayantrohila57/portcn/blob/main/CONTRIBUTING.md). Report bugs or request features in [GitHub Issues](https://github.com/jayantrohila57/portcn/issues).
 
