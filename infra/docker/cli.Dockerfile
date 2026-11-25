@@ -7,7 +7,7 @@ ENV COREPACK_HOME=/corepack \
 
 RUN corepack enable && corepack prepare pnpm@12.3.4 --activate
 RUN apt-get update \
-  && apt-get install --no-install-recommends -y git \
+  && apt-get install --no-install-recommends -y git iproute2 \
   && rm -rf /var/lib/apt/lists/*
 
 FROM pnpm-base AS cli-builder
@@ -26,10 +26,15 @@ RUN npm pack --pack-destination /artifact
 FROM node:24-bookworm-slim AS cli-runtime
 
 ENV NODE_ENV=production
+RUN apt-get update \
+  && apt-get install --no-install-recommends -y iproute2 \
+  && rm -rf /var/lib/apt/lists/*
 COPY --from=cli-builder /artifact/ /tmp/portcn-artifact/
 
 RUN npm install --global --omit=dev --no-audit --no-fund /tmp/portcn-artifact/*.tgz \
-  && rm -rf /tmp/portcn-artifact /root/.npm
+  && rm -rf /tmp/portcn-artifact /root/.npm \
+  && command -v ss \
+  && portcn list --json >/dev/null
 
 ENTRYPOINT ["portcn"]
 CMD []
@@ -37,6 +42,7 @@ CMD []
 FROM pnpm-base AS monorepo-test
 
 WORKDIR /workspace
+RUN git config --global --add safe.directory /workspace
 COPY . .
 
 RUN pnpm install --frozen-lockfile

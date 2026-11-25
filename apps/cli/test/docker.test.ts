@@ -148,13 +148,7 @@ describe('Docker container inventory', () => {
     expect(result.availability).toBe('available');
     expect(result.hostListenerDiscovery).toBe('available');
     expect(dependencies.runDocker).toHaveBeenNthCalledWith(1, ['container', 'ls', '--all', '--quiet', '--no-trunc']);
-    expect(dependencies.runDocker).toHaveBeenNthCalledWith(2, [
-      'container',
-      'inspect',
-      '--type',
-      'container',
-      ...IDS.split('\n'),
-    ]);
+    expect(dependencies.runDocker).toHaveBeenNthCalledWith(2, ['container', 'inspect', ...IDS.split('\n')]);
     expect(
       result.containers.find(({ name }) => name === 'web-1')?.ports[1]?.hostBindings[0]?.listeners[0]?.processName,
     ).toBe('node');
@@ -184,6 +178,21 @@ describe('Docker container inventory', () => {
       });
       expect(result).toMatchObject({ availability, error: { code } });
     }
+  });
+
+  it('classifies current Docker CLI connection failures as daemon-unavailable', () => {
+    const result = discoverDockerInventory({
+      runDocker: () => {
+        throw Object.assign(new Error('Command failed: docker container ls'), {
+          stderr:
+            'failed to connect to the docker API at unix:///tmp/docker.sock; check if the path is correct and if the daemon is running',
+        });
+      },
+    });
+    expect(result).toMatchObject({
+      availability: 'daemon-unavailable',
+      error: { code: 'DOCKER_DAEMON_UNAVAILABLE' },
+    });
   });
 
   it('does not invoke inspect when no containers are present', () => {
