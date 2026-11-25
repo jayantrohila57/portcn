@@ -59,9 +59,9 @@ function evaluateBranchPolicy({ eventName, pullRequest, commits = [] }) {
   const user = pullRequest.user;
   const releaseBranch = 'release-please--branches--main--components--portcn';
   const isReleaseBot = user?.type === 'Bot' && ['github-actions[bot]', 'app/github-actions'].includes(user?.login);
-  const hasOneReleaseCommit = commitHeaders.length === 1 && releaseHeader.test(commitHeaders[0]);
-  if (base === 'main' && head === releaseBranch && isReleaseBot && hasOneReleaseCommit) {
-    return { allowed: true, reason: 'Verified Release Please PR from the configured release branch.' };
+  const startsWithReleaseCommit = commitHeaders.length > 0 && releaseHeader.test(commitHeaders[0]);
+  if (base === 'main' && head === releaseBranch && isReleaseBot && startsWithReleaseCommit && commitsAreConventional) {
+    return { allowed: true, reason: 'Verified Release Please PR with conventional review commits.' };
   }
 
   return {
