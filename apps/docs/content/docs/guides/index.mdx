@@ -13,7 +13,7 @@ pnpm build
 node apps/cli/dist/index.js --help
 ```
 
-The published `v0.5.0` CLI includes listener and process diagnostics, versioned JSON, saved services, Docker inventory, and bind-scope reports. The development branch also includes the unreleased MCP server described in [MCP server for coding agents](/docs/guides/mcp). For exact commands, output, and exit codes, see [CLI Reference](/docs/cli-reference).
+The published `v0.6.0` CLI includes listener and process diagnostics, versioned JSON, saved services, Docker inventory, bind-scope reports, local service checks, bounded port waiting, and the read-only MCP server described in [MCP server for coding agents](/docs/guides/mcp). For exact commands, output, and exit codes, see [CLI Reference](/docs/cli-reference).
 
 To wait for a port to have no visible listener overlap, run ``portcn wait 3000``. The bounded wait can be cancelled with Ctrl-C; an observed free port is not reserved and can still race with another process.
 
@@ -22,5 +22,5 @@ To wait for a port to have no visible listener overlap, run ``portcn wait 3000``
 The Fumadocs site supports searchable pages, a table of contents, Markdown copy/view options, and Markdown/LLM-friendly exports. Start at [Getting Started](/docs/getting-started).
 
 <Callout title="Current boundary" type="warn">
-Portcn reports sockets visible to `ss` in the current Linux network namespace. Its bounded ``wait`` command repeats that read-only observation; it does not reserve ports, terminate processes, monitor services, or discover Docker namespaces automatically.
+Portcn reports sockets visible to `ss` in the current Linux network namespace. Its bounded ``wait`` command repeats that read-only observation; it does not reserve ports, terminate processes, monitor services continuously, or discover other namespaces automatically.
 </Callout>

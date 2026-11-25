@@ -5,6 +5,8 @@ description: The canonical Portcn release and publication procedure.
 
 This page is the single source of truth for releases. `CHANGELOG.md` is the canonical release history. The docs site renders its published sections directly at [`/whats-new`](https://github.com/jayantrohila57/portcn/tree/main/apps/docs/app/whats-new); do not maintain a second release list.
 
+The latest published release is `v0.6.0` (2026-11-25). The release includes the bounded port wait, read-only stdio MCP server, Node.js 22 CLI runtime support, and limited macOS listener discovery. The exact release status is verified from the GitHub Release, tag, package registry, and publication workflow; see the roadmap for the verified capability summary.
+
 ## Protected release flow
 
 1. Merge each validated task PR into protected `dev`. A single completed feature or fix can qualify for a release; do not wait for a task-count threshold. The promotion preview requires a real SemVer bump from a change to shipped source under `apps/cli/` or `packages/core/`. Documentation, workflows, and release tooling do not qualify on their own.

@@ -45,6 +45,7 @@ function normalizedSummary(entry) {
     .replace(/^-\s+/, '')
     .replace(/\s*<!-- task:[^>]+ -->$/, '')
     .replace(/\s+\((?:\[#\d+\]\([^)]+\)(?:,\s*)?)+\)$/, '')
+    .replace(/\s+\(#\d+\)$/, '')
     .trim()
     .toLocaleLowerCase();
 }

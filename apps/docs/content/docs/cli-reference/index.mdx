@@ -3,9 +3,15 @@ title: CLI reference
 description: Portcn port listing, inspection, conflict diagnosis, ownership evidence, output, and exit codes.
 ---
 
-The published ``v0.5.0`` Linux CLI declares Node.js 24 or newer. The development CLI package supports Node.js 22 or newer; the Node 24 build target and workspace requirement remain unchanged. The development branch supports ``list``, ``inspect``, and ``diagnose`` on Linux and macOS, plus the stdio MCP server described below. The macOS adapter uses ``lsof`` and reports PID/process names when visible; Linux-only process details, project context, and agent markers are unavailable there. This support is not yet part of a published package release.
+The published ``v0.6.0`` CLI package requires Node.js 22 or newer; the source workspace and build require Node.js 24 or newer. Linux is the primary supported platform. The package also includes limited macOS ``list``, ``inspect``, and ``diagnose`` support through ``lsof``. On macOS, process command lines, user IDs, project context, and agent markers are unavailable. Windows listener discovery is not implemented. The macOS CI integration verifies real listener discovery; other command families are supported on Linux unless stated otherwise.
 
-Registered top-level commands include `list`, `inspect`, `diagnose`, `assess`, `verify`, `check`, `suggest`, `config`, `endpoint`, `open`, `readiness`, `connection`, `docker`, `exposure`, and `mcp`. Configuration subcommands include `add`, `edit`, `remove`, `group`, and `recover`.
+| Platform | Verified CLI support | Requirements and limits |
+| --- | --- | --- |
+| Linux | All documented command families, including the dashboard and MCP server | `ss` from `iproute2`; Docker commands also require the user's Docker CLI/context. Visibility remains namespace- and permission-limited. |
+| macOS | `list`, `inspect`, and `diagnose` listener discovery | System `lsof`; visible PID/process names only. The live macOS CI check covers listener discovery. Linux `/proc`, project, and agent-marker details are unavailable. |
+| Windows | Help and version output | Listener/service discovery is unsupported. |
+
+Registered top-level commands include `list`, `inspect`, `diagnose`, `wait`, `check`, `suggest`, `assess`, `verify`, `config`, `endpoint`, `open`, `readiness`, `connection`, `docker`, `exposure`, and `mcp`. Configuration subcommands include `add`, `edit`, `remove`, `group`, and `recover`.
 
 ## ``portcn config``
 
@@ -103,7 +109,7 @@ node apps/cli/dist/index.js diagnose 3000 --json
 
 The `--json` forms emit complete results without pagination, colors, or screen-control sequences. `list --json` and `inspect --json` retain their existing top-level array format for compatibility. `diagnose --json` emits its versioned diagnosis object.
 
-On the development branch, all three commands also accept ``--json-version 1`` for a stable, deterministic envelope. This additive option preserves the successful legacy `--json` shapes; it will ship in a later package release.
+All three commands also accept ``--json-version 1`` for a stable, deterministic envelope. This additive option preserves the successful legacy `--json` shapes.
 
 ## Root options
 
@@ -251,7 +257,7 @@ With legacy ``diagnose --json``, invalid arguments and discovery failures are em
 
 ## Errors and limitations
 
-- ``list``, ``inspect``, and ``diagnose`` support Linux and macOS on the development branch. Linux requires ``ss`` from ``iproute2``; macOS requires the system ``lsof`` command. Windows and other platforms are unsupported for listener discovery.
+- Linux requires ``ss`` from ``iproute2``; macOS listener discovery requires the system ``lsof`` command. The published macOS support is limited to ``list``, ``inspect``, and ``diagnose``. Windows listener discovery is unsupported.
 - If ``ss`` is missing, install ``iproute2`` (Ubuntu: ``sudo apt install iproute2``). Portcn exits with status 1 instead of hiding the error.
 - Failures or unexpected output from ``ss`` produce a nonzero exit and explanatory error. Hidden process metadata appears as `` - `` rather than an invented owner.
 - Containers only see sockets in the current network namespace unless explicitly configured otherwise. ``diagnose`` shows the current namespace identifiers and does not inspect host namespaces automatically.

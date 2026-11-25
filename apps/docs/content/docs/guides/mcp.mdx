@@ -3,7 +3,7 @@ title: MCP server for coding agents
 description: Connect coding agents to Portcn's read-only local listener and availability tools.
 ---
 
-Portcn includes a local Model Context Protocol server for coding agents. It uses stdio and exposes bounded read-only queries. On Linux, listener and process evidence is scoped to visible namespaces; the development macOS listener adapter uses the current host view and does not provide Linux `/proc` process details. It does not run a model, require an API key, open an HTTP server, or provide process-control tools.
+The published `v0.6.0` package includes a local Model Context Protocol server for coding agents. It uses stdio and exposes bounded read-only queries. On Linux, listener and process evidence is scoped to visible namespaces. The limited macOS listener adapter uses the current host view and does not provide Linux `/proc` process details. It does not run a model, require an API key, open an HTTP server, or provide process-control tools.
 
 ## Start the server
 
@@ -41,4 +41,4 @@ An available result means Portcn observed no conflicting listener at that moment
 
 Portcn only sees sockets visible to its current Linux namespace or macOS host view. Process/project evidence may be incomplete because of permissions, process exits, or Linux PID namespace boundaries; macOS process command lines, user IDs, project context, and agent markers are unavailable. Project checkout details on Linux describe the current filesystem, not necessarily the code loaded by a running process. MCP diagnosis deliberately omits command lines, user identifiers, agent labels, session identifiers, and environment values.
 
-The reusable [Portcn agent skill](https://github.com/jayantrohila57/portcn/tree/main/.agents/skills/portcn-agent) provides usage guidance for coding agents.
+The MCP server and its four read-only tools are available in the published package. The reusable [Portcn agent skill](https://github.com/jayantrohila57/portcn/tree/main/.agents/skills/portcn-agent) provides usage guidance for coding agents.

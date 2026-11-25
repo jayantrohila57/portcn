@@ -1,6 +1,6 @@
 # portcn
 
-Know what's running. Portcn is a read-only, Linux-first command-line tool for inspecting listening TCP and UDP ports.
+Know what's running. Portcn is a Linux-first CLI for inspecting local development services. Runtime discovery is read-only; the published package is `portcn@0.6.0` and requires Node.js 22 or later. Process termination and service lifecycle management are not implemented.
 
 ## Install
 
@@ -10,50 +10,58 @@ portcn --version
 portcn --help
 ```
 
-The source workspace and documentation build require Node.js 24 or newer. The published `v0.5.0` package requires Node.js 24 and supports Linux listener discovery. The development CLI package supports Node.js 22 or newer; its `list`, `inspect`, and `diagnose` commands support Linux (`ss` from `iproute2`) and macOS (`lsof`). On macOS, visible PID and process names come from `lsof`; command lines, user IDs, project paths, and agent environment markers are reported unavailable. Other platform-dependent commands and the interactive dashboard are not included in this macOS support claim. Windows can use help and version output.
+On Linux, listener discovery requires `ss` from `iproute2`. Docker inventory additionally requires the user's Docker CLI and access to its selected daemon/context. These operations use existing permissions and do not request elevation.
+
+The package includes limited macOS `list`, `inspect`, and `diagnose` support through `lsof`. macOS process command lines, user IDs, project paths, and agent markers are unavailable. Windows listener discovery is not implemented; help and version output remain available where Node.js runs.
 
 ## Commands
 
 ```sh
-portcn                         # branded overview and available commands
-portcn list                    # listening TCP/UDP ports
-portcn list --json             # complete machine-readable result
-portcn list --interactive      # full-screen dashboard
-portcn inspect 3000            # details for every visible listener on port 3000
-portcn inspect 3000 --json     # machine-readable inspection
-portcn diagnose 3000           # owners, address families, and visibility limits
-portcn diagnose 3000 --json    # machine-readable diagnosis
-portcn check 3000              # dev: point-in-time TCP bind overlap check
-portcn wait 3000               # dev: bounded wait for observed listener overlap to clear
-portcn suggest                 # dev: bounded alternative port suggestions
-portcn assess 1234 --project "$PWD" # dev: read-only ownership evidence
-portcn verify 127.0.0.1:3000 --project "$PWD" # dev: local endpoint/project evidence
-portcn config add tcp 127.0.0.1 3000 --favorite --alias web --group local # dev: save user-authored details
-portcn config list --json    # dev: saved details with current listener status
-portcn docker               # dev: read-only containers, Compose labels, and port mappings
-portcn docker --json        # dev: versioned machine-readable container inventory
-portcn exposure            # dev: classify host and Docker bind scope
-portcn exposure --json     # dev: versioned potential-exposure report
-portcn readiness list      # dev: local listener and saved readiness state
-portcn readiness check tcp://127.0.0.1:3000 --json # dev: bounded local readiness probe
-portcn connection check tcp://127.0.0.1:3000 --json # dev: staged local connectivity diagnostics
-portcn mcp                     # dev: read-only Model Context Protocol server over stdio
+portcn                         # interactive dashboard in a TTY; help otherwise
+portcn list                    # visible listening TCP/UDP ports
+portcn list --json-version 1   # deterministic versioned JSON
+portcn list --interactive      # listener dashboard
+portcn inspect 3000            # visible listeners on port 3000
+portcn diagnose 3000           # owners and visibility limits
+portcn check 3000              # point-in-time listener overlap
+portcn wait 3000               # bounded wait; does not reserve the port
+portcn suggest                 # bounded alternative port suggestions
+portcn assess 1234 --project "$PWD" # read-only ownership evidence
+portcn verify 127.0.0.1:3000 --project "$PWD" # endpoint/project evidence
+portcn config add tcp 127.0.0.1 3000 --favorite --alias web --group local
+portcn endpoint list           # local URL candidates; no probe
+portcn endpoint check tcp://127.0.0.1:3000 # explicit bounded HTTP check
+portcn open tcp://127.0.0.1:3000 # explicit local browser open
+portcn readiness list          # saved services and current listener state
+portcn connection check tcp://127.0.0.1:3000 --json
+portcn docker --json           # read-only container inventory
+portcn exposure --json         # bind scope and potential exposure
+portcn mcp                     # read-only stdio MCP server
 ```
 
-All discovery is read-only. `diagnose` reports each visible TCP/UDP socket, bind address, IPv4/IPv6 family, and every visible PID/process owner. Linux also provides best-effort `/proc` details, process ancestry, Git project/worktree evidence, and optional agent session markers when visible. macOS reports those fields as unavailable because this adapter uses `lsof` and does not inspect process internals. On Linux, set `PORTCN_AGENT_SESSION_ID` to a non-secret session label and optionally `PORTCN_AGENT_NAME`; Portcn extracts only these exact keys from visible process environments and does not retain or emit other values. Attribution is user-supplied evidence, can be incomplete or ambiguous, and does not prove service ownership or session liveness. A possible leftover is not a safe-to-stop decision. It explains when permissions or namespaces hide information. A missing listener is not a guarantee that a later bind will succeed. Port numbers must be between 1 and 65535.
+The CLI also supports `config edit`, `config remove`, `config group`, and `config recover`. See the [CLI reference](https://jayantrohila57.github.io/portcn/docs/cli-reference) for bounds, JSON schemas, exit codes, and limitations.
 
-Successful diagnosis, including no visible listeners, exits with status 0. Invalid ports exit with status 2; discovery failures exit with status 1. With `--json`, errors are emitted as a JSON object on stdout with an `error.code` of `INVALID_PORT` or `DIAGNOSIS_FAILED`.
+## Evidence and safety
 
-### Interactive dashboard
+Portcn reports a point-in-time view of sockets visible in its current network namespace and process permissions. A missing listener does not guarantee a later bind will succeed. Docker inventory follows the selected Docker context; a remote context may describe a different host than local listener observations. Wildcard binds do not prove public reachability.
 
-In `portcn list --interactive`, use `1`/`2`/`3`/`4` to switch All, TCP, UDP, and With Process tabs. Arrow keys or `j`/`k` move selection, and the contextual panel immediately shows the selected bind address, PID/process, and best-effort project evidence. Project paths describe the current checkout and do not prove which code the process loaded. Use `/` to search, `s` to change sorting, `r` to refresh, `n`/`p` for next/previous page, and `q` or `Ctrl+C` to quit. The footer shows available shortcuts; the layout adapts to the terminal size.
+Linux diagnosis can include bounded process ancestry, Git project/worktree evidence, and opt-in `PORTCN_AGENT_SESSION_ID` / `PORTCN_AGENT_NAME` markers. Markers are user-supplied evidence, not verified identities. Project paths describe the current filesystem and do not prove which code a process loaded. A possible leftover is never a safe-to-stop decision.
 
-## Documentation and contributions
+The MCP server exposes bounded read-only listener, diagnosis, availability, and suggestion tools. It does not expose a shell or process-control operation. Local probes are explicit, bounded, and do not follow redirects or disable TLS validation.
 
-The current published version is `0.5.0` and includes Linux listener and process diagnostics, saved services, Docker inventory, bind-scope reports, and local service diagnostics. The `dev` branch adds versioned JSON, port availability queries, and the read-only MCP server; these will ship in a later package release. Future capabilities in the [product roadmap](https://github.com/jayantrohila57/portcn/blob/dev/PRODUCT-ROADMAP.md) are proposals until released and documented as implemented.
+## Development
 
-The `dev` branch also supports `portcn assess <pid> --project <path> [--session <id>]`; it reports matching, different, ambiguous, or unknown evidence with PID/start-time identity and observation time. These statuses are advisory and never authorize stopping or signaling a process. `portcn verify <endpoint> --project <path>` compares local TCP listener and current checkout metadata; it never connects or issues an HTTP request, and current Git branch/commit cannot prove what code an existing process loaded. The complete command reference and release policy are in the [Portcn documentation](https://jayantrohila57.github.io/portcn/). Development setup, checks, and contributor rules are in the repository [CONTRIBUTING.md](https://github.com/jayantrohila57/portcn/blob/main/CONTRIBUTING.md). Report bugs or request features in [GitHub Issues](https://github.com/jayantrohila57/portcn/issues).
+The source workspace requires Node.js 24 or later and pnpm 12.3.4. From the repository root:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+node apps/cli/dist/index.js --help
+pnpm test
+```
+
+Follow the [contribution guide](../../CONTRIBUTING.md) and [Linux-first roadmap](../../PRODUCT-ROADMAP.md). The roadmap records the verified status; GitHub issue acceptance criteria are authoritative.
 
 ## License
 
-Portcn is released under the [MIT License](LICENSE).
+MIT. See [LICENSE](LICENSE).

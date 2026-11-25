@@ -6,7 +6,7 @@ description: Use Portcn's local read-only MCP tools to inspect listening ports, 
 
 # Portcn for coding agents
 
-Use the Portcn MCP server when a task needs a point-in-time view of local Linux listeners, visible owner processes, best-effort Git project evidence, or port availability. Prefer these tools over guessing from conventional ports.
+Use the published Portcn MCP server when a task needs a point-in-time view of local Linux listeners, visible owner processes, best-effort Git project evidence, or port availability. Prefer these tools over guessing from conventional ports. macOS listener results use the host view and do not include Linux process/project evidence.
 
 ## Connect
 
