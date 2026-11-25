@@ -217,6 +217,18 @@ node apps/cli/dist/index.js suggest --protocol udp --address ::1 --range 5000-51
 
 The result contains ``schemaVersion``, ``protocol``, ``address``, ``range``, ``suggestions``, ``namespace``, and ``limitations``. A suggestion is not reserved and may be claimed immediately by another process.
 
+## ``portcn `wait` <port>``
+
+Repeatedly checks for visible listener overlap until none is observed, the timeout expires, or SIGINT/SIGTERM cancels the wait. Defaults to TCP on ``127.0.0.1``, a 250 ms interval, and a 30 second timeout. ``--interval`` accepts 50–5000 ms; ``--timeout`` accepts 1–300000 ms. A status is emitted when it changes; ``unknown`` never counts as available. The command is read-only and cannot reserve the port.
+
+```sh
+node apps/cli/dist/index.js wait 3000
+node apps/cli/dist/index.js wait 3000 --interval 500 --timeout 60000 --json
+node apps/cli/dist/index.js wait 3000 --protocol udp --address ::1 --json-version 1
+```
+
+JSON mode writes version 1 JSON Lines: ``state-change`` events followed by an ``available`` result, or a final ``timeout``, ``cancelled``, or ``error`` event. Timeout returns status 1, cancellation returns 130, invalid input returns 2, and observed availability returns 0. “No conflict observed” is only a point-in-time result; another process can claim the port before it is bound.
+
 Both commands return status ``0`` when a check completes, including an ``unknown`` check or when no suggestions are found; status ``1`` indicates discovery failure; status ``2`` indicates invalid input or an unsupported JSON schema version. JSON errors use the version 1 ``error`` object and sanitized messages.
 
 The JSON result has ``schemaVersion``, ``port``, ``namespace``, ``listeners``, ``messages``, and ``limitations`` fields. Each listener includes ``protocol``, ``state``, ``bindAddress``, ``addressFamily``, and ``owners``. Owner fields include ``pid``, ``processName``, ``command``, ``user``, and ``detailsStatus`` (``available``, ``permission-denied``, ``process-exited``, or ``unavailable``), plus ``projectContext`` with ``status``, evidence ``confidence`` (``high`` for owner cwd, ``medium`` for ancestor cwd, ``low`` when projects conflict, otherwise ``none``), ``source``, visible owner ``cwd``/``executable``, ``projectRoot``, ``gitDir``, ``gitCommonDir``, ``checkoutBranch``, ``checkoutCommit``, ``worktree``, bounded ``ancestors``, and evidence notes. The additive ``agentAttribution`` object includes ``status``, ``confidence``, opt-in ``agentName``/``sessionId``, source PID and relationship, ``leftoverAssessment``, UTC ``observedAt``, and evidence notes. Project context status is ``identified``, ``ambiguous``, ``not-found``, ``permission-denied``, ``process-exited``, or ``unavailable``. Sensitive command-line options, secret-like environment assignments, and URL passwords are redacted from process command details. When no process ID is visible, the listener's ``owners`` array is empty and the messages explain that permissions or namespace boundaries can hide ownership.

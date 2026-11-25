@@ -4,8 +4,11 @@ import {
   checkPortAvailability,
   formatPortAvailability,
   formatPortSuggestions,
+  PortWatchCancelledError,
+  PortWatchTimeoutError,
   registerAvailabilityCommands,
   suggestAvailablePorts,
+  watchPortAvailability,
 } from '../src/commands/availability.js';
 import type { ListeningPort } from '../src/commands/list.js';
 
@@ -109,6 +112,49 @@ describe('read-only port availability', () => {
     );
     expect(formatPortAvailability(checkPortAvailability(3001, { discover: () => sockets }))).toContain(
       'No overlapping TCP listener was observed',
+    );
+  });
+
+  it('watches until a listener disappears and emits only state changes', async () => {
+    let calls = 0;
+    const changes: string[] = [];
+    const result = await watchPortAvailability(3000, {
+      discover: () => (++calls < 2 ? [loopbackListener] : []),
+      sleep: async () => {},
+      onChange: ({ status }) => changes.push(status),
+    });
+    expect(result.status).toBe('no-conflict-observed');
+    expect(changes).toEqual(['conflict-observed', 'no-conflict-observed']);
+  });
+
+  it('times out while availability remains uncertain or conflicting', async () => {
+    await expect(
+      watchPortAvailability(3000, {
+        discover: () => [loopbackListener],
+        intervalMs: 50,
+        timeoutMs: 1,
+        sleep: async () => {},
+      }),
+    ).rejects.toBeInstanceOf(PortWatchTimeoutError);
+  });
+
+  it('cancels promptly and validates watch bounds', async () => {
+    const controller = new AbortController();
+    await expect(
+      watchPortAvailability(3000, {
+        discover: () => [loopbackListener],
+        signal: controller.signal,
+        sleep: async (_ms, signal) => {
+          controller.abort();
+          if (signal?.aborted) throw new PortWatchCancelledError();
+        },
+      }),
+    ).rejects.toBeInstanceOf(PortWatchCancelledError);
+    await expect(watchPortAvailability(3000, { intervalMs: 1, discover: () => [] })).rejects.toThrow(
+      'between 50 and 5000',
+    );
+    await expect(watchPortAvailability(3000, { timeoutMs: 0, discover: () => [] })).rejects.toThrow(
+      'between 1 and 300000',
     );
   });
 
