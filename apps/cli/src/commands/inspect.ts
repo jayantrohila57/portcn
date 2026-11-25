@@ -9,31 +9,69 @@ export interface ProcessDetails {
   user: string | null;
 }
 
+export type ProcessDetailStatus = 'available' | 'permission-denied' | 'process-exited' | 'unavailable';
+
+export interface ProcessDetailResult {
+  details: ProcessDetails | null;
+  status: ProcessDetailStatus;
+}
+
 export interface InspectedPort extends ListeningPort {
   details: ProcessDetails | null;
+}
+
+export class InvalidPortError extends Error {
+  constructor() {
+    super('Port must be an integer between 1 and 65535.');
+    this.name = 'InvalidPortError';
+  }
 }
 
 export function parsePort(value: string): PortNumber {
   const port = Number(value);
   if (!/^\d+$/.test(value) || !isValidPortNumber(port)) {
-    throw new Error('Port must be an integer between 1 and 65535.');
+    throw new InvalidPortError();
   }
   return port;
+}
+
+export function inspectProcessDetails(
+  pid: number,
+  readFile: (path: string, encoding: BufferEncoding) => string = (path, encoding) => readFileSync(path, encoding),
+): ProcessDetailResult {
+  let status: string;
+  try {
+    status = readFile(`/proc/${pid}/status`, 'utf8');
+  } catch (error) {
+    return { details: null, status: processDetailStatus(error) };
+  }
+
+  const name = /^Name:\s*(.+)$/m.exec(status)?.[1]?.trim() ?? null;
+  const uid = /^Uid:\s*(\d+)/m.exec(status)?.[1] ?? null;
+  try {
+    const command = readFile(`/proc/${pid}/cmdline`, 'utf8').replaceAll('\0', ' ').trim() || name;
+    return { details: { command, user: uid ? `uid:${uid}` : null }, status: 'available' };
+  } catch (error) {
+    return {
+      details: { command: name, user: uid ? `uid:${uid}` : null },
+      status: processDetailStatus(error),
+    };
+  }
+}
+
+function processDetailStatus(error: unknown): ProcessDetailStatus {
+  const code = (error as NodeJS.ErrnoException)?.code;
+  if (code === 'EACCES' || code === 'EPERM') return 'permission-denied';
+  if (code === 'ENOENT') return 'process-exited';
+  return 'unavailable';
 }
 
 export function readProcessDetails(
   pid: number,
   readFile: (path: string, encoding: BufferEncoding) => string = (path, encoding) => readFileSync(path, encoding),
 ): ProcessDetails | null {
-  try {
-    const status = readFile(`/proc/${pid}/status`, 'utf8');
-    const name = /^Name:\s*(.+)$/m.exec(status)?.[1]?.trim() ?? null;
-    const uid = /^Uid:\s*(\d+)/m.exec(status)?.[1] ?? null;
-    const command = readFile(`/proc/${pid}/cmdline`, 'utf8').replaceAll('\0', ' ').trim() || name;
-    return { command, user: uid ? `uid:${uid}` : null };
-  } catch {
-    return null;
-  }
+  const result = inspectProcessDetails(pid, readFile);
+  return result.status === 'available' ? result.details : null;
 }
 
 export function inspectListeningPort(
@@ -80,7 +118,7 @@ export function registerInspectCommand(program: Command): void {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         process.stderr.write(`portcn: ${message}\n`);
-        process.exitCode = message.startsWith('Port must') ? 2 : 1;
+        process.exitCode = error instanceof InvalidPortError ? 2 : 1;
       }
     });
 }

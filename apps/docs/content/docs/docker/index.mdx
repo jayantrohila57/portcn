@@ -3,7 +3,7 @@ title: Docker
 description: Build and run the Portcn CLI image or execute repository checks with Docker Compose.
 ---
 
-Docker support is an optional packaging workflow. Git hooks and GitHub Actions do not require Docker. The CLI image contains the currently implemented help/version foundation; it does not add port discovery or service management.
+Docker support is an optional packaging workflow. Git hooks and GitHub Actions do not require Docker. The CLI image includes the read-only listing and inspection commands. Container runs see only sockets exposed in the container's network namespace; Docker does not add host discovery or service management.
 
 ## Build the CLI image
 

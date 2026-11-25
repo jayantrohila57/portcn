@@ -26,15 +26,11 @@ Applications can depend on workspace packages. Packages must not depend on apps.
 
 ## Current CLI flow
 
-The executable entry point creates a Commander root program, sets its package version, and parses arguments only when invoked as the process entry point. In an interactive terminal, invoking `portcn` opens the keyboard-first listener dashboard; non-interactive invocation remains help-oriented and machine-safe. Explicit `list` and `inspect` commands remain independently usable.
+The executable entry point creates a Commander root program, sets its package version, and parses arguments only when invoked as the process entry point. In an interactive terminal, invoking `portcn` opens the keyboard-first listener dashboard; non-interactive invocation remains help-oriented and machine-safe. Explicit `list`, `inspect`, and `diagnose` commands share the same read-only Linux socket discovery; diagnosis adds process and namespace explanations in the CLI app.
 
-## Terminal dashboard roadmap
+## Terminal dashboard implementation
 
-The dashboard is being delivered in focused slices so each terminal behavior remains testable:
-
-1. **Foundation (current):** shared screen lifecycle, full redraw, resize-aware viewport sizing, stable sectioned layout, pagination, and default interactive entrypoint.
-2. **Interaction:** selection, search, sorting, command palette, and process detail panels.
-3. **Resilience:** refresh scheduling, discovery loading/error states, Unicode display widths, responsive column policies, and pseudo-terminal coverage across terminal sizes.
+The dashboard uses a shared terminal lifecycle, full redraw, resize-aware layout, pagination, selection, search, sorting, a command palette, process details, scheduled refresh, Unicode-aware widths, and responsive columns. These behaviors are covered by focused CLI tests and the real-PTY matrix below.
 
 The UI acceptance checklist for each slice is: no layout shift across tabs/pages, no clipped or wrapped table borders, correct page totals and visible ranges, matching row highlight and details, selection clamped to the filtered results after view changes, restored cursor/raw mode on exit, graceful behavior for small or non-interactive terminals, and unchanged plain-text/JSON command output. `list --json` and `inspect --json` bypass the screen renderer and always return complete machine-readable results.
 

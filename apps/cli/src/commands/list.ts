@@ -10,6 +10,12 @@ export interface ListeningPort {
   port: number;
   pid: number | null;
   processName: string | null;
+  owners?: ListeningOwner[];
+}
+
+export interface ListeningOwner {
+  pid: number;
+  processName: string;
 }
 
 const SS_ARGS = ['--no-header', '--listening', '--tcp', '--udp', '--numeric', '--processes'];
@@ -36,14 +42,19 @@ export function parseSsOutput(output: string): ListeningPort[] {
       throw new Error(`Unexpected local port from ss: ${endpoint}`);
     }
 
-    const owner = /"([^"]+)",pid=(\d+)/.exec(line);
+    const owners = [...line.matchAll(/"([^"]+)",pid=(\d+)/g)].map((owner) => ({
+      processName: owner[1] ?? 'unknown',
+      pid: Number(owner[2]),
+    }));
+    const owner = owners[0];
     ports.push({
       protocol,
       state: fields[1] ?? 'UNKNOWN',
       address: endpoint.slice(0, separator),
       port,
-      pid: owner ? Number(owner[2]) : null,
-      processName: owner?.[1] ?? null,
+      pid: owner?.pid ?? null,
+      processName: owner?.processName ?? null,
+      owners,
     });
   }
 
