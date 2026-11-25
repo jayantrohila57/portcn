@@ -244,7 +244,11 @@ function availabilityFromError(error: unknown): { availability: DockerAvailabili
       message:
         'Docker access was denied. Check access to the selected Docker daemon; Portcn will not elevate privileges.',
     };
-  if (/cannot connect to the docker daemon|is the docker daemon running|context deadline exceeded/i.test(detail))
+  if (
+    /cannot connect to the docker daemon|is the docker daemon running|failed to connect to the docker api|check if the path is correct and if the daemon is running|context deadline exceeded/i.test(
+      detail,
+    )
+  )
     return {
       availability: 'daemon-unavailable',
       code: 'DOCKER_DAEMON_UNAVAILABLE',
@@ -307,10 +311,7 @@ export function discoverDockerInventory(dependencies: DockerDependencies = {}): 
     };
   }
   try {
-    const containers = parseDockerInspect(
-      runDocker(['container', 'inspect', '--type', 'container', ...ids]),
-      listeners,
-    );
+    const containers = parseDockerInspect(runDocker(['container', 'inspect', ...ids]), listeners);
     return {
       schemaVersion: 1,
       availability: 'available',
