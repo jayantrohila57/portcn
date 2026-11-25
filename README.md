@@ -41,6 +41,7 @@ node apps/cli/dist/index.js list  # Linux, requires iproute2
 node apps/cli/dist/index.js inspect 3000  # Linux, read-only
 node apps/cli/dist/index.js list --interactive  # header, tabs, paginated table, and footer navigation
 node apps/cli/dist/index.js diagnose 3000 --json # visible listeners and diagnostic limits
+node apps/cli/dist/index.js list --json-version 1 # stable versioned JSON on dev
 ```
 
 Optional Docker Compose commands build and run the packaged CLI image. For example, `pnpm docker:cli -- --version` rebuilds the current artifact before running it. Unit tests and package checks run with the regular pnpm scripts.

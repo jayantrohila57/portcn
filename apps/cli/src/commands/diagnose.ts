@@ -3,7 +3,10 @@ import { isIP } from 'node:net';
 import type { Command } from 'commander';
 import { formatEmpty, formatTable } from '../terminal.js';
 import { InvalidPortError, inspectProcessDetails, type ProcessDetailStatus, parsePort } from './inspect.js';
+import { JSON_SCHEMA_VERSION, jsonSchemaIsSupported, UnsupportedJsonVersionError, versionedJsonError } from './json.js';
 import { discoverListeningPorts, type ListeningOwner, type ListeningPort } from './list.js';
+
+const compareText = (left: string, right: string): number => (left < right ? -1 : left > right ? 1 : 0);
 
 export interface DiagnosedOwner {
   pid: number;
@@ -22,7 +25,7 @@ export interface DiagnosedListener {
 }
 
 export interface PortDiagnosis {
-  schemaVersion: 1;
+  schemaVersion: typeof JSON_SCHEMA_VERSION;
   port: number;
   namespace: {
     network: string | null;
@@ -57,7 +60,10 @@ function familyForAddress(address: string): DiagnosedListener['addressFamily'] {
 }
 
 function ownersFor(listener: ListeningPort): ListeningOwner[] {
-  if (listener.owners) return listener.owners;
+  if (listener.owners)
+    return [...listener.owners].sort(
+      (left, right) => left.pid - right.pid || compareText(left.processName, right.processName),
+    );
   if (listener.pid !== null && listener.processName !== null)
     return [{ pid: listener.pid, processName: listener.processName }];
   return [];
@@ -82,7 +88,16 @@ export function diagnoseListeningPort(port: number, options: DiagnosisOptions = 
   const inspectProcess = options.inspectProcess ?? inspectProcessDetails;
   const readNamespace = options.readNamespace ?? readCurrentNamespace;
   const namespace = { network: readNamespace('net'), pid: readNamespace('pid') };
-  const visiblePorts = discover().filter((listener) => listener.port === port);
+  const visiblePorts = discover()
+    .filter((listener) => listener.port === port)
+    .sort(
+      (left, right) =>
+        compareText(left.protocol, right.protocol) ||
+        compareText(familyForAddress(left.address), familyForAddress(right.address)) ||
+        compareText(left.address, right.address) ||
+        compareText(left.state, right.state) ||
+        (left.pid ?? 0) - (right.pid ?? 0),
+    );
   const listeners = visiblePorts.map<DiagnosedListener>((listener) => ({
     protocol: listener.protocol,
     state: listener.state,
@@ -130,7 +145,7 @@ export function diagnoseListeningPort(port: number, options: DiagnosisOptions = 
     'This is a read-only point-in-time snapshot. A listener can stop or a new process can bind after diagnosis completes.',
   ];
 
-  return { schemaVersion: 1, port, namespace, listeners, messages, limitations };
+  return { schemaVersion: JSON_SCHEMA_VERSION, port, namespace, listeners, messages, limitations };
 }
 
 export function formatDiagnosis(diagnosis: PortDiagnosis): string {
@@ -171,22 +186,28 @@ export function registerDiagnoseCommand(
     .command('diagnose <port>')
     .description('Explain visible listeners and ownership limits for a port (Linux)')
     .option('--json', 'Print the complete diagnosis as JSON')
-    .action((value: string, options: { json?: boolean }) => {
+    .option('--json-version <version>', 'Print versioned JSON (supported: 1)')
+    .action((value: string, options: { json?: boolean; jsonVersion?: string }) => {
       try {
+        if (!jsonSchemaIsSupported(options.jsonVersion)) throw new UnsupportedJsonVersionError();
         const port = parsePort(value);
         const diagnosis = runDiagnosis(port);
-        process.stdout.write(`${options.json ? JSON.stringify(diagnosis) : formatDiagnosis(diagnosis)}\n`);
+        process.stdout.write(
+          `${options.json || options.jsonVersion !== undefined ? JSON.stringify(diagnosis) : formatDiagnosis(diagnosis)}\n`,
+        );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         const invalidPort = error instanceof InvalidPortError;
-        if (options.json) {
+        if (options.jsonVersion !== undefined) {
+          process.stdout.write(`${JSON.stringify(versionedJsonError(error, value))}\n`);
+        } else if (options.json) {
           process.stdout.write(
             `${JSON.stringify({ error: { code: invalidPort ? 'INVALID_PORT' : 'DIAGNOSIS_FAILED', message, port: value } })}\n`,
           );
         } else {
           process.stderr.write(`portcn: ${message}\n`);
         }
-        process.exitCode = invalidPort ? 2 : 1;
+        process.exitCode = invalidPort || error instanceof UnsupportedJsonVersionError ? 2 : 1;
       }
     });
 }
