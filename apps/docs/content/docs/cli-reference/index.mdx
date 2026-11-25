@@ -1,9 +1,9 @@
 ---
 title: CLI reference
-description: Implemented Portcn CLI options, port listing, inspection, output, and errors.
+description: Portcn port listing, inspection, conflict diagnosis, output, and exit codes.
 ---
 
-The development branch provides read-only ``portcn list`` and ``portcn inspect`` commands for Linux. The published ``v0.0.1`` package contains the CLI foundation; these commands are development-branch functionality until released.
+The Linux CLI provides read-only ``portcn list``, ``portcn inspect``, and ``portcn diagnose`` commands. Published ``v0.2.0`` includes ``list`` and ``inspect``; ``diagnose`` is available from the development branch and will ship in a later package release.
 
 ```sh
 node apps/cli/dist/index.js --help
@@ -16,6 +16,7 @@ For an interactive view, use ``--interactive``. The view is divided into an ASCI
 node apps/cli/dist/index.js list --interactive
 node apps/cli/dist/index.js list --json
 node apps/cli/dist/index.js inspect 3000 --json
+node apps/cli/dist/index.js diagnose 3000 --json
 ```
 
 The `--json` forms always emit the complete result set without pagination, colors, or screen-control sequences.
@@ -68,13 +69,34 @@ node apps/cli/dist/index.js inspect 3000
 
 The command never changes sockets or processes and does not require sudo. Process details may show ``unavailable`` when ``/proc`` access is restricted. Linux and ``ss``/``iproute2`` limitations are the same as ``list``.
 
+## ``portcn diagnose <port>``
+
+Diagnoses every TCP or UDP listening socket visible on the requested port. It reuses the read-only ``ss`` discovery used by ``list`` and ``inspect`` and reports each bind address, IPv4/IPv6 family, socket state, and every PID/process owner shown by ``ss``. For each visible PID it adds the best-effort command and user from ``/proc``. Shared sockets with multiple visible PIDs appear once in JSON with an ``owners`` array and as one row per owner in terminal output.
+
+```sh
+node apps/cli/dist/index.js diagnose 3000
+node apps/cli/dist/index.js diagnose 3000 --json
+```
+
+The JSON result has ``schemaVersion``, ``port``, ``namespace``, ``listeners``, ``messages``, and ``limitations`` fields. Each listener includes ``protocol``, ``state``, ``bindAddress``, ``addressFamily``, and ``owners``. Owner fields include ``pid``, ``processName``, ``command``, ``user``, and ``detailsStatus`` (``available``, ``permission-denied``, ``process-exited``, or ``unavailable``). When no process ID is visible, the listener's ``owners`` array is empty and the messages explain that permissions or namespace boundaries can hide ownership.
+
+The result identifies the current network and PID namespace. It does not inspect the host or other namespaces, elevate privileges, change processes, or reserve a port. A no-listener result is a point-in-time observation, not a guarantee that a later bind will succeed. Compare protocol, address, and IPv4/IPv6 behavior with the server you plan to start.
+
+| Exit status | Meaning |
+| --- | --- |
+| ``0`` | Diagnosis completed, including when no listeners are visible. |
+| ``1`` | Discovery failed, the platform is unsupported, or ``ss`` is unavailable. |
+| ``2`` | The port is not an integer from 1 through 65535. |
+
+With ``--json``, invalid arguments and discovery failures are emitted on stdout as ``{"error":{"code":"INVALID_PORT"|"DIAGNOSIS_FAILED","message":"...","port":"..."}}``. Terminal mode writes failures to stderr.
+
 ## Errors and limitations
 
-- Supported platform: Linux only. On other platforms, ``list`` prints ``Port listing currently supports Linux only.`` and exits with status 1.
+- Supported platform: Linux only. On other platforms, discovery commands print ``Port listing currently supports Linux only.`` and exit with status 1.
 - If ``ss`` is missing, install ``iproute2`` (Ubuntu: ``sudo apt install iproute2``). Portcn exits with status 1 instead of hiding the error.
 - Failures or unexpected output from ``ss`` produce a nonzero exit and explanatory error. Hidden process metadata appears as `` - `` rather than an invented owner.
-- Containers only see sockets in their own network namespace unless explicitly configured otherwise. Host-level inspection is not enabled automatically.
-- No kill, JSON output, process management, or service management commands have been implemented.
+- Containers only see sockets in the current network namespace unless explicitly configured otherwise. ``diagnose`` shows the current namespace identifiers and does not inspect host namespaces automatically.
+- ``list``, ``inspect``, and ``diagnose`` provide JSON output. Portcn does not kill processes or provide process/service management commands.
 
 ## Help and version
 

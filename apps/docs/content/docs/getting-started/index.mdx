@@ -6,7 +6,7 @@ description: Install Portcn's development workspace and list listening Linux por
 Portcn is under active development. This guide runs the CLI from a source checkout; it does not describe a published npm installation.
 
 <Callout title="Current capabilities" type="info">
-The `dev` branch supports `--help`, `--version`, and read-only Linux `list` (requires the `ss` command from `iproute2`). The published `v0.0.1` package does not include `list`. Process and service management are not implemented.
+The published `v0.2.0` package supports `--help`, `--version`, and read-only Linux `list` and `inspect`. The development branch also provides `diagnose` for listener ownership and namespace limitations. Discovery requires `ss` from `iproute2`. Process and service management are not implemented.
 </Callout>
 
 ## Requirements
@@ -68,6 +68,7 @@ pnpm build
 node apps/cli/dist/index.js --help
 node apps/cli/dist/index.js --version
 node apps/cli/dist/index.js list # Linux only, iproute2 required
+node apps/cli/dist/index.js diagnose 3000 # development branch
 ```
 
   </Step>

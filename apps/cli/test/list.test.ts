@@ -16,10 +16,37 @@ const SAMPLE = [
 describe('read-only Linux port listing', () => {
   it('parses TCP, UDP, IPv6 and visible process owners, sorted by port', () => {
     expect(parseSsOutput(SAMPLE)).toEqual([
-      { protocol: 'tcp', state: 'LISTEN', address: '[::]', port: 22, pid: 12, processName: 'sshd' },
-      { protocol: 'tcp', state: 'LISTEN', address: '127.0.0.1', port: 3000, pid: 321, processName: 'node' },
-      { protocol: 'udp', state: 'UNCONN', address: '0.0.0.0', port: 5353, pid: null, processName: null },
+      {
+        protocol: 'tcp',
+        state: 'LISTEN',
+        address: '[::]',
+        port: 22,
+        pid: 12,
+        processName: 'sshd',
+        owners: [{ processName: 'sshd', pid: 12 }],
+      },
+      {
+        protocol: 'tcp',
+        state: 'LISTEN',
+        address: '127.0.0.1',
+        port: 3000,
+        pid: 321,
+        processName: 'node',
+        owners: [{ processName: 'node', pid: 321 }],
+      },
+      { protocol: 'udp', state: 'UNCONN', address: '0.0.0.0', port: 5353, pid: null, processName: null, owners: [] },
     ]);
+  });
+
+  it('retains every process owner reported for a shared listening socket', () => {
+    const result = parseSsOutput(
+      'tcp LISTEN 0 128 127.0.0.1:3000 0.0.0.0:* users:(("node",pid=321,fd=15),("worker",pid=654,fd=6))',
+    );
+    expect(result[0]?.owners).toEqual([
+      { processName: 'node', pid: 321 },
+      { processName: 'worker', pid: 654 },
+    ]);
+    expect(result[0]?.pid).toBe(321);
   });
 
   it('does not assume missing PID and process data are visible', () => {

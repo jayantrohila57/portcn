@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- diagnose port conflicts with owner and namespace details ([#95](https://github.com/jayantrohila57/portcn/issues/95)) <!-- task:feat/port-conflict-diagnosis -->
+
 ### Changed
 
 ### Fixed
