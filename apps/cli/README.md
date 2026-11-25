@@ -10,7 +10,7 @@ portcn --version
 portcn --help
 ```
 
-Node.js 24 or newer is required. Linux with `iproute2` (`ss`) is supported; process details are best effort and may be unavailable without additional permissions. macOS, Windows, and non-interactive environments can use the executable, but Linux port discovery is not available there.
+Node.js 24 or newer is required. Linux with `iproute2` (`ss`) is supported; process details are best effort and may be unavailable without additional permissions. macOS and Windows can use help and version output, but Linux discovery commands are unavailable there. Piped and other non-interactive Linux runs are supported.
 
 ## Commands
 
@@ -21,9 +21,13 @@ portcn list --json             # complete machine-readable result
 portcn list --interactive      # full-screen dashboard
 portcn inspect 3000            # details for every visible listener on port 3000
 portcn inspect 3000 --json     # machine-readable inspection
+portcn diagnose 3000           # owners, address families, and visibility limits
+portcn diagnose 3000 --json    # machine-readable diagnosis
 ```
 
-All discovery is read-only. Port numbers must be between 1 and 65535. Missing listeners, restricted process details, IPv4/IPv6 addresses, and multiple listeners are reported without changing system state.
+All discovery is read-only. `diagnose` reports each visible TCP/UDP socket, bind address, IPv4/IPv6 family, every visible PID/process owner, best-effort `/proc` details, and the current network/PID namespaces. It explains when permissions or namespaces hide information. A missing listener is not a guarantee that a later bind will succeed. Port numbers must be between 1 and 65535.
+
+Successful diagnosis, including no visible listeners, exits with status 0. Invalid ports exit with status 2; discovery failures exit with status 1. With `--json`, errors are emitted as a JSON object on stdout with an `error.code` of `INVALID_PORT` or `DIAGNOSIS_FAILED`.
 
 ### Interactive dashboard
 

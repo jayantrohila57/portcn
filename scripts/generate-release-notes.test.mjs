@@ -12,7 +12,11 @@ const source = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8')
     const version = /^## \[(\d+\.\d+\.\d+)\] - /m.exec(section)?.[1];
     return !version || Boolean(execFileSync('git', ['tag', '--list', `v${version}`], { encoding: 'utf8' }).trim());
   })
-  .join('');
+  .join('')
+  .replace(
+    /^## Unreleased\n[\s\S]*?(?=^## \[)/m,
+    '## Unreleased\n\n### Added\n### Changed\n### Fixed\n### Deprecated\n### Removed\n### Security\n\n',
+  );
 const previousVersion = parseChangelog(source).releases[0]?.version;
 if (!previousVersion) throw new Error('The changelog test needs a published release.');
 const [major, minor, patch] = previousVersion.split('.').map(Number);

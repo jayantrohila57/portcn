@@ -5,7 +5,7 @@ description: Practical workflows supported by the current Portcn repository.
 
 ## Build and invoke from a checkout
 
-Use the source workflow while Portcn remains unreleased:
+Build from source to use the latest development commands:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -13,12 +13,12 @@ pnpm build
 node apps/cli/dist/index.js --help
 ```
 
-The CLI currently prints help and version information only. For its exact options, see [CLI Reference](/docs/cli-reference).
+The published `v0.2.0` CLI includes `list` and `inspect`; the development branch adds `diagnose`. For exact commands, output, and exit codes, see [CLI Reference](/docs/cli-reference).
 
 ## Explore the documentation
 
 The Fumadocs site supports searchable pages, a table of contents, Markdown copy/view options, and Markdown/LLM-friendly exports. Start at [Getting Started](/docs/getting-started).
 
-<Callout title="Not available yet" type="warn">
-Port scanning, process termination, service monitoring, and automatic Docker discovery are not implemented. Do not use the current CLI as if it performed those tasks.
+<Callout title="Current boundary" type="warn">
+Portcn reports sockets visible to `ss` in the current Linux network namespace. It does not scan unused ports, terminate processes, monitor services, or discover Docker namespaces automatically.
 </Callout>

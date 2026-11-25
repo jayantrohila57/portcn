@@ -43,6 +43,7 @@ describe('portcn CLI foundation', () => {
     const result = run(process.execPath, [executable, '--help']);
     expect(result.status).toBe(0);
     expectBrandedHelp(result.stdout);
+    expect(result.stdout).toContain('diagnose [options] <port>');
   });
 
   it('shows its version through direct Node.js execution', () => {
