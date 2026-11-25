@@ -12,17 +12,19 @@ test("What's New renders dated release sections from CHANGELOG.md and omits Unre
   const { releases } = parseChangelog(source);
   assert.deepEqual(
     releases.map(({ version }) => version),
-    ['0.2.0', '0.1.1', '0.1.0', '0.0.1'],
+    ['0.3.0', '0.2.0', '0.1.1', '0.1.0', '0.0.1'],
   );
   assert.deepEqual(
     releases.map(({ title }) => title),
     [
+      'Port conflict diagnosis',
       'A steadier terminal dashboard',
       'More reliable package publishing',
       'Port discovery and an interactive dashboard',
       'Portcn CLI foundation',
     ],
   );
+  assert.equal(releases[0]?.demo, '`portcn diagnose 3000 --json`');
   assert.equal(
     releases.find(({ version }) => version === '0.1.0')?.demo,
     '`portcn list --interactive` · `portcn list --json` · `portcn inspect 3000`',
