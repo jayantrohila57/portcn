@@ -91,6 +91,17 @@ portcn podman --json
 
 Only read-only ``podman container ls`` and ``podman container inspect`` operations are used. Missing CLI, denied access, unavailable service/connection, and malformed inventory are distinct in schema version 1 JSON. Stopped mappings are configured, not active. On Linux, active published bindings include ``rootlessForwarder`` with ``attributed``, ``ambiguous``, or ``unknown`` status. Attribution requires a visible listener owner, the ``rootlessport`` executable, matching structured host/container mapping and network address, and a stable PID start time. Listener and process observations come from Portcn's current namespace and do not prove reachability; a remote runtime may describe another host. Docker and Podman remain separate command outputs.
 
+## ``portcn nginx``
+
+The `nginx` command inspects readable local Nginx configuration and visible Nginx executable paths on Linux. The default configuration entry is ``/etc/nginx/nginx.conf``; ``--config <path>`` selects another entry. Schema version 1 JSON includes process PIDs, source paths, server names, configured TCP listeners and their observed/not-observed/unknown state, availability, and limitations. Only server names and listen directives are surfaced from configuration.
+
+```sh
+portcn nginx
+portcn nginx --config ./nginx.conf --json
+```
+
+Includes are followed through local readable files with a 256-file bound. Missing or unreadable files yield partial results. A configured listener does not establish active routing or reachability; matching sockets are read from Portcn's current network namespace. The command does not run or reload Nginx and does not elevate privileges.
+
 ## ``portcn exposure``
 
 Classify each visible host listener and Docker port record by address family and bind scope. Loopback, interface-specific, wildcard, direct-routed, and container-only records remain distinct. A wildcard address means the socket or mapping uses all addresses in that family; it does not establish internet reachability. Portcn does not inspect firewalls, routers, external routes, or public reachability.
