@@ -43,7 +43,10 @@
     "Name": "/stopped-worker",
     "Config": { "Image": "worker:latest", "Labels": {}, "ExposedPorts": { "9000/tcp": {} } },
     "State": { "Status": "exited" },
-    "HostConfig": { "NetworkMode": "bridge" },
+    "HostConfig": {
+      "NetworkMode": "bridge",
+      "PortBindings": { "9000/tcp": [{ "HostIp": "0.0.0.0", "HostPort": "9001" }] }
+    },
     "NetworkSettings": { "Ports": { "9000/tcp": null }, "Networks": {} }
   },
   {

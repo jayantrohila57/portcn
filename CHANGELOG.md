@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- report potential service exposure and bind scope ([#102](https://github.com/jayantrohila57/portcn/issues/102)) <!-- task:feat/potential-bind-exposure -->
+
 - discover containers and compose port mappings ([#101](https://github.com/jayantrohila57/portcn/issues/101)) <!-- task:feat/docker-compose-discovery -->
 
 - persist favorites aliases and custom service groups ([#100](https://github.com/jayantrohila57/portcn/issues/100)) <!-- task:feat/saved-service-config -->
