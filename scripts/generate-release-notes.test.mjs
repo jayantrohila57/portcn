@@ -50,7 +50,7 @@ test('creates concise categorized release notes with issue, PR, and compare link
   );
   assert.ok(result.includes(`**Title:** Dashboard improvements`));
   assert.ok(result.includes(`\n\n## [${previousVersion}]`));
-  assert.match(result, /## Unreleased\n\n### Added\n### Changed\n### Fixed/);
+  assert.match(result, /## Unreleased\n\n### Added\n\n### Changed\n\n### Fixed/);
 });
 test('deduplicates commit-derived release notes against authored Unreleased entries', () => {
   const issueUrl = 'https://github.com/jayantrohila57/portcn/issues/139';
