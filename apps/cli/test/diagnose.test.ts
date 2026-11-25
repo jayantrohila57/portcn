@@ -147,6 +147,18 @@ describe('port diagnose', () => {
     expect(restricted.listeners[0]?.owners[0]?.processName).toBe('node');
   });
 
+  it('describes macOS host discovery and unavailable Linux process metadata', () => {
+    const readNamespace = vi.fn(() => 'unexpected');
+    const result = diagnoseListeningPort(8080, { platform: 'darwin', discover: () => sockets, readNamespace });
+    expect(readNamespace).not.toHaveBeenCalled();
+    expect(result.namespace).toEqual({ network: null, pid: null });
+    expect(result.limitations.join('\n')).toContain('current macOS host view');
+    expect(result.limitations.join('\n')).toContain('unavailable on macOS');
+    expect(result.listeners[0]?.owners[0]).toMatchObject({ detailsStatus: 'unavailable' });
+    expect(result.listeners[0]?.owners[0]?.projectContext.status).toBe('unavailable');
+    expect(result.listeners[0]?.owners[0]?.agentAttribution.status).toBe('unknown');
+  });
+
   it('returns a successful empty result with a race-aware message', () => {
     const result = diagnoseListeningPort(9999, { discover: () => [], readNamespace: () => null });
     expect(result.listeners).toEqual([]);

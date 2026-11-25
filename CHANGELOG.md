@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- add macOS port and process discovery ([#140](https://github.com/jayantrohila57/portcn/issues/140)) <!-- task:feat/macos-port-discovery -->
+
 - support Node.js 22 runtime ([#142](https://github.com/jayantrohila57/portcn/issues/142)) <!-- task:chore/node22-compatibility-audit -->
 
 - expose Portcn as a read-only MCP server for coding agents ([#104](https://github.com/jayantrohila57/portcn/issues/104)) <!-- task:feat/agent-mcp-server -->

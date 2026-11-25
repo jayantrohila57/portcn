@@ -39,7 +39,9 @@ export function parsePort(value: string): PortNumber {
 export function inspectProcessDetails(
   pid: number,
   readFile: (path: string, encoding: BufferEncoding) => string = (path, encoding) => readFileSync(path, encoding),
+  platform: NodeJS.Platform = process.platform,
 ): ProcessDetailResult {
+  if (platform !== 'linux') return { details: null, status: 'unavailable' };
   let status: string;
   try {
     status = readFile(`/proc/${pid}/status`, 'utf8');
@@ -98,8 +100,9 @@ function processDetailStatus(error: unknown): ProcessDetailStatus {
 export function readProcessDetails(
   pid: number,
   readFile: (path: string, encoding: BufferEncoding) => string = (path, encoding) => readFileSync(path, encoding),
+  platform: NodeJS.Platform = process.platform,
 ): ProcessDetails | null {
-  const result = inspectProcessDetails(pid, readFile);
+  const result = inspectProcessDetails(pid, readFile, platform);
   return result.status === 'available' ? result.details : null;
 }
 
@@ -147,7 +150,7 @@ export function registerInspectCommand(
 ): void {
   program
     .command('inspect <port>')
-    .description('Inspect listeners on a TCP or UDP port (Linux)')
+    .description('Inspect listeners on a TCP or UDP port (Linux and macOS)')
     .option('--json', 'Print inspection results as JSON')
     .option('--json-version <version>', 'Print versioned JSON (supported: 1)')
     .action((value: string, options: { json?: boolean; jsonVersion?: string }) => {

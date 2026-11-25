@@ -6,7 +6,7 @@ description: Install Portcn's development workspace and list listening Linux por
 Portcn is under active development. This guide runs the CLI from a source checkout; it does not describe a published npm installation.
 
 <Callout title="Current capabilities" type="info">
-The published `v0.5.0` package supports `--help`, `--version`, and read-only Linux listener, process, project, and service diagnostics. It also includes saved services, Docker inventory, and bind-scope reports. Discovery requires `ss` from `iproute2`. The development branch adds a read-only stdio MCP server, which will be available in a later package release. Process termination and service management are not implemented.
+The published `v0.5.0` package supports `--help`, `--version`, and read-only Linux listener, process, project, and service diagnostics. It also includes saved services, Docker inventory, and bind-scope reports. Discovery requires `ss` from `iproute2`. The development branch adds macOS listener discovery for `list`, `inspect`, and `diagnose` through `lsof`, plus a read-only stdio MCP server; these changes will be available in a later package release. On macOS, process command lines, user IDs, project context, and agent markers are unavailable. Process termination and service management are not implemented.
 </Callout>
 
 ## Requirements
@@ -69,7 +69,7 @@ pnpm build
 ```sh
 node apps/cli/dist/index.js --help
 node apps/cli/dist/index.js --version
-node apps/cli/dist/index.js list # Linux only, iproute2 required
+node apps/cli/dist/index.js list # Linux: iproute2; macOS: lsof
 node apps/cli/dist/index.js diagnose 3000 # published in v0.4.0
 ```
 

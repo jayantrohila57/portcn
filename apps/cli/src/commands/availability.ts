@@ -58,6 +58,7 @@ export interface AvailabilityDependencies {
 interface AvailabilityOptions extends AvailabilityDependencies {
   protocol?: string;
   address?: string;
+  platform?: NodeJS.Platform;
 }
 
 function compareText(left: string, right: string): number {
@@ -170,11 +171,13 @@ function overlapReason(
   return null;
 }
 
-function limitations(namespace: string | null): string[] {
+function limitations(namespace: string | null, platform: NodeJS.Platform = process.platform): string[] {
   return [
-    namespace
-      ? `Discovery is limited to the current network namespace (${namespace}); other namespaces are not inspected.`
-      : 'The current network namespace could not be identified; discovery still covers only the namespace visible to this process.',
+    platform === 'darwin'
+      ? 'Discovery covers sockets visible to the current macOS host process; other hosts are not inspected.'
+      : namespace
+        ? `Discovery is limited to the current network namespace (${namespace}); other namespaces are not inspected.`
+        : 'The current network namespace could not be identified; discovery still covers only the namespace visible to this process.',
     'This read-only snapshot observes listeners only. It does not bind or reserve the port, and another process can claim it after the check.',
     'Wildcard availability across IPv4 and IPv6 can be uncertain because dual-stack socket settings may vary.',
   ];
@@ -187,6 +190,7 @@ function assessFromListeners(
   family: AddressFamily,
   listeners: ListeningPort[],
   namespace: string | null,
+  platform: NodeJS.Platform = process.platform,
 ): PortAvailability {
   const relevant = listeners
     .filter((listener) => listener.port === port && listener.protocol === protocol)
@@ -231,7 +235,7 @@ function assessFromListeners(
     conflicts,
     message,
     namespace,
-    limitations: limitations(namespace),
+    limitations: limitations(namespace, platform),
   };
 }
 
@@ -240,8 +244,11 @@ export function checkPortAvailability(port: number, options: AvailabilityOptions
   const protocol = normalizeProtocol(options.protocol);
   const { address, family } = normalizeAddress(options.address);
   const discover = options.discover ?? (() => discoverListeningPorts());
-  const namespace = (options.readNamespace ?? (() => readCurrentNamespace('net')))();
-  return assessFromListeners(port, protocol, address, family, discover(), namespace);
+  const namespace = (
+    options.readNamespace ??
+    (() => ((options.platform ?? process.platform) === 'linux' ? readCurrentNamespace('net') : null))
+  )();
+  return assessFromListeners(port, protocol, address, family, discover(), namespace, options.platform);
 }
 
 function parseRange(range: string | undefined): { start: number; end: number } {
@@ -272,7 +279,10 @@ export function suggestAvailablePorts(
   if (!Number.isInteger(limit) || limit < 1 || limit > 20)
     throw new InvalidAvailabilityInputError('Suggestion limit must be an integer between 1 and 20.');
   const discover = options.discover ?? (() => discoverListeningPorts());
-  const namespace = (options.readNamespace ?? (() => readCurrentNamespace('net')))();
+  const namespace = (
+    options.readNamespace ??
+    (() => ((options.platform ?? process.platform) === 'linux' ? readCurrentNamespace('net') : null))
+  )();
   const listeners = discover();
   const suggestions: number[] = [];
   for (let port = from; port <= range.end && suggestions.length < limit; port += 1) {
@@ -286,7 +296,7 @@ export function suggestAvailablePorts(
     range,
     suggestions,
     namespace,
-    limitations: limitations(namespace),
+    limitations: limitations(namespace, options.platform),
   };
 }
 
