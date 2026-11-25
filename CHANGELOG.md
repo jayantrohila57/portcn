@@ -10,13 +10,21 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Fixed
 
-- clarify diagnose platform support <!-- task:docs/linux-first-reconciliation -->
-
 ### Deprecated
 
 ### Removed
 
 ### Security
+
+## [0.6.1] - 2026-11-25
+
+[0.6.1]: https://github.com/jayantrohila57/portcn/compare/v0.6.0...v0.6.1
+
+**Title:** Clarify Linux and macOS diagnostics
+
+### Fixed
+
+- clarify diagnose platform support <!-- task:docs/linux-first-reconciliation -->
 
 ## [0.6.0] - 2026-11-25
 
