@@ -5,9 +5,9 @@ description: Portcn's terminal layout, interaction, accessibility, and renderer 
 
 ## Design goals
 
-Keep routine port inspection compact and scannable. Put the current task and selected resource first, keep controls discoverable, and reveal process details only when requested. Human-readable terminal output, the interactive dashboard, and JSON are separate interfaces: JSON stays complete and free of terminal styling, while the dashboard can paginate and hide lower-priority columns.
+Keep routine port inspection compact and scannable. Put the current task and selected resource first, keep controls discoverable, and show concise process/project evidence immediately when selection changes. Human-readable terminal output, the interactive dashboard, and JSON are separate interfaces: JSON stays complete and free of terminal styling, while the dashboard can paginate and hide lower-priority columns.
 
-The current dashboard is a persistent listener table with tabs, search, sorting, selection, details, refresh actions, and pagination. The layouts below describe the reusable contract for that dashboard and the next master-detail view; they do not claim that every future panel or action already exists.
+The current dashboard is a persistent listener table with tabs, search, sorting, selection, live contextual details, refresh actions, and pagination. The layouts below describe the reusable contract for that dashboard and future resource views; they do not claim that every future panel or action already exists.
 
 ## Layout contracts
 
@@ -23,7 +23,10 @@ At wide sizes, preserve the compact resource list and reserve a stable region fo
 | > TCP | LISTEN | 3000 | 127.0.0.1     | 481 | node                           |
 |   TCP | LISTEN | 5432 | 127.0.0.1     | 512 | postgres                       |
 +------------------------------------------------------------------------------+
-| Detail appears here after the user opens a selected resource.                 |
+| Bind: 127.0.0.1:3000/TCP LISTEN                                              |
+| PID: 481 | Process: node                                                     |
+| Project root: /home/alex/app                                                |
+| Evidence: identified/high via owner; loaded code unknown                    |
 +------------------------------------------------------------------------------+
 | Page 1/1 | 2 records | / search | s sort | j/k select | n/p page | q quit      |
 +------------------------------------------------------------------------------+
@@ -40,12 +43,16 @@ At a narrow size, retain identity and selection before secondary metadata. Hide 
 | PROTO | STATE  | PORT                |
 | > TCP | LISTEN | 3000                |
 +--------------------------------------+
+| Bind: 127.0.0.1:3000/TCP             |
+| PID: 481 | Process: node               |
+| Project root: /app                   |
+| Evidence: identified/high via owner  |
 | Page 1/1 | 2 records                 |
 | / search | j/k select | q quit       |
 +--------------------------------------+
 ```
 
-Keep headers and row geometry stable between tabs. Show a compact empty state, distinguish permission-limited or unavailable evidence in text, and retain the last good snapshot when refresh fails. Keep full detail available through explicit selection and a deeper view; never solve density by dropping data from JSON.
+Keep headers and row geometry stable between tabs. Show a compact empty state, distinguish permission-limited or unavailable evidence in text, and retain the last good snapshot when refresh fails. Update contextual details as selection changes; never solve density by dropping data from JSON.
 
 ## Semantic theme and accessibility
 
@@ -72,7 +79,7 @@ Measure strings in terminal cells, not JavaScript string length. Keep grapheme c
 | `1`–`4`, `Tab` | Select a resource tab; `Tab` advances to the next tab |
 | `/` | Enter search mode |
 | `j`/`k`, arrows | Move the selected row |
-| `Enter` | Finish search or open selected process details |
+| `Enter` | Finish search; selected details update immediately |
 | `Esc` | Cancel search or close the palette |
 | `n`/`p` | Move between result pages |
 | `s` | Cycle the port, protocol, and process sort order |
@@ -85,7 +92,7 @@ Do not capture navigation keys while the user is editing a query. Keep focus, se
 
 - **Header and tabs:** identify the view and active resource category; keep labels stable across pages.
 - **Resource table:** show stable identity and the highest-value status fields; selection must be visible without color.
-- **Context panel:** describe only the selected resource, distinguish missing evidence from negative evidence, and preserve a route back to the list.
+- **Context panel:** describe only the selected resource, distinguish missing evidence from negative evidence, and keep its association with the selected row clear.
 - **Footer:** show actions available in the current mode; keep the narrow layout to the most important controls.
 - **Transient prompt or palette:** own its key handling while open and restore the prior focus when dismissed.
 - **JSON output:** remain a separate complete, versioned interface with no ANSI codes, prompts, pagination, or progress text.
@@ -105,4 +112,4 @@ pnpm build
 node --test scripts/dashboard-pty.test.mjs
 ```
 
-The PTY matrix checks 40×12, 80×24, and 140×40 layouts, normal quit, Ctrl+C restoration, Unicode search input, and monochrome selection. Keep tests for JSON and non-interactive output alongside dashboard changes.
+The PTY matrix checks 40×12, 80×24, and 140×40 layouts, resize into a 40×12 viewport, normal quit, Ctrl+C restoration, Unicode search input, and monochrome selection. Keep tests for JSON and non-interactive output alongside dashboard changes.

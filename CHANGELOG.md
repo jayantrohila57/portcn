@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- add service table and contextual details ([#97](https://github.com/jayantrohila57/portcn/issues/97)) <!-- task:feat/service-table-context -->
+
 - establish terminal design system ([#118](https://github.com/jayantrohila57/portcn/issues/118)) <!-- task:feat/tui-design-system -->
 
 - verify endpoints against expected projects ([#108](https://github.com/jayantrohila57/portcn/issues/108)) <!-- task:feat/endpoint-project-verification -->

@@ -6,7 +6,7 @@ An open-source, developer-first CLI for understanding local development services
 
 ## Development status
 
-Portcn `v0.3.0` is published. It provides read-only Linux commands to list listeners, inspect a port, and diagnose visible owners and namespace limits. The development branch adds versioned JSON output, point-in-time port checks and suggestions, best-effort project/worktree evidence, opt-in agent session attribution, read-only ownership assessment, and endpoint/project comparison. Process termination is not implemented.
+Portcn `v0.3.0` is published. It provides read-only Linux commands to list listeners, inspect a port, and diagnose visible owners and namespace limits. The development branch adds versioned JSON output, point-in-time port checks and suggestions, best-effort project/worktree evidence, opt-in agent session attribution, read-only ownership assessment, endpoint/project comparison, and a live contextual dashboard. Process termination is not implemented.
 
 ## Implemented
 

@@ -1,13 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import { formatListeningPorts, type ListeningPort } from '../src/commands/list.js';
+import type { ProjectContext } from '../src/commands/project-context.js';
 import {
   calculatePageSize,
   clampSelection,
   filterPorts,
   formatTabView,
+  listenerIdentity,
   pageCountFor,
   pageForKey,
   paletteActionForKey,
+  reconcileSelection,
   runTabbedList,
   searchPorts,
   selectionForKey,
@@ -47,7 +50,52 @@ describe('interactive port tabs', () => {
 
   it('renders palette and selected process details without changing table geometry', () => {
     expect(formatTabView(ports, 'all', 0, 24, '', 'port', 0, ports[0], true)).toContain('Command palette');
-    expect(formatTabView(ports, 'all', 0, 24, '', 'port', 0, ports[0])).toContain('Detail: node | PID 10');
+    expect(formatTabView(ports, 'all', 0, 24, '', 'port', 0, ports[0])).toContain('Bind: TCP 127.0.0.1:3000');
+    expect(formatTabView(ports, 'all', 0, 24, '', 'port', 1)).toContain('Bind: UDP 0.0.0.0:5353');
+  });
+
+  it('renders project context evidence for the selected listener', () => {
+    const project: ProjectContext = {
+      status: 'identified',
+      confidence: 'high',
+      source: 'owner',
+      cwd: '/workspace/app',
+      executable: '/usr/bin/node',
+      projectRoot: '/workspace/app',
+      gitDir: '/workspace/app/.git',
+      gitCommonDir: '/workspace/app/.git',
+      checkoutBranch: 'main',
+      checkoutCommit: 'abc123',
+      worktree: false,
+      ancestors: [],
+      evidence: ['Git identified the owner working directory.'],
+    };
+    const rendered = formatTabView(ports, 'all', 0, 24, '', 'port', 0, ports[0], false, 100, project);
+    expect(rendered).toContain('PID: 10 | Process: node');
+    expect(rendered).toContain('Project root: /workspace/app');
+    expect(rendered).toContain('Evidence: identified/high via owner; loaded code unknown');
+  });
+
+  it('preserves listener selection across refresh reorder and falls back when filtered away', () => {
+    const firstPort = ports[0];
+    const secondPort = ports[1];
+    if (!firstPort || !secondPort) throw new Error('The listener fixtures are incomplete.');
+    const selectedIdentity = listenerIdentity(firstPort);
+    const refreshed = [{ ...secondPort }, { ...firstPort }];
+    expect(reconcileSelection(refreshed, selectedIdentity)).toBe(1);
+    expect(reconcileSelection(sortPorts(refreshed, 'protocol'), selectedIdentity)).toBe(0);
+    expect(reconcileSelection([secondPort], selectedIdentity)).toBe(0);
+    const filtered = searchPorts(refreshed, '5353');
+    expect(reconcileSelection(filtered, selectedIdentity)).toBe(0);
+    expect(
+      listenerIdentity({
+        ...firstPort,
+        owners: [
+          { pid: 12, processName: 'node' },
+          { pid: 10, processName: 'node' },
+        ],
+      }),
+    ).not.toBe(listenerIdentity(firstPort));
   });
 
   it('keeps hostile and narrow-terminal content bounded', () => {
@@ -76,8 +124,8 @@ describe('interactive port tabs', () => {
   it('paginates rows to the available terminal height', () => {
     const manyPorts = Array.from({ length: 20 }, (_, index) => ({ ...ports[0], port: 3000 + index }));
     expect(calculatePageSize(15)).toBe(3);
-    expect(formatTabView(manyPorts, 'all', 0, 15)).toContain('Page 1/7');
-    expect(formatTabView(manyPorts, 'all', 6, 15)).toContain('Page 7/7');
+    expect(formatTabView(manyPorts, 'all', 0, 15)).toContain('Page 1/5');
+    expect(formatTabView(manyPorts, 'all', 4, 15)).toContain('Page 5/5');
     expect(formatTabView(manyPorts, 'all', 0, 15)).toContain('3000');
     expect(formatTabView(manyPorts, 'all', 0, 15)).not.toContain('3005');
   });

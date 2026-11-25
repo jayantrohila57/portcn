@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
 import { test } from 'node:test';
 
 function runInPty(columns, rows, input = 'q', env = {}, resizeTo = null) {
@@ -75,4 +76,21 @@ test('interactive dashboard redraws within the resized viewport', { timeout: 10_
   const lines = finalFrame.split('\n');
   assert.ok(lines.length <= 12, `Expected at most 12 lines, got ${lines.length}`);
   assert.ok(Math.max(...lines.map((line) => [...line].length)) <= 40);
+});
+
+test('interactive dashboard follows selection with live project details', { timeout: 15_000 }, async () => {
+  const server = createServer();
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('The listener fixture did not bind a TCP port.');
+  try {
+    const { output, code } = await runInPty(120, 30, `/${address.port}\rq`);
+    assert.equal(code, 0);
+    const text = stripAnsi(output);
+    assert.match(text, new RegExp(`Bind: TCP 127\\.0\\.0\\.1:${address.port}`));
+    assert.ok(text.includes(`PID: ${process.pid}`));
+    assert.ok(text.includes(`Project root: ${process.cwd()}`));
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve(undefined))));
+  }
 });
