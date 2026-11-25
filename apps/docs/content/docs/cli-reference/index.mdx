@@ -37,6 +37,19 @@ portcn open tcp://127.0.0.1:3000
 
 ``endpoint check`` sends one HTTP ``HEAD`` request to the selected saved service, with a default 1500 ms timeout capped at 5000 ms. It reports an HTTP response, timeout, TLS validation failure, or unreachable endpoint; it does not claim application readiness. Redirects are not followed, and HTTPS uses Node's default certificate validation. ``open`` is an explicit action and invokes ``xdg-open`` without a shell, with the validated local URL as one argument. Terminal output uses OSC 8 hyperlinks only when stdout is a TTY; piped output contains plain URLs. JSON output uses schema version 1. The request and browser action do not visit remote hosts.
 
+## ``portcn readiness`` (`readiness`)
+
+Readiness is an explicit, bounded check of one saved or currently observed local service. ``readiness list`` reports listener snapshots as ``listening`` and saved services without a matching listener as ``stopped``; neither state is inferred from a prior probe. ``readiness check`` uses a TCP connection when no saved URL is configured and reports ``reachable`` only, which does not establish application readiness. With a saved local HTTP(S) URL, it sends bounded ``HEAD`` requests without following redirects: 2xx is ``ready``, a received non-2xx response after retries is ``unhealthy``, and no conclusive response is ``unknown``. UDP entries remain ``listening`` because these probes do not apply.
+
+```sh
+portcn readiness list
+portcn readiness list --json
+portcn readiness check tcp://127.0.0.1:3000
+portcn readiness check tcp://127.0.0.1:3000 --timeout 1500 --retries 2 --interval 250 --json
+```
+
+The timeout applies per attempt (100–5000 ms), retries are capped at five (default two), and the interval is capped at 2000 ms (default 250). Ctrl-C or SIGTERM cancels the in-flight probe or wait. Results use JSON schema version 1 with attempt count, endpoint mode, observation time, HTTP status when received, and a human-readable detail. A missing current listener is reported as ``stopped`` without sending a probe. All probes target the validated local bind or saved local URL; Portcn does not issue arbitrary shell checks, restart services, or make external requests.
+
 ## ``portcn docker``
 
 Read a snapshot of all containers in the Docker CLI's selected daemon context, including stopped containers. Portcn lists container IDs and inspects them without changing container state. The output includes state, configured health, Compose project/service labels, network addresses, exposed ports, and published host bindings. Stopped containers can retain mapping configuration; Portcn labels those entries as configured and does not treat them as active host bindings.

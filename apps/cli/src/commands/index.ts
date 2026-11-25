@@ -9,6 +9,7 @@ import { registerExposureCommand } from './exposure.js';
 import { registerInspectCommand } from './inspect.js';
 import { registerListCommand } from './list.js';
 import { registerProcessAssessmentCommand } from './process-assessment.js';
+import { registerReadinessCommands } from './readiness.js';
 
 /** Register CLI commands in one place so future commands stay independent. */
 export function registerCommands(program: Command): void {
@@ -19,6 +20,7 @@ export function registerCommands(program: Command): void {
   registerProcessAssessmentCommand(program);
   registerEndpointVerificationCommand(program);
   registerEndpointCommands(program);
+  registerReadinessCommands(program);
   registerConfigCommand(program);
   registerDockerCommand(program);
   registerExposureCommand(program);

@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- check service readiness with explicit local probes ([#114](https://github.com/jayantrohila57/portcn/issues/114)) <!-- task:feat/service-readiness-checks -->
+
 - detect local HTTP HTTPS endpoints and open service URLs ([#107](https://github.com/jayantrohila57/portcn/issues/107)) <!-- task:feat/local-endpoint-verification -->
 
 ### Changed
