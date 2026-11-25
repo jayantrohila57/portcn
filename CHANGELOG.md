@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- discover local Nginx services and listeners ([#184](https://github.com/jayantrohila57/portcn/issues/184)) <!-- task:feat/nginx-discovery -->
+
 - attribute rootlessport forwarding processes ([#183](https://github.com/jayantrohila57/portcn/issues/183)) <!-- task:feat/rootlessport-attribution -->
 
 - discover rootless containers and port mappings ([#181](https://github.com/jayantrohila57/portcn/issues/181)) <!-- task:feat/podman-discovery -->
