@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import type { Command } from 'commander';
-import { formatEmpty, formatTable, type TableOptions } from '../terminal.js';
+import { formatEmpty, formatTable, type TableOptions, TERMINAL_THEME } from '../terminal.js';
 import { JSON_SCHEMA_VERSION, jsonSchemaIsSupported, UnsupportedJsonVersionError, versionedJsonError } from './json.js';
 import { runTabbedList } from './tabs.js';
 
@@ -106,7 +106,10 @@ export function formatListeningPorts(ports: ListeningPort[], options: TableOptio
     port.pid === null ? '-' : String(port.pid),
     port.processName ?? '-',
   ]);
-  return formatTable(headers, rows, { ...options, columnColors: { 0: '\u001b[36m', 1: '\u001b[32m' } });
+  return formatTable(headers, rows, {
+    ...options,
+    columnColors: { 0: TERMINAL_THEME.focused, 1: TERMINAL_THEME.success },
+  });
 }
 
 export function registerListCommand(

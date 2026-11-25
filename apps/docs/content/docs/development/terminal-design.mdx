@@ -1,0 +1,108 @@
+---
+title: Terminal design system
+description: Portcn's terminal layout, interaction, accessibility, and renderer contracts.
+---
+
+## Design goals
+
+Keep routine port inspection compact and scannable. Put the current task and selected resource first, keep controls discoverable, and reveal process details only when requested. Human-readable terminal output, the interactive dashboard, and JSON are separate interfaces: JSON stays complete and free of terminal styling, while the dashboard can paginate and hide lower-priority columns.
+
+The current dashboard is a persistent listener table with tabs, search, sorting, selection, details, refresh actions, and pagination. The layouts below describe the reusable contract for that dashboard and the next master-detail view; they do not claim that every future panel or action already exists.
+
+## Layout contracts
+
+At wide sizes, preserve the compact resource list and reserve a stable region for contextual details and controls:
+
+```text
++------------------------------------------------------------------------------+
+| PORTCN  LISTENING PORTS                                                      |
++------------------------------------------------------------------------------+
+| Tabs: [1:ALL]  2:TCP  3:UDP  4:WITH PROCESS                                  |
++------------------------------------------------------------------------------+
+| PROTO | STATE  | PORT | LOCAL ADDRESS | PID | PROCESS                        |
+| > TCP | LISTEN | 3000 | 127.0.0.1     | 481 | node                           |
+|   TCP | LISTEN | 5432 | 127.0.0.1     | 512 | postgres                       |
++------------------------------------------------------------------------------+
+| Detail appears here after the user opens a selected resource.                 |
++------------------------------------------------------------------------------+
+| Page 1/1 | 2 records | / search | s sort | j/k select | n/p page | q quit      |
++------------------------------------------------------------------------------+
+```
+
+At a narrow size, retain identity and selection before secondary metadata. Hide columns in a documented priority order; do not wrap table borders or let output exceed the viewport:
+
+```text
++--------------------------------------+
+| PORTCN  LISTENING PORTS              |
++--------------------------------------+
+| Tabs: [1:ALL]  2:TCP  3:UDP          |
++--------------------------------------+
+| PROTO | STATE  | PORT                |
+| > TCP | LISTEN | 3000                |
++--------------------------------------+
+| Page 1/1 | 2 records                 |
+| / search | j/k select | q quit       |
++--------------------------------------+
+```
+
+Keep headers and row geometry stable between tabs. Show a compact empty state, distinguish permission-limited or unavailable evidence in text, and retain the last good snapshot when refresh fails. Keep full detail available through explicit selection and a deeper view; never solve density by dropping data from JSON.
+
+## Semantic theme and accessibility
+
+Use the shared `TERMINAL_THEME` roles from `apps/cli/src/terminal.ts`:
+
+| Role | Use | Monochrome behavior |
+| --- | --- | --- |
+| `normal` | Primary values and labels | Plain text |
+| `muted` | Secondary hints | Keep meaning understandable without dim color |
+| `selected` | The currently selected row | Prefix its first cell with `>`; reverse video may reinforce it |
+| `focused` | Primary headings or active focus | Use a clear label or bracket in addition to color |
+| `success` | Positive status | Include a textual status |
+| `warning` | Empty, partial, or caution state | Explain the condition in words |
+| `error` | Failed operation | Preserve an actionable message on stderr |
+
+Only emit color for a TTY when `NO_COLOR` is unset/empty and `TERM` is not `dumb`. Selection and focus must remain clear without color. Keep text labels for state, use concise uppercase table headers, and avoid relying on Unicode art for meaning. Sanitize control characters from process-supplied text before rendering.
+
+Measure strings in terminal cells, not JavaScript string length. Keep grapheme clusters intact while clipping, count combining accents as zero extra cells, and account for wide CJK and emoji glyphs. Use ASCII borders so the frame remains predictable in common terminal fonts.
+
+## Interaction contract
+
+| Key | Current dashboard behavior |
+| --- | --- |
+| `1`–`4`, `Tab` | Select a resource tab; `Tab` advances to the next tab |
+| `/` | Enter search mode |
+| `j`/`k`, arrows | Move the selected row |
+| `Enter` | Finish search or open selected process details |
+| `Esc` | Cancel search or close the palette |
+| `n`/`p` | Move between result pages |
+| `s` | Cycle the port, protocol, and process sort order |
+| `:` then `r`/`a` | Open the command palette, refresh, or toggle auto-refresh |
+| `q`, `Ctrl+C` | Quit and restore terminal state |
+
+Do not capture navigation keys while the user is editing a query. Keep focus, selection, search text, and active tab as separate state. On filtering, sorting, refresh, or resize, clamp selection to the visible result set before rendering details. Escape closes the active transient interaction before the dashboard exits.
+
+## Component contracts
+
+- **Header and tabs:** identify the view and active resource category; keep labels stable across pages.
+- **Resource table:** show stable identity and the highest-value status fields; selection must be visible without color.
+- **Context panel:** describe only the selected resource, distinguish missing evidence from negative evidence, and preserve a route back to the list.
+- **Footer:** show actions available in the current mode; keep the narrow layout to the most important controls.
+- **Transient prompt or palette:** own its key handling while open and restore the prior focus when dismissed.
+- **JSON output:** remain a separate complete, versioned interface with no ANSI codes, prompts, pagination, or progress text.
+
+## Renderer and dependency decisions
+
+Keep the existing small renderer over Node terminal APIs. The current dashboard already has full redraw, resize handling, selection, search, sorting, detail output, Unicode width helpers, and terminal cleanup. A component framework such as Ink or blessed would add a second rendering model without a current component tree or measured maintenance benefit.
+
+`@clack/prompts` is a better fit for future linear setup or confirmation flows than for a persistent dashboard. Portcn has no current guided configuration flow that justifies adding it. Re-evaluate Clack when configuration, groups, or aliases are implemented; it must not own the live dashboard renderer. `picocolors` is also unnecessary while the CLI uses a small semantic palette with explicit `NO_COLOR` behavior.
+
+## Verification
+
+The focused renderer tests cover monochrome selection, color policy, clipping, Unicode cell width, and terminal cleanup. Run the built CLI's real PTY matrix after building:
+
+```sh
+pnpm build
+node --test scripts/dashboard-pty.test.mjs
+```
+
+The PTY matrix checks 40×12, 80×24, and 140×40 layouts, normal quit, Ctrl+C restoration, Unicode search input, and monochrome selection. Keep tests for JSON and non-interactive output alongside dashboard changes.

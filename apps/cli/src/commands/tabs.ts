@@ -1,3 +1,4 @@
+import { fitTerminalText } from '../terminal.js';
 import type { ListeningPort } from './list.js';
 import { formatListeningPorts } from './list.js';
 
@@ -103,11 +104,12 @@ export function formatTabView(
   selected = 0,
   detail: ListeningPort | null = null,
   palette = false,
+  terminalWidth = process.stdout.columns ?? 100,
 ): string {
   const labels: Record<PortTab, string> = { all: 'ALL', tcp: 'TCP', udp: 'UDP', process: 'WITH PROCESS' };
-  const width = Math.max(40, process.stdout.columns ?? 100);
+  const width = Math.max(40, terminalWidth);
   const divider = `+${'-'.repeat(Math.max(1, width - 2))}+`;
-  const framed = (text: string) => `| ${text.slice(0, Math.max(0, width - 4)).padEnd(Math.max(0, width - 4))} |`;
+  const framed = (text: string) => `| ${fitTerminalText(text, Math.max(0, width - 4))} |`;
   const tabs = PORT_TABS.map(
     (name, index) => `${name === tab ? '[' : ' '} ${index + 1}:${labels[name]} ${name === tab ? ']' : ' '}`,
   ).join('  ');
@@ -126,16 +128,17 @@ export function formatTabView(
     ? `Detail: ${detail.processName ?? 'unknown process'} | PID ${detail.pid ?? 'unavailable'} | ${detail.protocol.toUpperCase()} ${detail.address}:${detail.port}`
     : '';
   const paletteLine = palette ? 'Command palette: [r] refresh  [a] auto-refresh  [q/Esc] close' : '';
+  const compact = terminalHeight <= 12;
   return [
     divider,
     framed('PORTCN  LISTENING PORTS'),
-    divider,
+    ...(!compact ? [divider] : []),
     framed(`Tabs: ${tabs}`),
     divider,
     table,
-    divider,
-    ...(detailLine ? [framed(detailLine), divider] : []),
-    ...(paletteLine ? [framed(paletteLine), divider] : []),
+    ...(!compact ? [divider] : []),
+    ...(detailLine ? [framed(detailLine), ...(!compact ? [divider] : [])] : []),
+    ...(paletteLine ? [framed(paletteLine), ...(!compact ? [divider] : [])] : []),
     framed(
       `Page ${currentPage + 1}/${pageCount}  |  ${filtered.length} records  |  / search  |  s sort:${sort}  |  j/k select  |  n/p page  |  q quit`,
     ),

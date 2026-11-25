@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { isValidPortNumber, type PortNumber } from '@portcn/core';
 import type { Command } from 'commander';
-import { formatEmpty, formatTable } from '../terminal.js';
+import { formatEmpty, formatTable, TERMINAL_THEME } from '../terminal.js';
 import { JSON_SCHEMA_VERSION, jsonSchemaIsSupported, UnsupportedJsonVersionError, versionedJsonError } from './json.js';
 import { discoverListeningPorts, type ListeningPort } from './list.js';
 
@@ -138,7 +138,7 @@ export function formatInspectedPorts(ports: InspectedPort[]): string {
     port.processName ?? '-',
     port.details?.command ?? 'unavailable',
   ]);
-  return formatTable(headers, rows, { columnColors: { 0: '\u001b[36m', 1: '\u001b[32m' } });
+  return formatTable(headers, rows, { columnColors: { 0: TERMINAL_THEME.focused, 1: TERMINAL_THEME.success } });
 }
 
 export function registerInspectCommand(
