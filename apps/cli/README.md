@@ -24,6 +24,7 @@ portcn inspect 3000 --json     # machine-readable inspection
 portcn diagnose 3000           # owners, address families, and visibility limits
 portcn diagnose 3000 --json    # machine-readable diagnosis
 portcn check 3000              # dev: point-in-time TCP bind overlap check
+portcn wait 3000               # dev: bounded wait for observed listener overlap to clear
 portcn suggest                 # dev: bounded alternative port suggestions
 portcn assess 1234 --project "$PWD" # dev: read-only ownership evidence
 portcn verify 127.0.0.1:3000 --project "$PWD" # dev: local endpoint/project evidence

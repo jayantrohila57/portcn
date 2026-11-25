@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- add bounded port wait ([#139](https://github.com/jayantrohila57/portcn/issues/139)) <!-- task:feat/port-watch -->
+
 - add macOS port and process discovery ([#140](https://github.com/jayantrohila57/portcn/issues/140)) <!-- task:feat/macos-port-discovery -->
 
 - support Node.js 22 runtime ([#142](https://github.com/jayantrohila57/portcn/issues/142)) <!-- task:chore/node22-compatibility-audit -->
