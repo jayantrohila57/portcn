@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import type { Command } from 'commander';
 import { formatEmpty, formatTable, type TableOptions } from '../terminal.js';
+import { JSON_SCHEMA_VERSION, jsonSchemaIsSupported, UnsupportedJsonVersionError, versionedJsonError } from './json.js';
 import { runTabbedList } from './tabs.js';
 
 export interface ListeningPort {
@@ -19,6 +20,7 @@ export interface ListeningOwner {
 }
 
 const SS_ARGS = ['--no-header', '--listening', '--tcp', '--udp', '--numeric', '--processes'];
+const compareText = (left: string, right: string): number => (left < right ? -1 : left > right ? 1 : 0);
 
 export function parseSsOutput(output: string): ListeningPort[] {
   const ports: ListeningPort[] = [];
@@ -42,10 +44,9 @@ export function parseSsOutput(output: string): ListeningPort[] {
       throw new Error(`Unexpected local port from ss: ${endpoint}`);
     }
 
-    const owners = [...line.matchAll(/"([^"]+)",pid=(\d+)/g)].map((owner) => ({
-      processName: owner[1] ?? 'unknown',
-      pid: Number(owner[2]),
-    }));
+    const owners = [...line.matchAll(/"([^"]+)",pid=(\d+)/g)]
+      .map((owner) => ({ processName: owner[1] ?? 'unknown', pid: Number(owner[2]) }))
+      .sort((left, right) => left.pid - right.pid || compareText(left.processName, right.processName));
     const owner = owners[0];
     ports.push({
       protocol,
@@ -60,9 +61,7 @@ export function parseSsOutput(output: string): ListeningPort[] {
 
   return ports.sort(
     (left, right) =>
-      left.port - right.port ||
-      left.protocol.localeCompare(right.protocol) ||
-      left.address.localeCompare(right.address),
+      left.port - right.port || compareText(left.protocol, right.protocol) || compareText(left.address, right.address),
   );
 }
 
@@ -110,22 +109,34 @@ export function formatListeningPorts(ports: ListeningPort[], options: TableOptio
   return formatTable(headers, rows, { ...options, columnColors: { 0: '\u001b[36m', 1: '\u001b[32m' } });
 }
 
-export function registerListCommand(program: Command): void {
+export function registerListCommand(
+  program: Command,
+  discover: typeof discoverListeningPorts = discoverListeningPorts,
+): void {
   program
     .command('list')
     .description('List listening TCP and UDP ports (Linux)')
     .option('-i, --interactive', 'Switch between filtered port tabs with the keyboard')
     .option('--json', 'Print all listeners as JSON without terminal formatting or pagination')
-    .action(async (options: { interactive?: boolean; json?: boolean }) => {
+    .option('--json-version <version>', 'Print versioned JSON (supported: 1)')
+    .action(async (options: { interactive?: boolean; json?: boolean; jsonVersion?: string }) => {
       try {
-        const ports = discoverListeningPorts();
-        if (options.json) process.stdout.write(`${JSON.stringify(ports)}\n`);
-        else if (options.interactive) await runTabbedList(ports, () => discoverListeningPorts());
+        if (!jsonSchemaIsSupported(options.jsonVersion)) throw new UnsupportedJsonVersionError();
+        const ports = discover();
+        if (options.jsonVersion === String(JSON_SCHEMA_VERSION))
+          process.stdout.write(`${JSON.stringify({ schemaVersion: JSON_SCHEMA_VERSION, listeners: ports })}\n`);
+        else if (options.json) process.stdout.write(`${JSON.stringify(ports)}\n`);
+        else if (options.interactive) await runTabbedList(ports, discover);
         else process.stdout.write(`${formatListeningPorts(ports)}\n`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        process.stderr.write(`portcn: ${message}\n`);
-        process.exitCode = 1;
+        if (options.jsonVersion !== undefined || options.json) {
+          process.stdout.write(`${JSON.stringify(versionedJsonError(error))}\n`);
+          process.exitCode = error instanceof UnsupportedJsonVersionError ? 2 : 1;
+        } else {
+          process.stderr.write(`portcn: ${message}\n`);
+          process.exitCode = 1;
+        }
       }
     });
 }

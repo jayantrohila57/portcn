@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   discoverListeningPorts,
   formatListeningPorts,
@@ -14,6 +14,11 @@ const SAMPLE = [
 ].join('\n');
 
 describe('read-only Linux port listing', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    process.exitCode = 0;
+  });
+
   it('parses TCP, UDP, IPv6 and visible process owners, sorted by port', () => {
     expect(parseSsOutput(SAMPLE)).toEqual([
       {
@@ -47,6 +52,11 @@ describe('read-only Linux port listing', () => {
       { processName: 'worker', pid: 654 },
     ]);
     expect(result[0]?.pid).toBe(321);
+    const reversed = parseSsOutput(
+      'tcp LISTEN 0 128 127.0.0.1:3000 0.0.0.0:* users:(("worker",pid=654,fd=6),("node",pid=321,fd=15))',
+    );
+    expect(reversed[0]?.owners).toEqual(result[0]?.owners);
+    expect(reversed[0]?.pid).toBe(321);
   });
 
   it('does not assume missing PID and process data are visible', () => {
@@ -106,5 +116,47 @@ describe('read-only Linux port listing', () => {
     registerListCommand(command);
     expect(command.helpInformation()).toContain('list');
     expect(command.commands[0]?.helpInformation()).toContain('--json');
+    expect(command.commands[0]?.helpInformation()).toContain('--json-version');
+  });
+
+  it('adds an opt-in versioned JSON envelope and keeps legacy JSON unchanged', async () => {
+    const output: string[] = [];
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      output.push(String(chunk));
+      return true;
+    });
+    const command = new Command().name('portcn');
+    registerListCommand(command, () => parseSsOutput(SAMPLE));
+    await command.parseAsync(['node', 'portcn', 'list', '--json-version', '1']);
+    const versioned = JSON.parse(output.join('')) as { schemaVersion: number; listeners: Array<{ port: number }> };
+    expect(versioned.schemaVersion).toBe(1);
+    expect(versioned.listeners.map(({ port }) => port)).toEqual([22, 3000, 5353]);
+    expect(output.join('').includes('\u001b')).toBe(false);
+    output.length = 0;
+    await command.parseAsync(['node', 'portcn', 'list', '--json']);
+    expect(Array.isArray(JSON.parse(output.join('')))).toBe(true);
+  });
+
+  it('emits sanitized structured JSON errors for the versioned contract', async () => {
+    const output: string[] = [];
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      output.push(String(chunk));
+      return true;
+    });
+    const command = new Command().name('portcn');
+    registerListCommand(command, () => {
+      throw new Error('Unable to list ports using ss: private detail');
+    });
+    await command.parseAsync(['node', 'portcn', 'list', '--json-version', '1']);
+    expect(JSON.parse(output.join(''))).toEqual({
+      schemaVersion: 1,
+      error: {
+        code: 'DISCOVERY_FAILED',
+        message: 'Port discovery failed. Check permissions, iproute2, and namespace visibility.',
+      },
+    });
+    expect(output.join('')).not.toContain('private detail');
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
   });
 });
