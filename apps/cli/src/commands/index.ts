@@ -3,6 +3,7 @@ import { registerAvailabilityCommands } from './availability.js';
 import { registerDiagnoseCommand } from './diagnose.js';
 import { registerInspectCommand } from './inspect.js';
 import { registerListCommand } from './list.js';
+import { registerProcessAssessmentCommand } from './process-assessment.js';
 
 /** Register CLI commands in one place so future commands stay independent. */
 export function registerCommands(program: Command): void {
@@ -10,4 +11,5 @@ export function registerCommands(program: Command): void {
   registerInspectCommand(program);
   registerDiagnoseCommand(program);
   registerAvailabilityCommands(program);
+  registerProcessAssessmentCommand(program);
 }

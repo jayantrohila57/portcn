@@ -31,6 +31,13 @@ export class InvalidAvailabilityInputError extends Error {
   }
 }
 
+export class InvalidProcessAssessmentInputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidProcessAssessmentInputError';
+  }
+}
+
 export function versionedJsonError(error: unknown, port?: string): VersionedJsonError {
   const message = error instanceof Error ? error.message : String(error);
   const code: JsonErrorCode =
@@ -38,13 +45,15 @@ export function versionedJsonError(error: unknown, port?: string): VersionedJson
       ? 'INVALID_PORT'
       : error instanceof InvalidAvailabilityInputError
         ? 'INVALID_INPUT'
-        : error instanceof UnsupportedJsonVersionError
-          ? 'UNSUPPORTED_JSON_VERSION'
-          : message.includes('Linux only')
-            ? 'UNSUPPORTED_PLATFORM'
-            : message.includes('ss command is missing')
-              ? 'MISSING_DEPENDENCY'
-              : 'DISCOVERY_FAILED';
+        : error instanceof InvalidProcessAssessmentInputError
+          ? 'INVALID_INPUT'
+          : error instanceof UnsupportedJsonVersionError
+            ? 'UNSUPPORTED_JSON_VERSION'
+            : message.includes('Linux only')
+              ? 'UNSUPPORTED_PLATFORM'
+              : message.includes('ss command is missing')
+                ? 'MISSING_DEPENDENCY'
+                : 'DISCOVERY_FAILED';
   const stableMessage =
     code === 'INVALID_PORT'
       ? 'Port must be an integer between 1 and 65535.'
