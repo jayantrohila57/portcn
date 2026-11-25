@@ -6,27 +6,33 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
-- add bounded port wait ([#139](https://github.com/jayantrohila57/portcn/issues/139)) <!-- task:feat/port-watch -->
-
-- add macOS port and process discovery ([#140](https://github.com/jayantrohila57/portcn/issues/140)) <!-- task:feat/macos-port-discovery -->
-
-- support Node.js 22 runtime ([#142](https://github.com/jayantrohila57/portcn/issues/142)) <!-- task:chore/node22-compatibility-audit -->
-
-- expose Portcn as a read-only MCP server for coding agents ([#104](https://github.com/jayantrohila57/portcn/issues/104)) <!-- task:feat/agent-mcp-server -->
-
 ### Changed
 
 ### Fixed
-
-- include Linux socket tools in CLI images <!-- task:fix/cli-e2e-issues -->
-
-- report port wait timeouts accurately ([#139](https://github.com/jayantrohila57/portcn/issues/139)) <!-- task:fix/port-wait-timeout-json -->
 
 ### Deprecated
 
 ### Removed
 
 ### Security
+
+## [0.6.0] - 2026-11-25
+
+[0.6.0]: https://github.com/jayantrohila57/portcn/compare/v0.5.0...v0.6.0
+
+**Title:** More capable local service diagnostics
+
+### Added
+
+- add bounded port wait ([#139](https://github.com/jayantrohila57/portcn/issues/139)) <!-- task:feat/port-watch -->
+- add macOS port and process discovery ([#140](https://github.com/jayantrohila57/portcn/issues/140)) <!-- task:feat/macos-port-discovery -->
+- support Node.js 22 runtime ([#142](https://github.com/jayantrohila57/portcn/issues/142)) <!-- task:chore/node22-compatibility-audit -->
+- expose Portcn as a read-only MCP server for coding agents ([#104](https://github.com/jayantrohila57/portcn/issues/104)) <!-- task:feat/agent-mcp-server -->
+
+### Fixed
+
+- include Linux socket tools in CLI images <!-- task:fix/cli-e2e-issues -->
+- report port wait timeouts accurately ([#139](https://github.com/jayantrohila57/portcn/issues/139)) <!-- task:fix/port-wait-timeout-json -->
 
 ## [0.5.0] - 2026-11-25
 

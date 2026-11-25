@@ -22,6 +22,11 @@ if (!previousVersion) throw new Error('The changelog test needs a published rele
 const [major, minor, patch] = previousVersion.split('.').map(Number);
 const version = `${major}.${minor}.${patch + 1}`;
 const commit = (sha, subject, message = subject) => ({ sha, subject, message });
+const releaseSection = (result) => {
+  const start = result.indexOf(`## [${version}] - `);
+  const end = result.indexOf('\n## [', start + 1);
+  return result.slice(start, end < 0 ? undefined : end);
+};
 test('calculates IST calendar date across UTC midnight', () => {
   assert.equal(dateInIst(new Date('2026-11-23T20:00:00Z')), '2026-11-24');
 });
@@ -50,7 +55,7 @@ test('creates concise categorized release notes with issue, PR, and compare link
   );
   assert.ok(result.includes(`**Title:** Dashboard improvements`));
   assert.ok(result.includes(`\n\n## [${previousVersion}]`));
-  assert.match(result, /## Unreleased\n\n### Added\n### Changed\n### Fixed/);
+  assert.match(result, /## Unreleased\n\n### Added\n\n### Changed\n\n### Fixed/);
 });
 test('deduplicates commit-derived release notes against authored Unreleased entries', () => {
   const issueUrl = 'https://github.com/jayantrohila57/portcn/issues/139';
@@ -66,12 +71,32 @@ test('deduplicates commit-derived release notes against authored Unreleased entr
     date: '2026-11-24',
     commits: [commit('a', 'feat(cli): add bounded port wait (#171)')],
   });
-  assert.equal([...result.matchAll(/add bounded port wait/g)].length, 1);
+  const releaseContent = releaseSection(result);
+  assert.equal([...releaseContent.matchAll(/add bounded port wait/g)].length, 1);
   assert.match(
     result,
     /add bounded port wait \(\[#139\]\(https:\/\/github\.com\/jayantrohila57\/portcn\/issues\/139\)\)/,
   );
   assert.doesNotMatch(result, /pull\/171/);
+});
+test('deduplicates authored issue-linked entries against PR-numbered commits', () => {
+  const issueUrl = 'https://github.com/jayantrohila57/portcn/issues/139';
+  const authoredSource = source.replace(
+    '## Unreleased\n\n### Added\n### Changed\n### Fixed\n### Deprecated\n### Removed\n### Security',
+    `## Unreleased\n\n### Added\n\n- add bounded port wait ([#139](${issueUrl})) <!-- task:feat/port-watch -->\n\n### Changed\n### Fixed\n### Deprecated\n### Removed\n### Security`,
+  );
+  const result = renderRelease({
+    source: authoredSource,
+    version,
+    previousVersion,
+    title: 'Dashboard improvements',
+    date: '2026-11-24',
+    commits: [commit('a', 'feat(cli): add bounded port wait (#171)')],
+  });
+  const releaseContent = releaseSection(result);
+  assert.equal([...releaseContent.matchAll(/add bounded port wait/g)].length, 1);
+  assert.match(releaseContent, /#139/);
+  assert.doesNotMatch(releaseContent, /pull\/171/);
 });
 test('handles breaking changes and refuses duplicates or empty releases', () => {
   assert.equal(summarize('feat!: remove old config').category, 'Changed');
