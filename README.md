@@ -6,7 +6,7 @@ An open-source, developer-first CLI for understanding local development services
 
 ## Development status
 
-Portcn `v0.3.0` is published. It provides read-only Linux commands to list listeners, inspect a port, and diagnose visible owners and namespace limits. The development branch adds versioned JSON output, point-in-time port checks and suggestions, best-effort project/worktree evidence, opt-in agent session attribution, and read-only ownership assessment. Process termination is not implemented.
+Portcn `v0.3.0` is published. It provides read-only Linux commands to list listeners, inspect a port, and diagnose visible owners and namespace limits. The development branch adds versioned JSON output, point-in-time port checks and suggestions, best-effort project/worktree evidence, opt-in agent session attribution, read-only ownership assessment, and endpoint/project comparison. Process termination is not implemented.
 
 ## Implemented
 
@@ -19,6 +19,7 @@ Portcn `v0.3.0` is published. It provides read-only Linux commands to list liste
 - Development branch: diagnosis also reports bounded process ancestry and Git project/worktree evidence when visible; this is evidence, not proof of service ownership.
 - Optional development branch metadata: set `PORTCN_AGENT_SESSION_ID` and optionally `PORTCN_AGENT_NAME` to annotate a process tree; attribution is not identity verification and possible leftovers are not safe-to-stop decisions.
 - Development branch: `portcn assess <pid> --project <path>` compares visible process evidence with a Git project; add `--session <id>` for an explicit session comparison. It never signals or stops a process.
+- Development branch: `portcn verify <endpoint> --project <path>` compares a local listener's visible owner and current checkout metadata with the expected project. It never connects to the endpoint and cannot prove which code a running process loaded.
 - Development branch: `portcn check <port>` reports visible listener overlap for a TCP/UDP protocol and bind address; `portcn suggest` returns bounded candidate ports without observed conflicts. Neither command binds or reserves ports.
 - Human-readable list and inspect output uses bordered ASCII tables with colors in interactive terminals and plain text when piped.
 - Private `@portcn/core` package for future shared functionality.
@@ -49,6 +50,7 @@ node apps/cli/dist/index.js list --json-version 1 # stable versioned JSON on dev
 node apps/cli/dist/index.js check 3000            # read-only listener overlap check on dev
 node apps/cli/dist/index.js suggest               # bounded port suggestions on dev
 node apps/cli/dist/index.js assess 1234 --project "$PWD" # read-only ownership evidence on dev
+node apps/cli/dist/index.js verify 127.0.0.1:3000 --project "$PWD" # local endpoint/project evidence on dev
 ```
 
 Optional Docker Compose commands build and run the packaged CLI image. For example, `pnpm docker:cli -- --version` rebuilds the current artifact before running it. Unit tests and package checks run with the regular pnpm scripts.

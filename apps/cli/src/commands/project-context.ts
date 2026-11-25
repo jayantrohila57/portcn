@@ -26,6 +26,8 @@ export interface ProjectContext {
   projectRoot: string | null;
   gitDir: string | null;
   gitCommonDir: string | null;
+  checkoutBranch: string | null;
+  checkoutCommit: string | null;
   worktree: boolean | null;
   ancestors: ProcessAncestor[];
   evidence: string[];
@@ -42,6 +44,8 @@ export interface GitMetadata {
   projectRoot: string;
   gitDir: string;
   gitCommonDir: string;
+  checkoutBranch: string | null;
+  checkoutCommit: string | null;
 }
 
 const readFile = (path: string, encoding: BufferEncoding): string => readFileSync(path, encoding);
@@ -89,14 +93,34 @@ function processName(pid: number, read: typeof readFile): string | null {
 
 function gitMetadata(cwd: string): GitMetadata | null {
   try {
-    const output = execFileSync(
-      'git',
-      ['-C', cwd, 'rev-parse', '--path-format=absolute', '--show-toplevel', '--absolute-git-dir', '--git-common-dir'],
-      { encoding: 'utf8', timeout: 1_000, maxBuffer: 64 * 1024, stdio: ['ignore', 'pipe', 'ignore'] },
-    );
-    const [projectRoot, gitDir, gitCommonDir] = output.trimEnd().split('\n');
+    const command = ['-C', cwd, 'rev-parse', '--path-format=absolute'];
+    const options = {
+      encoding: 'utf8' as const,
+      timeout: 1_000,
+      maxBuffer: 64 * 1024,
+      stdio: ['ignore', 'pipe', 'ignore'] as ['ignore', 'pipe', 'ignore'],
+    };
+    let output: string;
+    let hasRevision = true;
+    try {
+      output = execFileSync(
+        'git',
+        [...command, '--show-toplevel', '--absolute-git-dir', '--git-common-dir', 'HEAD', '--abbrev-ref', 'HEAD'],
+        options,
+      );
+    } catch {
+      hasRevision = false;
+      output = execFileSync('git', [...command, '--show-toplevel', '--absolute-git-dir', '--git-common-dir'], options);
+    }
+    const [projectRoot, gitDir, gitCommonDir, checkoutCommit, checkoutBranch] = output.trimEnd().split('\n');
     if (!projectRoot || !gitDir || !gitCommonDir) return null;
-    return { projectRoot, gitDir, gitCommonDir };
+    return {
+      projectRoot,
+      gitDir,
+      gitCommonDir,
+      checkoutBranch: hasRevision ? (checkoutBranch ?? null) : null,
+      checkoutCommit: hasRevision ? (checkoutCommit ?? null) : null,
+    };
   } catch {
     return null;
   }
@@ -126,6 +150,8 @@ function inspectProcess(pid: number, dependencies: ProjectContextDependencies): 
       projectRoot: null,
       gitDir: null,
       gitCommonDir: null,
+      checkoutBranch: null,
+      checkoutCommit: null,
       worktree: null,
       ancestors: [],
       evidence: [],
@@ -193,6 +219,8 @@ function inspectProcess(pid: number, dependencies: ProjectContextDependencies): 
       projectRoot: null,
       gitDir: null,
       gitCommonDir: null,
+      checkoutBranch: null,
+      checkoutCommit: null,
       worktree: null,
       ancestors,
       evidence: ['The process exited or became inaccessible during inspection.'],
@@ -208,6 +236,8 @@ function inspectProcess(pid: number, dependencies: ProjectContextDependencies): 
       projectRoot: null,
       gitDir: null,
       gitCommonDir: null,
+      checkoutBranch: null,
+      checkoutCommit: null,
       worktree: null,
       ancestors: [],
       evidence: ['The PID changed during inspection; results were discarded.'],
@@ -269,6 +299,8 @@ function inspectProcess(pid: number, dependencies: ProjectContextDependencies): 
     projectRoot: selected?.metadata.projectRoot ?? null,
     gitDir: selected?.metadata.gitDir ?? null,
     gitCommonDir: selected?.metadata.gitCommonDir ?? null,
+    checkoutBranch: selected?.metadata.checkoutBranch ?? null,
+    checkoutCommit: selected?.metadata.checkoutCommit ?? null,
     worktree: selected ? selected.metadata.gitDir !== selected.metadata.gitCommonDir : null,
     ancestors,
     evidence,
@@ -286,6 +318,8 @@ export function inspectProjectContext(pid: number, dependencies: ProjectContextD
       projectRoot: null,
       gitDir: null,
       gitCommonDir: null,
+      checkoutBranch: null,
+      checkoutCommit: null,
       worktree: null,
       ancestors: [],
       evidence: ['The process ID is invalid.'],

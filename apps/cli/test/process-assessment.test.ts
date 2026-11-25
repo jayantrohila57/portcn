@@ -17,6 +17,8 @@ const project = (status: ProjectContext['status'] = 'identified', projectRoot = 
   projectRoot: status === 'identified' ? projectRoot : null,
   gitDir: '/repo/.git',
   gitCommonDir: '/repo/.git',
+  checkoutBranch: 'main',
+  checkoutCommit: 'abc123',
   worktree: false,
   ancestors: [{ pid: 10, name: 'shell', cwd: '/repo', executable: '/usr/bin/bash' }],
   evidence: ['Fixture project evidence.'],
@@ -37,7 +39,13 @@ const agent = (status: AgentAttribution['status'] = 'unknown', sessionId: string
 function dependencies(options: { project?: ProjectContext; agent?: AgentAttribution; reused?: boolean } = {}) {
   let reads = 0;
   return {
-    resolveProject: () => ({ projectRoot: '/repo', gitDir: '/repo/.git', gitCommonDir: '/repo/.git' }),
+    resolveProject: () => ({
+      projectRoot: '/repo',
+      gitDir: '/repo/.git',
+      gitCommonDir: '/repo/.git',
+      checkoutBranch: 'main',
+      checkoutCommit: 'abc123',
+    }),
     readStartTime: () => {
       reads += 1;
       return options.reused && reads > 1 ? 'new-process' : 'process-start-42';
