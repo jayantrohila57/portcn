@@ -35,7 +35,7 @@ Successful diagnosis, including no visible listeners, exits with status 0. Inval
 
 ### Interactive dashboard
 
-In `portcn list --interactive`, use `1`/`2`/`3`/`4` to switch All, TCP, UDP, and With Process tabs. Use `/` to search, `s` to change sorting, `r` to refresh, `n`/`p` for next/previous page, and `q` or `Ctrl+C` to quit. The footer always shows the available shortcuts; the layout adapts to the terminal size.
+In `portcn list --interactive`, use `1`/`2`/`3`/`4` to switch All, TCP, UDP, and With Process tabs. Arrow keys or `j`/`k` move selection, and the contextual panel immediately shows the selected bind address, PID/process, and best-effort project evidence. Project paths describe the current checkout and do not prove which code the process loaded. Use `/` to search, `s` to change sorting, `r` to refresh, `n`/`p` for next/previous page, and `q` or `Ctrl+C` to quit. The footer shows available shortcuts; the layout adapts to the terminal size.
 
 ## Documentation and contributions
 
