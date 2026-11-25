@@ -2,19 +2,20 @@
 
 **Your ports. Under control.**
 
-An open-source, developer-first CLI foundation for local development. portcn is Linux-first, starting with Ubuntu.
+An open-source, developer-first CLI for understanding local development services. Portcn is Linux-first, starting with Ubuntu.
 
 ## Development status
 
-Early development. The `dev` branch includes read-only Linux `portcn list` and `portcn inspect <port>` commands for listening TCP/UDP ports. Process management is not implemented yet. The published `v0.0.1` package contains only the CLI foundation.
+Portcn `v0.3.0` is published. It provides read-only Linux commands to list listeners, inspect a port, and diagnose visible owners and namespace limits. Process termination is not implemented.
 
 ## Implemented
 
 - Fumadocs documentation site with navigation, search, Markdown negotiation, LLM-friendly exports, and generated Open Graph images.
 - pnpm workspace and Turborepo task orchestration.
 - `portcn` CLI package with branded default/help/version output and a Node.js executable.
-- Read-only `portcn list` on Linux (development branch): listening TCP/UDP ports, local addresses, and process details when visible; requires `ss` from `iproute2`.
-- Read-only `portcn inspect <port>` on Linux (development branch): protocol, state, local address, PID, process name, and best-effort `/proc` details for all visible listeners on a validated port.
+- Read-only `portcn list` on Linux: listening TCP/UDP ports, local addresses, and process details when visible; requires `ss` from `iproute2`.
+- Read-only `portcn inspect <port>` on Linux: protocol, state, local address, PID, process name, and best-effort `/proc` details for all visible listeners on a validated port.
+- Read-only `portcn diagnose <port>` on Linux: visible listeners, owners, address families, and namespace/permission visibility limits. Missing listeners do not guarantee a later bind will succeed.
 - Human-readable list and inspect output uses bordered ASCII tables with colors in interactive terminals and plain text when piped.
 - Private `@portcn/core` package for future shared functionality.
 - GitHub Actions validation and Release Please version/changelog workflow for `portcn`.
@@ -39,6 +40,7 @@ pnpm test
 node apps/cli/dist/index.js list  # Linux, requires iproute2
 node apps/cli/dist/index.js inspect 3000  # Linux, read-only
 node apps/cli/dist/index.js list --interactive  # header, tabs, paginated table, and footer navigation
+node apps/cli/dist/index.js diagnose 3000 --json # visible listeners and diagnostic limits
 ```
 
 Optional Docker Compose commands build and run the packaged CLI image. For example, `pnpm docker:cli -- --version` rebuilds the current artifact before running it. Unit tests and package checks run with the regular pnpm scripts.
