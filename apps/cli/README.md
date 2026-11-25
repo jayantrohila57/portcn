@@ -35,7 +35,7 @@ In `portcn list --interactive`, use `1`/`2`/`3`/`4` to switch All, TCP, UDP, and
 
 ## Documentation and contributions
 
-The current published version is `0.3.0` and includes all three commands listed above. Future capabilities in the product roadmap are proposals until released and documented as implemented.
+The current published version is `0.3.0` and includes all three commands listed above. Future capabilities in the [product roadmap](https://github.com/jayantrohila57/portcn/blob/dev/PRODUCT-ROADMAP.md) are proposals until released and documented as implemented.
 
 The complete command reference and release policy are in the [Portcn documentation](https://jayantrohila57.github.io/portcn/). Development setup, checks, and contributor rules are in the repository [CONTRIBUTING.md](https://github.com/jayantrohila57/portcn/blob/main/CONTRIBUTING.md). Report bugs or request features in [GitHub Issues](https://github.com/jayantrohila57/portcn/issues).
 

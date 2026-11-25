@@ -83,6 +83,8 @@ Docker Compose packaged-image checks are optional and are documented in [Docker]
 
 The searchable [project documentation](apps/docs/content/docs/index.mdx) in `apps/docs` covers getting started, CLI behavior, architecture, development, Docker, contributing, releases, security, and open source. Community policies remain in the canonical root and GitHub files.
 
+The [product roadmap](https://github.com/jayantrohila57/portcn/blob/dev/PRODUCT-ROADMAP.md) tracks implemented status, planned capabilities, dependencies, and acceptance criteria. Planned items are proposals, not shipped features or release commitments.
+
 ## Repository structure
 
 - `apps/docs` — independent Fumadocs website.
