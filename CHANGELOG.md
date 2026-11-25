@@ -6,27 +6,33 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
-- integrate discovered services in unified dashboard ([#187](https://github.com/jayantrohila57/portcn/issues/187)) <!-- task:feat/unified-service-dashboard -->
-
-- discover visible service and socket units ([#185](https://github.com/jayantrohila57/portcn/issues/185)) <!-- task:feat/systemd-discovery -->
-
-- discover local Nginx services and listeners ([#184](https://github.com/jayantrohila57/portcn/issues/184)) <!-- task:feat/nginx-discovery -->
-
-- attribute rootlessport forwarding processes ([#183](https://github.com/jayantrohila57/portcn/issues/183)) <!-- task:feat/rootlessport-attribution -->
-
-- discover rootless containers and port mappings ([#181](https://github.com/jayantrohila57/portcn/issues/181)) <!-- task:feat/podman-discovery -->
-
 ### Changed
 
 ### Fixed
-
-- deduplicate runtime observations by scoped identity ([#182](https://github.com/jayantrohila57/portcn/issues/182)) <!-- task:feat/container-deduplication -->
 
 ### Deprecated
 
 ### Removed
 
 ### Security
+
+## [0.7.0] - 2026-11-25
+
+[0.7.0]: https://github.com/jayantrohila57/portcn/compare/v0.6.1...v0.7.0
+
+**Title:** Unified Linux service discovery
+
+### Added
+
+- integrate discovered services in unified dashboard ([#187](https://github.com/jayantrohila57/portcn/issues/187)) <!-- task:feat/unified-service-dashboard -->
+- discover visible service and socket units ([#185](https://github.com/jayantrohila57/portcn/issues/185)) <!-- task:feat/systemd-discovery -->
+- discover local Nginx services and listeners ([#184](https://github.com/jayantrohila57/portcn/issues/184)) <!-- task:feat/nginx-discovery -->
+- attribute rootlessport forwarding processes ([#183](https://github.com/jayantrohila57/portcn/issues/183)) <!-- task:feat/rootlessport-attribution -->
+- discover rootless containers and port mappings ([#181](https://github.com/jayantrohila57/portcn/issues/181)) <!-- task:feat/podman-discovery -->
+
+### Fixed
+
+- deduplicate runtime observations by scoped identity ([#182](https://github.com/jayantrohila57/portcn/issues/182)) <!-- task:feat/container-deduplication -->
 
 ## [0.6.1] - 2026-11-25
 
