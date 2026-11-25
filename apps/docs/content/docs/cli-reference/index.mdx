@@ -3,7 +3,9 @@ title: CLI reference
 description: Portcn port listing, inspection, conflict diagnosis, ownership evidence, output, and exit codes.
 ---
 
-The published ``v0.4.0`` Linux CLI includes read-only listener and process diagnostics, versioned JSON, project evidence, saved services, Docker inventory, and bind-scope reports. The `docker` and `exposure` commands ship in v0.4.0. The development branch extends ``config`` with ``--url`` and adds `endpoint` and `open`; ``check`` and ``suggest`` are also available in v0.4.0.
+The published ``v0.5.0`` Linux CLI includes read-only listener and process diagnostics, versioned JSON, project evidence, saved services, Docker inventory, and bind-scope reports. The development branch adds the stdio MCP server described below; it will be available in a later package release.
+
+Registered top-level commands include `list`, `inspect`, `diagnose`, `assess`, `verify`, `check`, `suggest`, `config`, `endpoint`, `open`, `readiness`, `connection`, `docker`, `exposure`, and `mcp`. Configuration subcommands include `add`, `edit`, `remove`, `group`, and `recover`.
 
 ## ``portcn config``
 
@@ -218,6 +220,12 @@ The result contains ``schemaVersion``, ``protocol``, ``address``, ``range``, ``s
 Both commands return status ``0`` when a check completes, including an ``unknown`` check or when no suggestions are found; status ``1`` indicates discovery failure; status ``2`` indicates invalid input or an unsupported JSON schema version. JSON errors use the version 1 ``error`` object and sanitized messages.
 
 The JSON result has ``schemaVersion``, ``port``, ``namespace``, ``listeners``, ``messages``, and ``limitations`` fields. Each listener includes ``protocol``, ``state``, ``bindAddress``, ``addressFamily``, and ``owners``. Owner fields include ``pid``, ``processName``, ``command``, ``user``, and ``detailsStatus`` (``available``, ``permission-denied``, ``process-exited``, or ``unavailable``), plus ``projectContext`` with ``status``, evidence ``confidence`` (``high`` for owner cwd, ``medium`` for ancestor cwd, ``low`` when projects conflict, otherwise ``none``), ``source``, visible owner ``cwd``/``executable``, ``projectRoot``, ``gitDir``, ``gitCommonDir``, ``checkoutBranch``, ``checkoutCommit``, ``worktree``, bounded ``ancestors``, and evidence notes. The additive ``agentAttribution`` object includes ``status``, ``confidence``, opt-in ``agentName``/``sessionId``, source PID and relationship, ``leftoverAssessment``, UTC ``observedAt``, and evidence notes. Project context status is ``identified``, ``ambiguous``, ``not-found``, ``permission-denied``, ``process-exited``, or ``unavailable``. Sensitive command-line options, secret-like environment assignments, and URL passwords are redacted from process command details. When no process ID is visible, the listener's ``owners`` array is empty and the messages explain that permissions or namespace boundaries can hide ownership.
+
+## ``portcn mcp``
+
+Starts a local read-only MCP server over stdio for coding-agent hosts. Configure the host to run ``portcn`` with the ``mcp`` argument. The server advertises ``list_listeners``, ``diagnose_port``, ``check_port_availability``, and ``suggest_ports``. Input schemas validate arguments before tool execution. Results are bounded and structured; tool errors use an error object with a stable code and a sanitized message. Stdout carries only MCP protocol messages, and SIGINT, SIGTERM, or client EOF closes the server.
+
+The server reuses the CLI's Linux listener, process, project, and availability contracts. It does not execute arbitrary shell commands, inspect remote namespaces, start an HTTP endpoint, or change processes or ports. Diagnosis returns visible PID/process name and selected Git project fields, but omits process command lines, user identifiers, agent names, session IDs, and environment values. Port results are point-in-time snapshots, not reservations. See [MCP server for coding agents](/docs/guides/mcp) for tool bounds and client setup.
 
 The result identifies the current network and PID namespace. It does not inspect the host or other namespaces, elevate privileges, change processes, or reserve a port. A no-listener result is a point-in-time observation, not a guarantee that a later bind will succeed. Compare protocol, address, and IPv4/IPv6 behavior with the server you plan to start.
 

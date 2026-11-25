@@ -6,7 +6,7 @@ description: Install Portcn's development workspace and list listening Linux por
 Portcn is under active development. This guide runs the CLI from a source checkout; it does not describe a published npm installation.
 
 <Callout title="Current capabilities" type="info">
-The published `v0.4.0` package supports `--help`, `--version`, and read-only Linux listener, process, project, and service diagnostics. It also includes saved services, Docker inventory, and bind-scope reports. Discovery requires `ss` from `iproute2`. Process termination and service management are not implemented.
+The published `v0.5.0` package supports `--help`, `--version`, and read-only Linux listener, process, project, and service diagnostics. It also includes saved services, Docker inventory, and bind-scope reports. Discovery requires `ss` from `iproute2`. The development branch adds a read-only stdio MCP server, which will be available in a later package release. Process termination and service management are not implemented.
 </Callout>
 
 ## Requirements
@@ -86,4 +86,4 @@ Open `http://localhost:3000/docs`. For another port:
 pnpm --filter @portcn/docs exec next dev --port 3001
 ```
 
-See [CLI Reference](/docs/cli-reference), [Development](/docs/development), and [Docker](/docs/docker).
+See [CLI Reference](/docs/cli-reference), [MCP server for coding agents](/docs/guides/mcp), [Development](/docs/development), and [Docker](/docs/docker).

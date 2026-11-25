@@ -9,6 +9,7 @@ import { registerEndpointCommands } from './endpoints.js';
 import { registerExposureCommand } from './exposure.js';
 import { registerInspectCommand } from './inspect.js';
 import { registerListCommand } from './list.js';
+import { registerMcpCommand } from './mcp.js';
 import { registerProcessAssessmentCommand } from './process-assessment.js';
 import { registerReadinessCommands } from './readiness.js';
 
@@ -26,4 +27,5 @@ export function registerCommands(program: Command): void {
   registerConfigCommand(program);
   registerDockerCommand(program);
   registerExposureCommand(program);
+  registerMcpCommand(program);
 }

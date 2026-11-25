@@ -15,6 +15,8 @@ The ``config`` commands store user-authored service identities, favorites, alias
 
 ``connection check`` diagnoses one selected local service from the CLI process's current network namespace. Resolution remains limited to the service's local name or address; TCP connects use a bounded timeout, and an HTTP request is sent only when an explicit, validated local URL is saved. Redirects are not followed and TLS certificate checks stay enabled. Docker data comes from the selected Docker CLI context and reports port mapping configuration only; it is not a test from inside a container or proof of reachability, especially for remote contexts. The command does not scan external hosts, inspect firewall rules, execute commands in containers, or change system state.
 
+The ``mcp`` command uses stdio only and exposes bounded read-only listener, owner/project, and port-availability queries. It does not expose a shell, process-control operation, HTTP listener, or agent inference. Tool responses omit process command lines, user identifiers, agent names, session IDs, and environment values. MCP stdout contains protocol data only; SDK diagnostics, if any, go to stderr.
+
 <Callout title="Report privately" type="warn">
 Include a clear impact and reproduction steps in a private report. Do not include credentials, tokens, or unrelated personal data.
 </Callout>
