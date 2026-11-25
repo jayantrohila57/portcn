@@ -1,6 +1,6 @@
 # Contributing to portcn
 
-Thanks for helping improve portcn. The `dev` branch implements a first read-only Linux port listing command; process and service management are not implemented yet.
+Thanks for helping improve Portcn. The published `v0.6.0` CLI is a read-only, Linux-first local service inspection tool. Process termination and service lifecycle management are not implemented.
 
 ## Requirements and setup
 
@@ -8,6 +8,8 @@ Thanks for helping improve portcn. The `dev` branch implements a first read-only
 - pnpm 12.3.4 (`corepack enable` can provide pnpm)
 - Docker Engine with the Compose plugin (optional, for packaged CLI image checks)
 - Linux is the initial target for future CLI functionality; the docs app can be developed on supported Node.js platforms.
+
+The capability summary and ordered Linux-first plan are in [`PRODUCT-ROADMAP.md`](PRODUCT-ROADMAP.md); GitHub issue acceptance criteria and status labels are authoritative. Complete the repository reconciliation and have the owner review the updated roadmap before starting another product feature. Preserve the current limited macOS listener implementation without expanding it. Defer Windows and further standalone distribution work until the Linux product is complete.
 
 ```sh
 git clone https://github.com/jayantrohila57/portcn.git

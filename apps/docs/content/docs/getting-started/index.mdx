@@ -1,23 +1,34 @@
 ---
 title: Getting started
-description: Install Portcn's development workspace and list listening Linux ports.
+description: Install Portcn or build the source workspace and discover local services.
 ---
 
-Portcn is under active development. This guide runs the CLI from a source checkout; it does not describe a published npm installation.
+This guide covers both the published CLI and a source checkout.
 
 <Callout title="Current capabilities" type="info">
-The published `v0.5.0` package supports `--help`, `--version`, and read-only Linux listener, process, project, and service diagnostics. It also includes saved services, Docker inventory, and bind-scope reports. Discovery requires `ss` from `iproute2`. The development branch adds macOS listener discovery for `list`, `inspect`, and `diagnose` through `lsof`, plus a read-only stdio MCP server; these changes will be available in a later package release. On macOS, process command lines, user IDs, project context, and agent markers are unavailable. Process termination and service management are not implemented.
+The published `v0.6.0` package requires Node.js 22 or later. Linux discovery requires `ss` from `iproute2`; Docker commands additionally require the user's Docker CLI and daemon permissions. The package includes limited macOS listener support for `list`, `inspect`, and `diagnose` through `lsof`. macOS does not provide Portcn's Linux process command lines, user IDs, project context, or agent markers. Windows discovery and process/service management are not implemented.
 </Callout>
 
 ## Requirements
 
 - Node.js 24 or later
+- Node.js 22 or later to install the published CLI package
 - pnpm 12.3.4 (the repository pins this version through Corepack)
 - Git
 
-These requirements apply to building the source workspace. The CLI package itself supports Node.js 22 or later in the development branch; the published `v0.5.0` package retains its Node.js 24 requirement until a later release.
+Node.js 24 is required to build the source workspace. The published CLI package runs on Node.js 22 or later.
 
 ## Build and run Portcn
+
+To install the published package:
+
+```sh
+npm install -g portcn
+portcn --version
+portcn --help
+```
+
+For a source checkout, build from the repository root:
 
 <Tabs items={['Source checkout', 'Docker']}>
   <Tab value="Source checkout">
@@ -70,7 +81,7 @@ pnpm build
 node apps/cli/dist/index.js --help
 node apps/cli/dist/index.js --version
 node apps/cli/dist/index.js list # Linux: iproute2; macOS: lsof
-node apps/cli/dist/index.js diagnose 3000 # published in v0.4.0
+node apps/cli/dist/index.js diagnose 3000
 ```
 
   </Step>
