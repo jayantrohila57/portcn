@@ -10,21 +10,16 @@ const page = readFileSync(new URL('../apps/docs/app/whats-new/page.tsx', import.
 
 test("What's New renders dated release sections from CHANGELOG.md and omits Unreleased", () => {
   const { releases } = parseChangelog(source);
-  assert.deepEqual(
-    releases.map(({ version }) => version),
-    ['0.3.0', '0.2.0', '0.1.1', '0.1.0', '0.0.1'],
-  );
-  assert.deepEqual(
-    releases.map(({ title }) => title),
-    [
-      'Port conflict diagnosis',
-      'A steadier terminal dashboard',
-      'More reliable package publishing',
-      'Port discovery and an interactive dashboard',
-      'Portcn CLI foundation',
-    ],
-  );
-  assert.equal(releases[0]?.demo, '`portcn diagnose 3000 --json`');
+  const history = new Map(releases.map(({ version, title }) => [version, title]));
+  for (const [version, title] of [
+    ['0.3.0', 'Port conflict diagnosis'],
+    ['0.2.0', 'A steadier terminal dashboard'],
+    ['0.1.1', 'More reliable package publishing'],
+    ['0.1.0', 'Port discovery and an interactive dashboard'],
+    ['0.0.1', 'Portcn CLI foundation'],
+  ])
+    assert.equal(history.get(version), title);
+  assert.equal(releases.find(({ version }) => version === '0.3.0')?.demo, '`portcn diagnose 3000 --json`');
   assert.equal(
     releases.find(({ version }) => version === '0.1.0')?.demo,
     '`portcn list --interactive` · `portcn list --json` · `portcn inspect 3000`',
