@@ -5,6 +5,7 @@ import { Command } from 'commander';
 import packageJson from '../package.json' with { type: 'json' };
 import { registerCommands } from './commands/index.js';
 import { discoverListeningPorts } from './commands/list.js';
+import { discoverDashboardServices } from './commands/service-dashboard.js';
 import { runTabbedList } from './commands/tabs.js';
 
 export function createProgram(): Command {
@@ -25,7 +26,18 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(resolve(p
   if (process.argv.length === 2) {
     if (process.stdin.isTTY && process.stdout.isTTY) {
       try {
-        await runTabbedList(discoverListeningPorts(), () => discoverListeningPorts());
+        const listeners = discoverListeningPorts();
+        let latestListeners = listeners;
+        const services = process.platform === 'linux' ? discoverDashboardServices({ listeners: () => listeners }) : [];
+        await runTabbedList(
+          listeners,
+          () => {
+            latestListeners = discoverListeningPorts();
+            return latestListeners;
+          },
+          services,
+          () => (process.platform === 'linux' ? discoverDashboardServices({ listeners: () => latestListeners }) : []),
+        );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         process.stderr.write(`portcn: ${message}\n`);

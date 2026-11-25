@@ -37,12 +37,14 @@ The executable entry point creates a Commander root program, registers command m
 | `project-context`, `agent-attribution`, `process-assessment`, `endpoint-verification` | Linux project/session evidence with PID reuse checks and conservative results. |
 | `config-store`, `config`, `endpoints` | Versioned local saved-service data, local URL candidates, explicit probes, and browser open. |
 | `readiness`, `connection` | Bounded local readiness and staged connectivity diagnostics. |
-| `docker`, `exposure` | Optional Docker CLI inventory and bind-scope classification; host listener and remote daemon evidence can refer to different hosts. |
+| `docker`, `podman`, `nginx`, `systemd`, `exposure` | Optional read-only runtime inventories, Podman rootlessport attribution, Nginx configuration evidence, visible user/system systemd units, and bind-scope classification. |
 | `mcp` | Bounded, read-only stdio tools for visible listeners, diagnosis, availability, and suggestions. |
 
-These modules are implemented in `apps/cli`; `@portcn/core` currently exports a port-number type and range validation only. Operating-system discovery and terminal presentation stay out of the platform-independent package.
+These modules are implemented in `apps/cli`; `@portcn/core` exports platform-independent identities, evidence and result contracts, scope-safe duplicate reconciliation, and container-mapping correlation. Operating-system discovery and terminal presentation stay out of the platform-independent package.
 
-The current providers do not share a unified service identity. Native sockets, Docker records, and the selected service configuration have separate data shapes; there is no Podman, Nginx, or systemd provider and no service relationship graph. The reviewed target architecture is tracked by issues #180–#186. The dashboard currently shows native listeners, not all service providers; issue #187 tracks that integration. Do not treat configured mappings or an Nginx/systemd declaration as proof of an active listener.
+The current providers do not yet share a unified service identity. Native sockets, Docker records, Podman records, and selected service configuration have separate command models; there is no Nginx or systemd provider and no service relationship graph. The Podman adapter honors the invoking user and configured connection; visible Linux `rootlessport` attribution is advisory and requires matching scoped evidence. Safe Docker/Podman reconciliation is available in the shared discovery layer, and the Linux Nginx adapter reads bounded local configuration without invoking Nginx. These records are not yet presented by the dashboard; systemd correlates only manager-reported MainPID and socket configuration. The reviewed target architecture is tracked by issues #180–#187. On Linux, the interactive dashboard now has a source-aware service view for native listeners, Docker, Podman, Nginx, and systemd; it retains provider-specific evidence and explicit provider failure records. The feature is tracked by issue #187. Do not treat configured mappings or an Nginx/systemd declaration as proof of an active listener.
+
+Issue #180 defines the platform-neutral contracts for identity, provider results, evidence, freshness, namespace scope, partial results, and correlation. See [Unified service discovery contracts](./unified-service-discovery) for the audited data flow and compatibility boundaries. Existing Docker/Podman command outputs remain unchanged while providers are migrated incrementally.
 
 ## Terminal dashboard implementation
 

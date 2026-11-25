@@ -60,6 +60,43 @@ test('allows documentation and release-excluded maintenance PRs to leave the rel
     ]).allowed,
     false,
   );
+  assert.equal(
+    validate(
+      base,
+      base,
+      'refactor(core): define discovery contracts',
+      'refactor/unified-service-discovery',
+      undefined,
+      [
+        'packages/core/src/discovery.ts',
+        'packages/core/src/index.ts',
+        'packages/core/src/port-number.ts',
+        'packages/core/test/discovery.test.ts',
+        'apps/docs/content/docs/architecture/unified-service-discovery.mdx',
+        'apps/docs/content/docs/architecture/_meta.json',
+        'PRODUCT-ROADMAP.md',
+        'scripts/changelog-policy.cjs',
+        'scripts/changelog.test.mjs',
+      ],
+    ).allowed,
+    true,
+  );
+  assert.equal(
+    validate(
+      base,
+      base,
+      'refactor(core): define discovery contracts',
+      'refactor/unified-service-discovery',
+      undefined,
+      [
+        'packages/core/src/discovery.ts',
+        'packages/core/src/index.ts',
+        'packages/core/test/discovery.test.ts',
+        'packages/core/src/other-runtime-code.ts',
+      ],
+    ).allowed,
+    false,
+  );
 });
 test('categorizes fixes and breaking commits and rejects duplicate task entries', () => {
   assert.match(update(base, 'fix(cli): handle empty input', 'fix/example'), /### Fixed/);

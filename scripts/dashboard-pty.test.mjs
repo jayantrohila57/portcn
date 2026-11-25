@@ -3,11 +3,20 @@ import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { test } from 'node:test';
 
-function runInPty(columns, rows, input = 'q', env = {}, resizeTo = null) {
+function runInPty(
+  columns,
+  rows,
+  input = 'q',
+  env = {},
+  resizeTo = null,
+  dashboardCommand = 'node apps/cli/dist/index.js list --interactive',
+  inputDelay = 200,
+  inputAfterFirstFrame = false,
+) {
   return new Promise((resolve, reject) => {
     const command = resizeTo
-      ? `stty cols ${columns} rows ${rows}; node apps/cli/dist/index.js list --interactive & app=$!; sleep 0.05; stty cols ${resizeTo[0]} rows ${resizeTo[1]}; kill -WINCH "$app"; wait "$app"`
-      : `stty cols ${columns} rows ${rows}; node apps/cli/dist/index.js list --interactive`;
+      ? `stty cols ${columns} rows ${rows}; ${dashboardCommand} & app=$!; sleep 0.05; stty cols ${resizeTo[0]} rows ${resizeTo[1]}; kill -WINCH "$app"; wait "$app"`
+      : `stty cols ${columns} rows ${rows}; ${dashboardCommand}`;
     const child = spawn('script', ['-qec', command, '/dev/null'], {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, ...env },
@@ -16,16 +25,29 @@ function runInPty(columns, rows, input = 'q', env = {}, resizeTo = null) {
     const timer = setTimeout(() => {
       child.kill('SIGTERM');
       reject(new Error('Interactive dashboard did not exit after PTY input.'));
-    }, 8_000);
-    child.stdout.setEncoding('utf8').on('data', (chunk) => (output += chunk));
+    }, 18_000);
+    let sentInput = false;
+    const sendInput = () => {
+      if (sentInput) return;
+      sentInput = true;
+      [...input].forEach((key, index) => {
+        setTimeout(() => child.stdin.write(key), index * 80);
+      });
+    };
+    child.stdout.setEncoding('utf8').on('data', (chunk) => {
+      output += chunk;
+      if (inputAfterFirstFrame && output.includes('PORTCN')) sendInput();
+    });
     child.once('error', reject);
     child.once('exit', () => {
       clearTimeout(timer);
       resolve({ output, code: child.exitCode });
     });
-    [...input].forEach((key, index) => {
-      setTimeout(() => child.stdin.write(key), 200 + index * 80);
-    });
+    if (!inputAfterFirstFrame) {
+      [...input].forEach((key, index) => {
+        setTimeout(() => child.stdin.write(key), inputDelay + index * 80);
+      });
+    }
   });
 }
 
@@ -45,6 +67,15 @@ test('interactive dashboard starts and exits cleanly across terminal sizes', { t
     assert.match(output, /PORTCN/);
     assert.equal(output.includes('\u001b[?25h'), true);
   }
+});
+
+test('Linux unified service dashboard opens through the services tab and exits cleanly', {
+  timeout: 15_000,
+}, async () => {
+  const { output, code } = await runInPty(120, 40, '5q', {}, null, 'node apps/cli/dist/index.js', 200, true);
+  assert.equal(code, 0);
+  assert.match(stripAnsi(output), /DISCOVERED SERVICES/);
+  assert.equal(output.includes('\u001b[?25h'), true);
 });
 
 test('interactive dashboard restores terminal state on Ctrl+C', { timeout: 10_000 }, async () => {

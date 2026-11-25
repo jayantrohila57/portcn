@@ -3,15 +3,15 @@ title: CLI reference
 description: Portcn port listing, inspection, conflict diagnosis, ownership evidence, output, and exit codes.
 ---
 
-The published ``v0.6.0`` CLI package requires Node.js 22 or newer; the source workspace and build require Node.js 24 or newer. Linux is the primary supported platform. The package also includes limited macOS ``list``, ``inspect``, and ``diagnose`` support through ``lsof``. On macOS, process command lines, user IDs, project context, and agent markers are unavailable. Windows listener discovery is not implemented. The macOS CI integration verifies real listener discovery; other command families are supported on Linux unless stated otherwise.
+The published ``v0.6.1`` CLI package requires Node.js 22 or newer; the source workspace and build require Node.js 24 or newer. Linux is the primary supported platform. The package also includes limited macOS ``list``, ``inspect``, and ``diagnose`` support through ``lsof``. On macOS, process command lines, user IDs, project context, and agent markers are unavailable. Windows listener discovery is not implemented. The macOS CI integration verifies real listener discovery; other command families are supported on Linux unless stated otherwise.
 
 | Platform | Verified CLI support | Requirements and limits |
 | --- | --- | --- |
-| Linux | All documented command families, including the dashboard and MCP server | `ss` from `iproute2`; Docker commands also require the user's Docker CLI/context. Visibility remains namespace- and permission-limited. |
+| Linux | All documented command families, including the dashboard and MCP server | `ss` from `iproute2`; Docker and Podman commands require the respective CLI and access to the selected runtime/context. Visibility remains namespace- and permission-limited. |
 | macOS | `list`, `inspect`, and `diagnose` listener discovery | System `lsof`; visible PID/process names only. The live macOS CI check covers listener discovery. Linux `/proc`, project, and agent-marker details are unavailable. |
 | Windows | Help and version output | Listener/service discovery is unsupported. |
 
-Registered top-level commands include `list`, `inspect`, `diagnose`, `wait`, `check`, `suggest`, `assess`, `verify`, `config`, `endpoint`, `open`, `readiness`, `connection`, `docker`, `exposure`, and `mcp`. Configuration subcommands include `add`, `edit`, `remove`, `group`, and `recover`.
+Registered top-level commands include `list`, `inspect`, `diagnose`, `wait`, `check`, `suggest`, `assess`, `verify`, `config`, `endpoint`, `open`, `readiness`, `connection`, `docker`, `podman`, `exposure`, and `mcp`. Configuration subcommands include `add`, `edit`, `remove`, `group`, and `recover`.
 
 ## ``portcn config``
 
@@ -80,6 +80,39 @@ portcn docker --json
 
 Ports marked ``exposed`` are container metadata and are not necessarily published or listening. Published bindings retain every host address and port, including separate IPv4 and IPv6 mappings. IPv6 routed-mode entries with no host port are marked ``direct``. Portcn compares published host bindings with visible local TCP/UDP listeners by protocol, port, and bind address; this is a point-in-time observation, not proof of reachability or ownership by a Docker proxy process. When the Docker context is remote, listener observations still come from Portcn's current network namespace and may not describe the daemon host. Host-network containers share the host network stack, so Portcn does not attribute listeners to them from declared exposed ports alone. Docker CLI absence, daemon unavailability, and permission denial have distinct statuses and return code 1; ``--json`` emits a version 1 result with a stable error code.
 
+## ``portcn podman``
+
+Inspect containers visible through the current Podman user and configured connection. Rootless and rootful inventories follow the caller's existing access; Portcn does not elevate privileges. The command reports Compose labels, health, network mode and addresses, exposed ports, published mappings, and visible host listeners.
+
+```sh
+portcn podman
+portcn podman --json
+```
+
+Only read-only ``podman container ls`` and ``podman container inspect`` operations are used. Missing CLI, denied access, unavailable service/connection, and malformed inventory are distinct in schema version 1 JSON. Stopped mappings are configured, not active. On Linux, active published bindings include ``rootlessForwarder`` with ``attributed``, ``ambiguous``, or ``unknown`` status. Attribution requires a visible listener owner, the ``rootlessport`` executable, matching structured host/container mapping and network address, and a stable PID start time. Listener and process observations come from Portcn's current namespace and do not prove reachability; a remote runtime may describe another host. Docker and Podman remain separate command outputs.
+
+## ``portcn nginx``
+
+The `nginx` command inspects readable local Nginx configuration and visible Nginx executable paths on Linux. The default configuration entry is ``/etc/nginx/nginx.conf``; ``--config <path>`` selects another entry. Schema version 1 JSON includes process PIDs, source paths, server names, configured TCP listeners and their observed/not-observed/unknown state, availability, and limitations. Only server names and listen directives are surfaced from configuration.
+
+```sh
+portcn nginx
+portcn nginx --config ./nginx.conf --json
+```
+
+Includes are followed through local readable files with a 256-file bound. Missing or unreadable files yield partial results. A configured listener does not establish active routing or reachability; matching sockets are read from Portcn's current network namespace. The command does not run or reload Nginx and does not elevate privileges.
+
+## ``portcn systemd``
+
+The `systemd` command reads visible user and systemd service/socket units. Schema version 1 JSON includes each manager's availability separately, unit scope and state, MainPID when present, matching listener ports for MainPID, and socket listen endpoints with point-in-time observation state. Missing `systemctl`, an unavailable user manager, and permission denial remain distinct.
+
+```sh
+portcn systemd
+portcn systemd --json
+```
+
+The command is read-only. It does not elevate privileges or start, stop, restart, enable, or disable units. Socket activation configuration is kept distinct from a live service process; only the unit's MainPID is used for process/listener correlation.
+
 ## ``portcn exposure``
 
 Classify each visible host listener and Docker port record by address family and bind scope. Loopback, interface-specific, wildcard, direct-routed, and container-only records remain distinct. A wildcard address means the socket or mapping uses all addresses in that family; it does not establish internet reachability. Portcn does not inspect firewalls, routers, external routes, or public reachability.
@@ -98,7 +131,7 @@ node apps/cli/dist/index.js --help
 node apps/cli/dist/index.js list
 ```
 
-For an interactive view, use ``--interactive``. The view shows a compact listener table and live details for the selected row, including bind address, owner PID/process, and best-effort project evidence when visible. Project paths describe the current checkout and do not prove which code the process loaded. Press ``1`` for all listeners, ``2`` for TCP, ``3`` for UDP, ``4`` for listeners with visible processes, ``Tab`` for the next tab, ``n`` or Space for the next page, ``p`` for the previous page, and ``q`` or ``Esc`` to quit. Arrow keys or ``j``/``k`` move selection; details follow the selected listener immediately. Interactive mode requires a terminal; piped output remains the normal table.
+For an interactive view, use ``--interactive`` or run ``portcn`` without arguments. The listener tabs show bind address, owner PID/process, and best-effort project evidence when visible. On Linux, press ``5`` for a service view combining native listeners, Docker, Podman, Nginx configuration, and systemd service/socket units. Service details retain source, configured/observed state, endpoint, owner/project scope, and evidence; provider failures remain visible as status records. Press ``1`` for all listeners, ``2`` for TCP, ``3`` for UDP, ``4`` for listeners with visible processes, ``Tab`` for the next tab, ``n`` or Space for the next page, ``p`` for the previous page, and ``q`` or ``Esc`` to quit. Arrow keys or ``j``/``k`` move selection; details follow the selected row. Provider snapshots refresh from the command palette and five-second auto-refresh. Interactive mode requires a terminal; piped output remains the normal listener table.
 
 ```sh
 node apps/cli/dist/index.js list --interactive

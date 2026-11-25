@@ -1,0 +1,45 @@
+[
+  {
+    "Id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "Name": "api-rootless",
+    "Config": {
+      "Image": "localhost/api:latest",
+      "Labels": {
+        "io.podman.compose.project": "demo",
+        "io.podman.compose.service": "api"
+      },
+      "ExposedPorts": { "8080/tcp": {}, "8443/tcp": {}, "5353/udp": {} }
+    },
+    "State": { "Status": "running", "Running": true, "Health": { "Status": "healthy" } },
+    "HostConfig": {
+      "NetworkMode": "slirp4netns",
+      "PortBindings": {
+        "8080/tcp": [{ "HostIp": "127.0.0.1", "HostPort": "43117" }],
+        "5353/udp": [{ "HostIp": "::1", "HostPort": "5353" }]
+      }
+    },
+    "NetworkSettings": {
+      "Ports": {
+        "8080/tcp": [{ "HostIp": "127.0.0.1", "HostPort": "43117" }, { "HostIp": "::1", "HostPort": "43117" }],
+        "8443/tcp": null,
+        "5353/udp": [{ "HostIp": "::1", "HostPort": "5353" }]
+      },
+      "Networks": { "podman": { "IPAddress": "10.88.0.4/16" } }
+    }
+  },
+  {
+    "Id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "Name": "stopped-worker",
+    "Config": {
+      "Image": "localhost/worker:latest",
+      "Labels": { "io.podman.compose.project": "demo", "io.podman.compose.service": "worker" },
+      "ExposedPorts": { "9000/tcp": {} }
+    },
+    "State": { "Status": "exited", "Running": false },
+    "HostConfig": {
+      "NetworkMode": "bridge",
+      "PortBindings": { "9000/tcp": [{ "HostIp": "0.0.0.0", "HostPort": "49000" }] }
+    },
+    "NetworkSettings": { "Ports": { "9000/tcp": null }, "Networks": {} }
+  }
+]
