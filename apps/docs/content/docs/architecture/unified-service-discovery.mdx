@@ -1,0 +1,116 @@
+---
+title: Unified service discovery contracts
+description: Linux-first identity, provider, evidence, freshness, namespace, and correlation rules for service discovery.
+---
+
+## Decision and boundary
+
+Issue #180 defines the shared contract before additional discovery providers are added. The contract types and deterministic helpers live in `@portcn/core`; operating-system access, Docker CLI calls, provider orchestration, and terminal presentation remain in `apps/cli` or future platform adapters.
+
+This is an architecture baseline, not a claim that the current CLI uses a unified service model. Existing command implementations and their version 1 JSON shapes remain intact. No provider is added or migrated by this decision.
+
+## Existing implementation audit
+
+| Capability | Current implementation | Existing boundary |
+| --- | --- | --- |
+| Native TCP/UDP listeners | `apps/cli/src/commands/list.ts` uses read-only `ss` on Linux and `lsof` on macOS. | Results identify protocol, state, exact local bind address, port, and visible owners. Namespace identifiers are reported separately by diagnosis where available. |
+| Process and project attribution | `inspect.ts`, `diagnose.ts`, `project-context.ts`, `process-assessment.ts`, `endpoint-verification.ts`, and `agent-attribution.ts`. | Linux `/proc` visibility and PID start-time checks bound process/project claims. Missing or denied data remains unknown or unavailable. |
+| Docker inventory | `apps/cli/src/commands/docker.ts` invokes the selected Docker CLI context and parses inspect data. | Configured, exposed, direct, and published ports are distinct. Its existing listener matcher compares protocol, address, and port; it does not establish that a remote daemon and the local listener share a host or namespace. |
+| Saved services and probes | `config-store.ts`, `config.ts`, `endpoints.ts`, `readiness.ts`, and `connection.ts`. | Saved IDs such as `tcp://127.0.0.1:8080` are configuration keys, not global runtime identities. Probe outputs describe the current local observation. |
+| JSON contracts | Command modules return their existing `schemaVersion: 1` shapes; `json.ts` centralizes stable errors. | The shared model is internal/additive. Existing CLI response objects are not replaced or silently reshaped. |
+| Terminal dashboard | `tabs.ts` filters and selects listener rows; its current row identity uses protocol, address, port, and owner information. | It is listener-focused. Service-wide provider aggregation remains issue #187. |
+| MCP | `mcp.ts` exposes four bounded, read-only tools for listeners, diagnosis, availability, and suggestions. | It calls existing command-domain functions; service graph tools are future work. |
+
+These separate implementations are the migration sources. The architecture must not reimplement Docker bind matching, process inspection, project attribution, or existing serializers. An adapter should call or wrap the existing owner and translate its result into the shared contract.
+
+## Data flow
+
+The target flow keeps provider observations independent through collection. Correlation adds evidence-backed relationships after collection; it does not delete or rewrite source records.
+
+```text
+CLI request and requested scope
+              |
+              v
+      discovery coordinator
+       /          |          \
+      v           v           v
+native adapter  Docker adapter  future adapters
+  ss + /proc      docker CLI     Podman / Nginx /
+                                  systemd / metrics
+       \          |          /
+        v         v         v
+       provider results (records + status + limits)
+                      |
+                      v
+       identity index + evidence-backed correlations
+                      |
+          +-----------+------------+
+          v           v            v
+      CLI/TUI      JSON/API       MCP tools
+   later issue    additive only   later issue
+       #187        preserve v1       #116
+```
+
+Current command paths continue to run as shown below until provider integration is separately implemented:
+
+```text
+`list` / `inspect` / `diagnose` ──> native `ss` or `lsof` ──> listener JSON / TUI
+`docker` / `exposure`           ──> selected Docker context ─> Docker JSON / text
+`assess` / `verify`              ──> Linux `/proc` + Git     ─> attribution JSON
+`mcp`                            ──> existing domain calls   ─> four current tools
+```
+
+## Identity contract
+
+`discoveryIdentityKey()` encodes a versioned, ordered tuple from the discriminated `DiscoveryIdentity` union. It preserves exact address text and includes the identity kind and the scope and resource fields required for that kind. Container keys include both selected daemon context and daemon host; published bindings also include host network namespace. `PortNumber` validates port-bearing identities. Identity keys are comparisons within the stated view; they are not a promise that an address, PID, container ID, or namespace remains stable forever.
+
+| Identity kind | Required distinguishing fields | Meaning |
+| --- | --- | --- |
+| `native-listener` | host, network namespace, protocol, exact bind address, port | One socket endpoint observation. Multiple visible owners are owner evidence for that endpoint, not separate socket identities. |
+| `process` | host, PID namespace, PID, process start time | One process lifetime; PID alone is never an identity. |
+| `container` | runtime, daemon context, daemon host, full container ID | A runtime object. Docker and Podman IDs never collide by assumption. |
+| `container-port` | runtime, daemon context and host, container ID, transport, container port | A port declared or observed within one container. |
+| `published-binding` | container identity, host network namespace, transport, container port, host address and port | One host-side mapping. Multiple binds remain distinct. |
+| `system-service` | provider (`nginx` or `systemd`), host, mount namespace, provider-local ID | A manager/configuration record, not proof of an active listener. |
+| `configured-service` | configuration store and local configuration ID | User-saved intent, not proof that a service is running. |
+| `resource` | host, resource namespace, subject identity key, metric | A sampled resource record tied to an explicit subject and scope. |
+
+If a required identity component cannot be established, the observation is observation-only or unavailable and has no stable identity key. Only `identityStatus: stable` observations can be referenced by correlations. Providers must not replace unknown host or namespace scope with a shared wildcard. Names, image tags, Compose service names, ports alone, and project paths alone are not unique identity fields.
+
+## Provider and result contract
+
+`DiscoveryProvider` receives a requested timestamp, the caller-visible `DiscoveryScope`, and a deadline. It returns its own `DiscoveryProviderResult` with provider ID/name, covered scope, start/finish time, observations, issues, and limitations. Results use `complete`, `partial`, `permission-denied`, `unavailable`, or `failed` status. A provider may return useful observations and issues together; an unavailable Docker daemon must not discard successful native results.
+
+Provider IDs identify an adapter instance and context, such as a selected Docker context. Each observation keeps its identity, state, timestamp, and evidence. A top-level `DiscoverySnapshot` is complete only when at least one provider ran and every provider result is complete. It preserves the per-provider status and observations and sorts results deterministically; it does not deduplicate them.
+
+## Evidence, confidence, and freshness
+
+Each `DiscoveryEvidence` entry records provider, method, source reference, claim, provenance (`direct`, `derived`, `inferred`, or `configured`), qualitative confidence, observation time, expiry, scope, and limitations. Evidence IDs are unique within one discovery snapshot and include their provider instance. Confidence describes support for a claim; it does not override a provider failure, missing namespace, or stale timestamp.
+
+`evidenceFreshness(evidence, at)` returns `fresh` only when timestamps parse and the explicit validity deadline has not passed. It returns `stale` after that deadline and `unknown` when timing or expiry is unavailable, invalid, or evaluated before the evidence was observed. Saved configuration does not expire into proof of runtime activity; it remains configured evidence.
+
+## Namespace and host boundaries
+
+- Native socket and process evidence uses the namespace of the process that performed the observation. PID, network, and mount namespace identifiers are independent and may be unavailable.
+- Docker evidence belongs to the selected daemon context. A remote context is not the local host; a mapping and a local socket can be related only when evidence establishes the same host and compatible network scope.
+- Container network namespace and host-side published binding are distinct scopes. Host-network mode does not by itself attribute an otherwise unidentified host listener to a container.
+- Never infer equivalence from equal port numbers, matching names, or a shared project label. If host or namespace correspondence is unknown, retain the records and leave the correlation absent or ambiguous.
+- Providers operate with current user permissions and namespaces. No elevated process inspection, host namespace entry, or container privilege is implied by this contract.
+
+## Correlation and deduplication contract
+
+Source records are deduplicated only when their complete versioned identity keys are equal and their scope is compatible. An adapter must preserve source evidence even when another adapter reports the same endpoint. Cross-provider relationships are `DiscoveryCorrelation` edges with both identity keys, relation type, confidence, evidence IDs, observation time, and scope. `createDiscoverySnapshot()` rejects edges whose endpoints or evidence are absent from the collected provider results, and rejects self-edges.
+
+For current Docker mappings, reuse the existing bind/address/protocol matching behavior rather than creating a second wildcard-IP matcher. Treat the match as derived evidence only. Promote it to `published-as` only when daemon host and network-namespace compatibility are established; otherwise preserve the Docker binding and listener as separate records. Forwarding attribution requires direct process evidence plus a compatible binding; port equality alone is insufficient.
+
+Supported relationship vocabulary includes `same-endpoint`, `published-as`, `forwarded-by`, `owned-by`, `project-of`, `configured-as`, `hosts`, and `depends-on`. Future resource and service-manager adapters can attach observations and relationships without changing the identity of existing listener, process, or container records.
+
+## Deterministic contract coverage
+
+`packages/core/test/discovery.test.ts` uses fixed identities, timestamps, provider results, and correlation edges. It verifies stable key serialization, separation by protocol/bind/namespace/container/process lifetime, separate published bindings, retention of partial provider results without port-only deduplication, deterministic ordering, and freshness outcomes. Tests require neither root privileges nor a Docker socket.
+
+The existing command tests remain the compatibility fixtures for CLI JSON, listener ownership, Docker inventory, TUI identity, and MCP tool contracts. This architecture does not migrate those outputs; future adapter issues must add explicit compatibility tests before exposing a unified view.
+
+## Deferred integrations
+
+This contract provides extension points for Podman, Docker/Podman deduplication, `rootlessport`, Nginx, systemd, service relationships, resource monitoring, and later terminal/MCP integration. Their implementations remain tracked separately in issues #181–#187, #112, and #116. They are not included in issue #180.

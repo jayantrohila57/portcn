@@ -44,6 +44,8 @@ These modules are implemented in `apps/cli`; `@portcn/core` currently exports a 
 
 The current providers do not share a unified service identity. Native sockets, Docker records, and the selected service configuration have separate data shapes; there is no Podman, Nginx, or systemd provider and no service relationship graph. The reviewed target architecture is tracked by issues #180–#186. The dashboard currently shows native listeners, not all service providers; issue #187 tracks that integration. Do not treat configured mappings or an Nginx/systemd declaration as proof of an active listener.
 
+Issue #180 defines the platform-neutral contracts for identity, provider results, evidence, freshness, namespace scope, partial results, and correlation. See [Unified service discovery contracts](./unified-service-discovery) for the audited data flow and compatibility boundaries. These contracts are not yet wired into the current commands.
+
 ## Terminal dashboard implementation
 
 The dashboard uses a shared terminal lifecycle, full redraw, resize-aware layout, pagination, selection, search, sorting, a command palette, live bind/process/project details for the selected listener, scheduled refresh, grapheme-aware cell widths, and responsive columns. Selection includes a text marker so it remains visible without color. The semantic terminal palette respects `NO_COLOR` and `TERM=dumb`. These behaviors are covered by focused CLI tests and the real-PTY matrix below.
