@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync, readlinkSync } from 'node:fs';
+import { readFileSync, readlinkSync, realpathSync } from 'node:fs';
 
 export type ProjectContextStatus =
   | 'identified'
@@ -38,7 +38,7 @@ export interface ProjectContextDependencies {
   maxAncestors?: number;
 }
 
-interface GitMetadata {
+export interface GitMetadata {
   projectRoot: string;
   gitDir: string;
   gitCommonDir: string;
@@ -68,6 +68,17 @@ function processStat(pid: number, read: typeof readFile): { startTime: string; p
   return { parentPid, startTime };
 }
 
+export function readProcessStartTime(
+  pid: number,
+  read: (path: string, encoding: BufferEncoding) => string = readFile,
+): string | null {
+  try {
+    return processStat(pid, read).startTime;
+  } catch {
+    return null;
+  }
+}
+
 function processName(pid: number, read: typeof readFile): string | null {
   try {
     return /^Name:\s*(.+)$/m.exec(read(`/proc/${pid}/status`, 'utf8'))?.[1]?.trim() ?? null;
@@ -86,6 +97,14 @@ function gitMetadata(cwd: string): GitMetadata | null {
     const [projectRoot, gitDir, gitCommonDir] = output.trimEnd().split('\n');
     if (!projectRoot || !gitDir || !gitCommonDir) return null;
     return { projectRoot, gitDir, gitCommonDir };
+  } catch {
+    return null;
+  }
+}
+
+export function resolveGitProject(directory: string): GitMetadata | null {
+  try {
+    return gitMetadata(realpathSync(directory));
   } catch {
     return null;
   }

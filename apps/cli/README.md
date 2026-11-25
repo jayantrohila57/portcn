@@ -25,6 +25,7 @@ portcn diagnose 3000           # owners, address families, and visibility limits
 portcn diagnose 3000 --json    # machine-readable diagnosis
 portcn check 3000              # dev: point-in-time TCP bind overlap check
 portcn suggest                 # dev: bounded alternative port suggestions
+portcn assess 1234 --project "$PWD" # dev: read-only ownership evidence
 ```
 
 All discovery is read-only. `diagnose` reports each visible TCP/UDP socket, bind address, IPv4/IPv6 family, every visible PID/process owner, best-effort `/proc` details, and the current network/PID namespaces. On `dev`, it also reports bounded process ancestry, Git project/worktree evidence, and optional agent session markers when visible. Set `PORTCN_AGENT_SESSION_ID` to a non-secret session label and optionally `PORTCN_AGENT_NAME`; Portcn extracts only these exact keys from visible process environments and does not retain or emit other values. Attribution is user-supplied evidence, can be incomplete or ambiguous, and does not prove service ownership or session liveness. A possible leftover is not a safe-to-stop decision. It explains when permissions or namespaces hide information. A missing listener is not a guarantee that a later bind will succeed. Port numbers must be between 1 and 65535.
@@ -39,7 +40,7 @@ In `portcn list --interactive`, use `1`/`2`/`3`/`4` to switch All, TCP, UDP, and
 
 The current published version is `0.3.0` and includes the first three commands listed above. The `dev` branch adds `--json-version 1` plus read-only `check` and `suggest` commands; they will ship in a later package release. Future capabilities in the [product roadmap](https://github.com/jayantrohila57/portcn/blob/dev/PRODUCT-ROADMAP.md) are proposals until released and documented as implemented.
 
-The complete command reference and release policy are in the [Portcn documentation](https://jayantrohila57.github.io/portcn/). Development setup, checks, and contributor rules are in the repository [CONTRIBUTING.md](https://github.com/jayantrohila57/portcn/blob/main/CONTRIBUTING.md). Report bugs or request features in [GitHub Issues](https://github.com/jayantrohila57/portcn/issues).
+The `dev` branch also supports `portcn assess <pid> --project <path> [--session <id>]`; it reports matching, different, ambiguous, or unknown evidence with PID/start-time identity and observation time. These statuses are advisory and never authorize stopping or signaling a process. The complete command reference and release policy are in the [Portcn documentation](https://jayantrohila57.github.io/portcn/). Development setup, checks, and contributor rules are in the repository [CONTRIBUTING.md](https://github.com/jayantrohila57/portcn/blob/main/CONTRIBUTING.md). Report bugs or request features in [GitHub Issues](https://github.com/jayantrohila57/portcn/issues).
 
 ## License
 

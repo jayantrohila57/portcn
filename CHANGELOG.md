@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- add read-only process ownership safety checks ([#111](https://github.com/jayantrohila57/portcn/issues/111)) <!-- task:fix/read-only-process-safety -->
+
 - attribute agent-started services and detect leftover processes ([#103](https://github.com/jayantrohila57/portcn/issues/103)) <!-- task:feat/agent-process-attribution -->
 
 - associate listening services with projects and worktrees ([#96](https://github.com/jayantrohila57/portcn/issues/96)) <!-- task:feat/project-worktree-evidence -->

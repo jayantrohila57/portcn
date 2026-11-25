@@ -1,6 +1,6 @@
 ---
 title: CLI reference
-description: Portcn port listing, inspection, conflict diagnosis, output, and exit codes.
+description: Portcn port listing, inspection, conflict diagnosis, ownership evidence, output, and exit codes.
 ---
 
 The published ``v0.3.0`` Linux CLI provides read-only ``portcn list``, ``portcn inspect``, and ``portcn diagnose`` commands. The development branch adds ``check`` and ``suggest`` for point-in-time listener overlap checks and bounded port suggestions; these commands will ship in a later package release.
@@ -78,6 +78,17 @@ Diagnoses every TCP or UDP listening socket visible on the requested port. It re
 Project context is evidence, not proof that a project launched or owns a service. Portcn reads only the owner and a bounded parent chain; it does not scan repositories or inspect agent conversations. Paths and executable locations are included in JSON when visible. A PID start-time check discards context if the process exits or the PID is reused during inspection. Git metadata lookup is read-only and time-limited.
 
 Agent attribution is opt-in. Set ``PORTCN_AGENT_SESSION_ID`` to a non-secret identifier and optionally ``PORTCN_AGENT_NAME`` in a process environment to associate that process tree with an agent session. Portcn inspects the owner and bounded ancestors' ``/proc/<pid>/environ`` files to extract only those two keys; other environment values are not retained or emitted. IDs and names are limited to 80 safe characters. Attribution reports ``associated``, ``ambiguous``, or ``unknown`` and includes its evidence, observation time, and source. ``high`` confidence means the marker was directly present on the owner; ``medium`` means it was found on an ancestor; these describe where the opt-in marker was observed, not whether the claimed agent identity is authentic. A possible leftover means the owner has a marker but no inspected ancestor has the same marker. It is a hint only; Portcn cannot verify whether a session is alive, and a leftover must never be treated as permission to stop a process.
+
+## ``portcn assess <pid>``
+
+The command named `assess` compares visible ownership evidence for one PID with a supplied Git project and, optionally, an opt-in agent session ID. The project path must exist inside a Git repository. The command reads a stable PID/start-time identity before and after collecting project and agent evidence; if the process exits or the PID is reused, it discards that evidence. Results include the current PID namespace and a UTC observation time.
+
+```sh
+node apps/cli/dist/index.js assess 1234 --project "$PWD"
+node apps/cli/dist/index.js assess 1234 --project "$PWD" --session session-7 --json
+```
+
+The JSON schema version 1 result contains ``status`` (``matching``, ``different``, ``ambiguous``, or ``unknown``), ``identity``, ``expectedProject``, ``expectedSessionId``, ``processProject``, ``agentAttribution``, matching/different evidence arrays, ``observedAt``, ``pidNamespace``, ``limitations``, and a human-readable ``message``. A session is compared only when ``--session`` is supplied. Exit status ``0`` means the assessment completed, including unknown/ambiguous/different results; ``1`` is an unexpected runtime failure; ``2`` is invalid input or an unsupported JSON schema version. The output is advisory evidence only and never authorizes signaling or stopping a process.
 
 ```sh
 node apps/cli/dist/index.js diagnose 3000
