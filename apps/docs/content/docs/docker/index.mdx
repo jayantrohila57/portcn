@@ -7,7 +7,7 @@ Docker support includes an optional packaging workflow and a released read-only 
 
 ## Inspect local containers
 
-The released ``portcn docker`` command lists running and stopped containers from the Docker CLI's selected daemon context. It reports Compose project/service labels, configured health, network addresses, exposed ports, published host bindings, and any matching host listeners visible in Portcn's current namespace. A stopped container's saved port configuration is labeled configured rather than active. Podman is not implemented.
+The ``portcn docker`` command lists running and stopped containers from the Docker CLI's selected daemon context. It reports Compose project/service labels, configured health, network addresses, exposed ports, published host bindings, and any matching host listeners visible in Portcn's current namespace. A stopped container's saved port configuration is labeled configured rather than active.
 
 ```sh
 portcn docker
@@ -15,6 +15,17 @@ portcn docker --json
 ```
 
 This is a read-only Docker CLI query. Missing Docker, denied daemon access, and an unavailable daemon are reported separately. Port mappings describe Docker configuration; matching listeners are observations and do not prove reachability. Listener observations come from Portcn's current network namespace and may not describe a remote Docker daemon host. IPv6 routed-mode mappings without a host port are reported as direct routes. Host-network containers share the host network stack and are not attributed from exposed-port metadata alone.
+
+## Inspect Podman containers
+
+Use ``portcn podman`` to inspect running and stopped containers visible through the current Podman user and configured connection. Podman commands run as the invoking user, so the same command can discover rootless containers owned by that user or rootful containers when the caller already has access. Portcn never elevates privileges. It reports Podman Compose labels, health, network mode and addresses, exposed ports, published mappings, and matching local listeners.
+
+```sh
+portcn podman
+portcn podman --json
+```
+
+Podman inventory uses only read-only ``container ls`` and ``container inspect`` operations. It does not start, stop, exec into, or reconfigure containers. A stopped container's port mapping remains configured, not active. Listener matches come from Portcn's current network namespace and do not establish reachability or identity of a remote connection. Docker and Podman records are currently reported by separate commands; unified deduplication and rootless forwarding attribution are tracked separately.
 
 ## Classify potential exposure
 

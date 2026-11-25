@@ -3,15 +3,15 @@ title: CLI reference
 description: Portcn port listing, inspection, conflict diagnosis, ownership evidence, output, and exit codes.
 ---
 
-The published ``v0.6.0`` CLI package requires Node.js 22 or newer; the source workspace and build require Node.js 24 or newer. Linux is the primary supported platform. The package also includes limited macOS ``list``, ``inspect``, and ``diagnose`` support through ``lsof``. On macOS, process command lines, user IDs, project context, and agent markers are unavailable. Windows listener discovery is not implemented. The macOS CI integration verifies real listener discovery; other command families are supported on Linux unless stated otherwise.
+The published ``v0.6.1`` CLI package requires Node.js 22 or newer; the source workspace and build require Node.js 24 or newer. Linux is the primary supported platform. The package also includes limited macOS ``list``, ``inspect``, and ``diagnose`` support through ``lsof``. On macOS, process command lines, user IDs, project context, and agent markers are unavailable. Windows listener discovery is not implemented. The macOS CI integration verifies real listener discovery; other command families are supported on Linux unless stated otherwise.
 
 | Platform | Verified CLI support | Requirements and limits |
 | --- | --- | --- |
-| Linux | All documented command families, including the dashboard and MCP server | `ss` from `iproute2`; Docker commands also require the user's Docker CLI/context. Visibility remains namespace- and permission-limited. |
+| Linux | All documented command families, including the dashboard and MCP server | `ss` from `iproute2`; Docker and Podman commands require the respective CLI and access to the selected runtime/context. Visibility remains namespace- and permission-limited. |
 | macOS | `list`, `inspect`, and `diagnose` listener discovery | System `lsof`; visible PID/process names only. The live macOS CI check covers listener discovery. Linux `/proc`, project, and agent-marker details are unavailable. |
 | Windows | Help and version output | Listener/service discovery is unsupported. |
 
-Registered top-level commands include `list`, `inspect`, `diagnose`, `wait`, `check`, `suggest`, `assess`, `verify`, `config`, `endpoint`, `open`, `readiness`, `connection`, `docker`, `exposure`, and `mcp`. Configuration subcommands include `add`, `edit`, `remove`, `group`, and `recover`.
+Registered top-level commands include `list`, `inspect`, `diagnose`, `wait`, `check`, `suggest`, `assess`, `verify`, `config`, `endpoint`, `open`, `readiness`, `connection`, `docker`, `podman`, `exposure`, and `mcp`. Configuration subcommands include `add`, `edit`, `remove`, `group`, and `recover`.
 
 ## ``portcn config``
 
@@ -79,6 +79,17 @@ portcn docker --json
 ```
 
 Ports marked ``exposed`` are container metadata and are not necessarily published or listening. Published bindings retain every host address and port, including separate IPv4 and IPv6 mappings. IPv6 routed-mode entries with no host port are marked ``direct``. Portcn compares published host bindings with visible local TCP/UDP listeners by protocol, port, and bind address; this is a point-in-time observation, not proof of reachability or ownership by a Docker proxy process. When the Docker context is remote, listener observations still come from Portcn's current network namespace and may not describe the daemon host. Host-network containers share the host network stack, so Portcn does not attribute listeners to them from declared exposed ports alone. Docker CLI absence, daemon unavailability, and permission denial have distinct statuses and return code 1; ``--json`` emits a version 1 result with a stable error code.
+
+## ``portcn podman``
+
+Inspect containers visible through the current Podman user and configured connection. Rootless and rootful inventories follow the caller's existing access; Portcn does not elevate privileges. The command reports Compose labels, health, network mode and addresses, exposed ports, published mappings, and visible host listeners.
+
+```sh
+portcn podman
+portcn podman --json
+```
+
+Only read-only ``podman container ls`` and ``podman container inspect`` operations are used. Missing CLI, denied access, unavailable service/connection, and malformed inventory are distinct in schema version 1 JSON. Stopped mappings are configured, not active. Listener matches come from Portcn's current network namespace and do not prove reachability or ownership; a remote runtime may describe another host. Docker and Podman remain separate command outputs until evidence-based unified discovery is implemented.
 
 ## ``portcn exposure``
 
