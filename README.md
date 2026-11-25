@@ -2,20 +2,26 @@
 
 **Your ports. Under control.**
 
-An open-source, developer-first CLI foundation for local development. portcn is Linux-first, starting with Ubuntu.
+An open-source, developer-first CLI for understanding local development services. Portcn is Linux-first, starting with Ubuntu.
 
 ## Development status
 
-Early development. The `dev` branch includes read-only Linux `portcn list` and `portcn inspect <port>` commands for listening TCP/UDP ports. Process management is not implemented yet. The published `v0.0.1` package contains only the CLI foundation.
+Portcn `v0.3.0` is published. It provides read-only Linux commands to list listeners, inspect a port, and diagnose visible owners and namespace limits. The development branch adds versioned JSON output, point-in-time port checks and suggestions, best-effort project/worktree evidence, opt-in agent session attribution, read-only ownership assessment, endpoint/project comparison, and a live contextual dashboard. Process termination is not implemented.
 
 ## Implemented
 
 - Fumadocs documentation site with navigation, search, Markdown negotiation, LLM-friendly exports, and generated Open Graph images.
 - pnpm workspace and Turborepo task orchestration.
 - `portcn` CLI package with branded default/help/version output and a Node.js executable.
-- Read-only `portcn list` on Linux (development branch): listening TCP/UDP ports, local addresses, and process details when visible; requires `ss` from `iproute2`.
-- Read-only `portcn inspect <port>` on Linux (development branch): protocol, state, local address, PID, process name, and best-effort `/proc` details for all visible listeners on a validated port.
-- Human-readable list and inspect output uses bordered ASCII tables with colors in interactive terminals and plain text when piped.
+- Read-only `portcn list` on Linux: listening TCP/UDP ports, local addresses, and process details when visible; requires `ss` from `iproute2`.
+- Read-only `portcn inspect <port>` on Linux: protocol, state, local address, PID, process name, and best-effort `/proc` details for all visible listeners on a validated port.
+- Read-only `portcn diagnose <port>` on Linux: visible listeners, owners, address families, and namespace/permission visibility limits. Missing listeners do not guarantee a later bind will succeed.
+- Development branch: diagnosis also reports bounded process ancestry and Git project/worktree evidence when visible; this is evidence, not proof of service ownership.
+- Optional development branch metadata: set `PORTCN_AGENT_SESSION_ID` and optionally `PORTCN_AGENT_NAME` to annotate a process tree; attribution is not identity verification and possible leftovers are not safe-to-stop decisions.
+- Development branch: `portcn assess <pid> --project <path>` compares visible process evidence with a Git project; add `--session <id>` for an explicit session comparison. It never signals or stops a process.
+- Development branch: `portcn verify <endpoint> --project <path>` compares a local listener's visible owner and current checkout metadata with the expected project. It never connects to the endpoint and cannot prove which code a running process loaded.
+- Development branch: `portcn check <port>` reports visible listener overlap for a TCP/UDP protocol and bind address; `portcn suggest` returns bounded candidate ports without observed conflicts. Neither command binds or reserves ports.
+- Human-readable list and inspect output uses bordered ASCII tables with color only in capable terminals; set `NO_COLOR` or `TERM=dumb` to disable it. Interactive selection remains marked in monochrome.
 - Private `@portcn/core` package for future shared functionality.
 - GitHub Actions validation and Release Please version/changelog workflow for `portcn`.
 
@@ -39,6 +45,18 @@ pnpm test
 node apps/cli/dist/index.js list  # Linux, requires iproute2
 node apps/cli/dist/index.js inspect 3000  # Linux, read-only
 node apps/cli/dist/index.js list --interactive  # header, tabs, paginated table, and footer navigation
+node apps/cli/dist/index.js diagnose 3000 --json # visible listeners and diagnostic limits
+node apps/cli/dist/index.js list --json-version 1 # stable versioned JSON on dev
+node apps/cli/dist/index.js check 3000            # read-only listener overlap check on dev
+node apps/cli/dist/index.js suggest               # bounded port suggestions on dev
+node apps/cli/dist/index.js assess 1234 --project "$PWD" # read-only ownership evidence on dev
+node apps/cli/dist/index.js verify 127.0.0.1:3000 --project "$PWD" # local endpoint/project evidence on dev
+node apps/cli/dist/index.js config add tcp 127.0.0.1 3000 --favorite --alias web --group local # saved details on dev
+node apps/cli/dist/index.js config list --json # saved services and current status on dev
+node apps/cli/dist/index.js docker             # container health and mappings on dev
+node apps/cli/dist/index.js docker --json      # versioned container inventory on dev
+node apps/cli/dist/index.js exposure           # bind scope and potential exposure on dev
+node apps/cli/dist/index.js exposure --json    # versioned exposure report on dev
 ```
 
 Optional Docker Compose commands build and run the packaged CLI image. For example, `pnpm docker:cli -- --version` rebuilds the current artifact before running it. Unit tests and package checks run with the regular pnpm scripts.
@@ -80,6 +98,8 @@ Docker Compose packaged-image checks are optional and are documented in [Docker]
 ## Project documentation
 
 The searchable [project documentation](apps/docs/content/docs/index.mdx) in `apps/docs` covers getting started, CLI behavior, architecture, development, Docker, contributing, releases, security, and open source. Community policies remain in the canonical root and GitHub files.
+
+The [product roadmap](https://github.com/jayantrohila57/portcn/blob/dev/PRODUCT-ROADMAP.md) tracks implemented status, planned capabilities, dependencies, and acceptance criteria. Planned items are proposals, not shipped features or release commitments.
 
 ## Repository structure
 

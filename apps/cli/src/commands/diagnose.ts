@@ -1,9 +1,14 @@
 import { readlinkSync } from 'node:fs';
 import { isIP } from 'node:net';
 import type { Command } from 'commander';
-import { formatEmpty, formatTable } from '../terminal.js';
+import { formatEmpty, formatTable, TERMINAL_THEME } from '../terminal.js';
+import { type AgentAttribution, inspectAgentAttribution } from './agent-attribution.js';
 import { InvalidPortError, inspectProcessDetails, type ProcessDetailStatus, parsePort } from './inspect.js';
+import { JSON_SCHEMA_VERSION, jsonSchemaIsSupported, UnsupportedJsonVersionError, versionedJsonError } from './json.js';
 import { discoverListeningPorts, type ListeningOwner, type ListeningPort } from './list.js';
+import { inspectProjectContext, type ProjectContext } from './project-context.js';
+
+const compareText = (left: string, right: string): number => (left < right ? -1 : left > right ? 1 : 0);
 
 export interface DiagnosedOwner {
   pid: number;
@@ -11,6 +16,8 @@ export interface DiagnosedOwner {
   command: string | null;
   user: string | null;
   detailsStatus: ProcessDetailStatus;
+  projectContext: ProjectContext;
+  agentAttribution: AgentAttribution;
 }
 
 export interface DiagnosedListener {
@@ -22,7 +29,7 @@ export interface DiagnosedListener {
 }
 
 export interface PortDiagnosis {
-  schemaVersion: 1;
+  schemaVersion: typeof JSON_SCHEMA_VERSION;
   port: number;
   namespace: {
     network: string | null;
@@ -36,6 +43,8 @@ export interface PortDiagnosis {
 export interface DiagnosisOptions {
   discover?: () => ListeningPort[];
   inspectProcess?: (pid: number) => ReturnType<typeof inspectProcessDetails>;
+  inspectProject?: (pid: number) => ProjectContext;
+  inspectAgent?: (pid: number, ancestors: ProjectContext['ancestors']) => AgentAttribution;
   readNamespace?: (namespace: 'net' | 'pid') => string | null;
 }
 
@@ -57,7 +66,10 @@ function familyForAddress(address: string): DiagnosedListener['addressFamily'] {
 }
 
 function ownersFor(listener: ListeningPort): ListeningOwner[] {
-  if (listener.owners) return listener.owners;
+  if (listener.owners)
+    return [...listener.owners].sort(
+      (left, right) => left.pid - right.pid || compareText(left.processName, right.processName),
+    );
   if (listener.pid !== null && listener.processName !== null)
     return [{ pid: listener.pid, processName: listener.processName }];
   return [];
@@ -80,9 +92,20 @@ function ownerMessage(listener: DiagnosedListener, owner: DiagnosedOwner, port: 
 export function diagnoseListeningPort(port: number, options: DiagnosisOptions = {}): PortDiagnosis {
   const discover = options.discover ?? (() => discoverListeningPorts());
   const inspectProcess = options.inspectProcess ?? inspectProcessDetails;
+  const inspectProject = options.inspectProject ?? inspectProjectContext;
+  const inspectAgent = options.inspectAgent ?? inspectAgentAttribution;
   const readNamespace = options.readNamespace ?? readCurrentNamespace;
   const namespace = { network: readNamespace('net'), pid: readNamespace('pid') };
-  const visiblePorts = discover().filter((listener) => listener.port === port);
+  const visiblePorts = discover()
+    .filter((listener) => listener.port === port)
+    .sort(
+      (left, right) =>
+        compareText(left.protocol, right.protocol) ||
+        compareText(familyForAddress(left.address), familyForAddress(right.address)) ||
+        compareText(left.address, right.address) ||
+        compareText(left.state, right.state) ||
+        (left.pid ?? 0) - (right.pid ?? 0),
+    );
   const listeners = visiblePorts.map<DiagnosedListener>((listener) => ({
     protocol: listener.protocol,
     state: listener.state,
@@ -90,11 +113,14 @@ export function diagnoseListeningPort(port: number, options: DiagnosisOptions = 
     addressFamily: familyForAddress(listener.address),
     owners: ownersFor(listener).map((owner) => {
       const details = inspectProcess(owner.pid);
+      const projectContext = inspectProject(owner.pid);
       return {
         ...owner,
         command: details.details?.command ?? null,
         user: details.details?.user ?? null,
         detailsStatus: details.status,
+        projectContext,
+        agentAttribution: inspectAgent(owner.pid, projectContext.ancestors),
       };
     }),
   }));
@@ -130,7 +156,7 @@ export function diagnoseListeningPort(port: number, options: DiagnosisOptions = 
     'This is a read-only point-in-time snapshot. A listener can stop or a new process can bind after diagnosis completes.',
   ];
 
-  return { schemaVersion: 1, port, namespace, listeners, messages, limitations };
+  return { schemaVersion: JSON_SCHEMA_VERSION, port, namespace, listeners, messages, limitations };
 }
 
 export function formatDiagnosis(diagnosis: PortDiagnosis): string {
@@ -146,15 +172,35 @@ export function formatDiagnosis(diagnosis: PortDiagnosis): string {
       owner?.command ?? '-',
       owner?.user ?? '-',
       owner?.detailsStatus ?? 'owner hidden',
+      owner?.projectContext.projectRoot ?? 'unknown project',
+      owner?.projectContext.status ?? 'unknown',
+      owner?.agentAttribution.agentName ?? owner?.agentAttribution.status ?? 'unknown agent',
     ]);
   });
   const lines = [`Port diagnosis: ${diagnosis.port}`, ...diagnosis.messages];
   if (rows.length) {
     lines.push(
-      formatTable(['PROTO', 'STATE', 'FAMILY', 'BIND ADDRESS', 'PID', 'PROCESS', 'COMMAND', 'USER', 'DETAILS'], rows, {
-        columnWidths: [6, 8, 7, 24, 8, 16, 32, 12, 17],
-        columnColors: { 0: '\u001b[36m', 1: '\u001b[32m' },
-      }),
+      formatTable(
+        [
+          'PROTO',
+          'STATE',
+          'FAMILY',
+          'BIND ADDRESS',
+          'PID',
+          'PROCESS',
+          'COMMAND',
+          'USER',
+          'DETAILS',
+          'PROJECT',
+          'PROJECT STATUS',
+          'AGENT',
+        ],
+        rows,
+        {
+          columnWidths: [6, 8, 7, 24, 8, 16, 32, 12, 17, 30, 12, 16],
+          columnColors: { 0: TERMINAL_THEME.focused, 1: TERMINAL_THEME.success },
+        },
+      ),
     );
   } else {
     lines.push(formatEmpty('No visible listeners.'));
@@ -171,22 +217,28 @@ export function registerDiagnoseCommand(
     .command('diagnose <port>')
     .description('Explain visible listeners and ownership limits for a port (Linux)')
     .option('--json', 'Print the complete diagnosis as JSON')
-    .action((value: string, options: { json?: boolean }) => {
+    .option('--json-version <version>', 'Print versioned JSON (supported: 1)')
+    .action((value: string, options: { json?: boolean; jsonVersion?: string }) => {
       try {
+        if (!jsonSchemaIsSupported(options.jsonVersion)) throw new UnsupportedJsonVersionError();
         const port = parsePort(value);
         const diagnosis = runDiagnosis(port);
-        process.stdout.write(`${options.json ? JSON.stringify(diagnosis) : formatDiagnosis(diagnosis)}\n`);
+        process.stdout.write(
+          `${options.json || options.jsonVersion !== undefined ? JSON.stringify(diagnosis) : formatDiagnosis(diagnosis)}\n`,
+        );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         const invalidPort = error instanceof InvalidPortError;
-        if (options.json) {
+        if (options.jsonVersion !== undefined) {
+          process.stdout.write(`${JSON.stringify(versionedJsonError(error, value))}\n`);
+        } else if (options.json) {
           process.stdout.write(
             `${JSON.stringify({ error: { code: invalidPort ? 'INVALID_PORT' : 'DIAGNOSIS_FAILED', message, port: value } })}\n`,
           );
         } else {
           process.stderr.write(`portcn: ${message}\n`);
         }
-        process.exitCode = invalidPort ? 2 : 1;
+        process.exitCode = invalidPort || error instanceof UnsupportedJsonVersionError ? 2 : 1;
       }
     });
 }

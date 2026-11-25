@@ -1,16 +1,57 @@
 ---
 title: CLI reference
-description: Portcn port listing, inspection, conflict diagnosis, output, and exit codes.
+description: Portcn port listing, inspection, conflict diagnosis, ownership evidence, output, and exit codes.
 ---
 
-The Linux CLI provides read-only ``portcn list``, ``portcn inspect``, and ``portcn diagnose`` commands. Published ``v0.2.0`` includes ``list`` and ``inspect``; ``diagnose`` is available from the development branch and will ship in a later package release.
+The published ``v0.3.0`` Linux CLI provides read-only ``portcn list``, ``portcn inspect``, and ``portcn diagnose`` commands. The development branch adds ``check`` and ``suggest`` for point-in-time listener overlap checks, bounded port suggestions, ``config`` for local user-authored saved service details, ``docker`` for read-only container and published-port inventory, and ``exposure`` for bind-scope classification; these commands will ship in a later package release.
+
+## ``portcn config``
+
+Save service identities using their protocol, bind address, and port. A service can have a favorite, alias, note, and memberships in multiple groups. The identity includes protocol and the exact bind address, so TCP/UDP and wildcard/specific binds remain distinct. Use `add`, `edit`, and `remove` for saved services, and `group` to manage group records.
+
+```sh
+portcn config add tcp 127.0.0.1 3000 --favorite --alias web --group local --group projects
+portcn config group add projects
+portcn config edit tcp://127.0.0.1:3000 --favorite false --note "development server"
+portcn config list
+portcn config list --json
+portcn config remove tcp://127.0.0.1:3000
+portcn config group remove local
+portcn config recover
+```
+
+The configuration is stored at ``$XDG_CONFIG_HOME/portcn/config.json`` or ``~/.config/portcn/config.json`` when ``XDG_CONFIG_HOME`` is unset. Portcn restricts the directory to owner access and the file to mode ``0600``. Writes use a same-directory temporary file and retain the preceding valid version as ``config.json.bak``. Config version 0 favorites migrate to version 1 when loaded. If the primary file is invalid, the CLI uses a valid backup with a warning; ``recover`` explicitly restores that backup. Invalid config without a valid backup is reported and left untouched. Saved status is ``online`` or ``offline`` only when listener discovery succeeds; it is ``unknown`` when discovery is unavailable. Process metadata and discovery results are never persisted.
+
+## ``portcn docker``
+
+Read a snapshot of all containers in the Docker CLI's selected daemon context, including stopped containers. Portcn lists container IDs and inspects them without changing container state. The output includes state, configured health, Compose project/service labels, network addresses, exposed ports, and published host bindings. Stopped containers can retain mapping configuration; Portcn labels those entries as configured and does not treat them as active host bindings.
+
+```sh
+portcn docker
+portcn docker --json
+```
+
+Ports marked ``exposed`` are container metadata and are not necessarily published or listening. Published bindings retain every host address and port, including separate IPv4 and IPv6 mappings. IPv6 routed-mode entries with no host port are marked ``direct``. Portcn compares published host bindings with visible local TCP/UDP listeners by protocol, port, and bind address; this is a point-in-time observation, not proof of reachability or ownership by a Docker proxy process. When the Docker context is remote, listener observations still come from Portcn's current network namespace and may not describe the daemon host. Host-network containers share the host network stack, so Portcn does not attribute listeners to them from declared exposed ports alone. Docker CLI absence, daemon unavailability, and permission denial have distinct statuses and return code 1; ``--json`` emits a version 1 result with a stable error code.
+
+## ``portcn exposure``
+
+Classify each visible host listener and Docker port record by address family and bind scope. Loopback, interface-specific, wildcard, direct-routed, and container-only records remain distinct. A wildcard address means the socket or mapping uses all addresses in that family; it does not establish internet reachability. Portcn does not inspect firewalls, routers, external routes, or public reachability.
+
+```sh
+portcn exposure
+portcn exposure --json
+```
+
+The version 1 JSON report includes an observation timestamp, listener and Docker availability, findings, and limitations. Docker findings use the currently selected Docker CLI context; listener observations come from Portcn's current network namespace and may refer to a different host for remote contexts. Docker daemon permission or availability failures do not hide successfully discovered host listeners. The command returns code 1 only when both listener discovery and Docker inventory are unavailable.
+
+Docker documents a same-layer-2 reachability caveat for localhost-published ports with Engine versions earlier than 28.0.0. Portcn does not inspect the daemon version; see Docker's [port publishing and mapping reference](https://docs.docker.com/engine/network/port-publishing/).
 
 ```sh
 node apps/cli/dist/index.js --help
 node apps/cli/dist/index.js list
 ```
 
-For an interactive view, use ``--interactive``. The view is divided into an ASCII title header, a tab navigation row, the full-width table, and a footer with the controls. Press ``1`` for all listeners, ``2`` for TCP, ``3`` for UDP, ``4`` for listeners with visible processes, ``Tab`` for the next tab, ``n`` or Space for the next page, ``p`` for the previous page, and ``q`` or ``Esc`` to quit. Interactive mode requires a terminal; piped output remains the normal table.
+For an interactive view, use ``--interactive``. The view shows a compact listener table and live details for the selected row, including bind address, owner PID/process, and best-effort project evidence when visible. Project paths describe the current checkout and do not prove which code the process loaded. Press ``1`` for all listeners, ``2`` for TCP, ``3`` for UDP, ``4`` for listeners with visible processes, ``Tab`` for the next tab, ``n`` or Space for the next page, ``p`` for the previous page, and ``q`` or ``Esc`` to quit. Arrow keys or ``j``/``k`` move selection; details follow the selected listener immediately. Interactive mode requires a terminal; piped output remains the normal table.
 
 ```sh
 node apps/cli/dist/index.js list --interactive
@@ -19,7 +60,9 @@ node apps/cli/dist/index.js inspect 3000 --json
 node apps/cli/dist/index.js diagnose 3000 --json
 ```
 
-The `--json` forms always emit the complete result set without pagination, colors, or screen-control sequences.
+The `--json` forms emit complete results without pagination, colors, or screen-control sequences. `list --json` and `inspect --json` retain their existing top-level array format for compatibility. `diagnose --json` emits its versioned diagnosis object.
+
+On the development branch, all three commands also accept ``--json-version 1`` for a stable, deterministic envelope. This additive option preserves the successful legacy `--json` shapes; it will ship in a later package release.
 
 ## Root options
 
@@ -46,7 +89,7 @@ Lists listening TCP and UDP sockets on Linux. Requires ``ss`` (provided by ``ipr
 node apps/cli/dist/index.js list
 ```
 
-Output is rendered as an ASCII table with colored headers and protocol/state values in an interactive terminal. Colors are automatically omitted when output is piped. Columns are ``PROTO`` (TCP/UDP), ``STATE``, ``PORT`` (numeric), ``LOCAL ADDRESS`` (bind address), ``PID`` and ``PROCESS``. Results are sorted by ascending port number. PID and process may display `` - `` when the operating system does not expose ownership to your current user. You do not need to run with sudo just to list visible sockets.
+Output is rendered as an ASCII table with colored headers and protocol/state values in a capable interactive terminal. Color is omitted when output is piped, ``NO_COLOR`` is set to a non-empty value, or ``TERM=dumb``. Columns are ``PROTO`` (TCP/UDP), ``STATE``, ``PORT`` (numeric), ``LOCAL ADDRESS`` (bind address), ``PID`` and ``PROCESS``. Results are sorted by ascending port number. PID and process may display `` - `` when the operating system does not expose ownership to your current user. You do not need to run with sudo just to list visible sockets.
 
 Example with sample data from tests:
 
@@ -71,14 +114,71 @@ The command never changes sockets or processes and does not require sudo. Proces
 
 ## ``portcn diagnose <port>``
 
-Diagnoses every TCP or UDP listening socket visible on the requested port. It reuses the read-only ``ss`` discovery used by ``list`` and ``inspect`` and reports each bind address, IPv4/IPv6 family, socket state, and every PID/process owner shown by ``ss``. For each visible PID it adds the best-effort command and user from ``/proc``. Shared sockets with multiple visible PIDs appear once in JSON with an ``owners`` array and as one row per owner in terminal output.
+Diagnoses every TCP or UDP listening socket visible on the requested port. It reuses the read-only ``ss`` discovery used by ``list`` and ``inspect`` and reports each bind address, IPv4/IPv6 family, socket state, and every PID/process owner shown by ``ss``. For each visible PID it adds the best-effort command and user from ``/proc``, plus project context from the process working directory and up to five parent processes. Git identifies the project root, worktree metadata, and current checkout branch/commit for those directories; these are current filesystem facts and do not prove which source the running process loaded. Results distinguish identified, ambiguous, not-found, permission-denied, process-exited, and unavailable context. Shared sockets with multiple visible PIDs appear once in JSON with an ``owners`` array and as one row per owner in terminal output.
+
+Project context is evidence, not proof that a project launched or owns a service. Portcn reads only the owner and a bounded parent chain; it does not scan repositories or inspect agent conversations. Paths and executable locations are included in JSON when visible. A PID start-time check discards context if the process exits or the PID is reused during inspection. Git metadata lookup is read-only and time-limited.
+
+Agent attribution is opt-in. Set ``PORTCN_AGENT_SESSION_ID`` to a non-secret identifier and optionally ``PORTCN_AGENT_NAME`` in a process environment to associate that process tree with an agent session. Portcn inspects the owner and bounded ancestors' ``/proc/<pid>/environ`` files to extract only those two keys; other environment values are not retained or emitted. IDs and names are limited to 80 safe characters. Attribution reports ``associated``, ``ambiguous``, or ``unknown`` and includes its evidence, observation time, and source. ``high`` confidence means the marker was directly present on the owner; ``medium`` means it was found on an ancestor; these describe where the opt-in marker was observed, not whether the claimed agent identity is authentic. A possible leftover means the owner has a marker but no inspected ancestor has the same marker. It is a hint only; Portcn cannot verify whether a session is alive, and a leftover must never be treated as permission to stop a process.
+
+## ``portcn assess <pid>``
+
+The command named `assess` compares visible ownership evidence for one PID with a supplied Git project and, optionally, an opt-in agent session ID. The project path must exist inside a Git repository. The command reads a stable PID/start-time identity before and after collecting project and agent evidence; if the process exits or the PID is reused, it discards that evidence. Results include the current PID namespace and a UTC observation time.
+
+```sh
+node apps/cli/dist/index.js assess 1234 --project "$PWD"
+node apps/cli/dist/index.js assess 1234 --project "$PWD" --session session-7 --json
+```
+
+The JSON schema version 1 result contains ``status`` (``matching``, ``different``, ``ambiguous``, or ``unknown``), ``identity``, ``expectedProject``, ``expectedSessionId``, ``processProject``, ``agentAttribution``, matching/different evidence arrays, ``observedAt``, ``pidNamespace``, ``limitations``, and a human-readable ``message``. A session is compared only when ``--session`` is supplied. Exit status ``0`` means the assessment completed, including unknown/ambiguous/different results; ``1`` is an unexpected runtime failure; ``2`` is invalid input or an unsupported JSON schema version. The output is advisory evidence only and never authorizes signaling or stopping a process.
+
+## ``portcn verify <endpoint>``
+
+The command named `verify` compares a local TCP listener with the expected Git checkout. Supply `--project <path>` and an endpoint such as `127.0.0.1:3000`, `[::1]:3000`, or `https://localhost:8443/health`. Only `localhost` and IPv4/IPv6 literals are accepted; DNS is not used. An endpoint path is ignored. Verification does not connect, make an HTTP request, check TLS, or execute tests.
+
+```sh
+node apps/cli/dist/index.js verify 127.0.0.1:3000 --project "$PWD"
+node apps/cli/dist/index.js verify https://localhost:8443/health --project "$PWD" --json-version 1
+```
+
+The version 1 result includes ``status`` (``matching``, ``different``, ``ambiguous``, or ``unavailable``), endpoint and expected project checkout metadata, matching listeners and owner evidence, up to five discovered endpoint suggestions, ``suggestionsComplete``, ``runtimeCode``, observation time, messages, and limitations. Suggestions are included only when a visible owner’s current project root, branch, and commit match the expected checkout. The current checkout can change after a process starts; Portcn always reports loaded runtime code as ``unverified``. Exit status ``0`` means the comparison completed, including unavailable or ambiguous results; ``1`` is a runtime discovery failure; ``2`` is invalid input or an unsupported JSON schema version.
 
 ```sh
 node apps/cli/dist/index.js diagnose 3000
 node apps/cli/dist/index.js diagnose 3000 --json
+node apps/cli/dist/index.js list --json-version 1
+node apps/cli/dist/index.js inspect 3000 --json-version 1
+node apps/cli/dist/index.js diagnose 3000 --json-version 1
 ```
 
-The JSON result has ``schemaVersion``, ``port``, ``namespace``, ``listeners``, ``messages``, and ``limitations`` fields. Each listener includes ``protocol``, ``state``, ``bindAddress``, ``addressFamily``, and ``owners``. Owner fields include ``pid``, ``processName``, ``command``, ``user``, and ``detailsStatus`` (``available``, ``permission-denied``, ``process-exited``, or ``unavailable``). When no process ID is visible, the listener's ``owners`` array is empty and the messages explain that permissions or namespace boundaries can hide ownership.
+Version 1 returns ``{"schemaVersion":1,"listeners":[...]}`` for ``list``, ``{"schemaVersion":1,"port":3000,"listeners":[...]}`` for ``inspect``, and the existing versioned diagnosis object for ``diagnose``. Listener and owner order is deterministic. Invalid ports and discovery failures in JSON mode produce one JSON error object on stdout and a nonzero exit status; errors use stable codes and sanitized messages.
+
+## ``portcn check <port>``
+
+Checks for visible listener overlap for the requested protocol and bind address. It does not bind, reserve, or connect to the port. The default is TCP on ``127.0.0.1``; use ``--protocol udp`` or an IPv4/IPv6 literal with ``--address`` to check another case.
+
+```sh
+node apps/cli/dist/index.js check 3000
+node apps/cli/dist/index.js check 3000 --protocol tcp --address 0.0.0.0 --json
+node apps/cli/dist/index.js check 3000 --address ::1 --json-version 1
+```
+
+The version 1 result contains ``schemaVersion``, ``port``, ``protocol``, ``address``, ``status``, ``conflicts``, ``message``, ``namespace``, and ``limitations``. Status is ``conflict-observed``, ``no-conflict-observed``, or ``unknown``. Wildcard checks across IPv4 and IPv6 can be uncertain because dual-stack settings differ. “No conflict observed” is a snapshot, not a guarantee that a later bind will succeed.
+
+## ``portcn suggest``
+
+Scans a bounded range using the same read-only listener snapshot and returns candidates with no observed overlap. By default it checks TCP on ``127.0.0.1``, scans ``3000-3999``, and returns up to five suggestions. ``--range`` accepts at most 1024 ports; ``--limit`` accepts 1 through 20. Unknown candidates are omitted.
+
+```sh
+node apps/cli/dist/index.js suggest
+node apps/cli/dist/index.js suggest --range 4000-4100 --from 4000 --limit 3 --json
+node apps/cli/dist/index.js suggest --protocol udp --address ::1 --range 5000-5100 --json-version 1
+```
+
+The result contains ``schemaVersion``, ``protocol``, ``address``, ``range``, ``suggestions``, ``namespace``, and ``limitations``. A suggestion is not reserved and may be claimed immediately by another process.
+
+Both commands return status ``0`` when a check completes, including an ``unknown`` check or when no suggestions are found; status ``1`` indicates discovery failure; status ``2`` indicates invalid input or an unsupported JSON schema version. JSON errors use the version 1 ``error`` object and sanitized messages.
+
+The JSON result has ``schemaVersion``, ``port``, ``namespace``, ``listeners``, ``messages``, and ``limitations`` fields. Each listener includes ``protocol``, ``state``, ``bindAddress``, ``addressFamily``, and ``owners``. Owner fields include ``pid``, ``processName``, ``command``, ``user``, and ``detailsStatus`` (``available``, ``permission-denied``, ``process-exited``, or ``unavailable``), plus ``projectContext`` with ``status``, evidence ``confidence`` (``high`` for owner cwd, ``medium`` for ancestor cwd, ``low`` when projects conflict, otherwise ``none``), ``source``, visible owner ``cwd``/``executable``, ``projectRoot``, ``gitDir``, ``gitCommonDir``, ``checkoutBranch``, ``checkoutCommit``, ``worktree``, bounded ``ancestors``, and evidence notes. The additive ``agentAttribution`` object includes ``status``, ``confidence``, opt-in ``agentName``/``sessionId``, source PID and relationship, ``leftoverAssessment``, UTC ``observedAt``, and evidence notes. Project context status is ``identified``, ``ambiguous``, ``not-found``, ``permission-denied``, ``process-exited``, or ``unavailable``. Sensitive command-line options, secret-like environment assignments, and URL passwords are redacted from process command details. When no process ID is visible, the listener's ``owners`` array is empty and the messages explain that permissions or namespace boundaries can hide ownership.
 
 The result identifies the current network and PID namespace. It does not inspect the host or other namespaces, elevate privileges, change processes, or reserve a port. A no-listener result is a point-in-time observation, not a guarantee that a later bind will succeed. Compare protocol, address, and IPv4/IPv6 behavior with the server you plan to start.
 
@@ -86,9 +186,9 @@ The result identifies the current network and PID namespace. It does not inspect
 | --- | --- |
 | ``0`` | Diagnosis completed, including when no listeners are visible. |
 | ``1`` | Discovery failed, the platform is unsupported, or ``ss`` is unavailable. |
-| ``2`` | The port is not an integer from 1 through 65535. |
+| ``2`` | The port is not an integer from 1 through 65535, or the requested JSON schema version is unsupported. |
 
-With ``--json``, invalid arguments and discovery failures are emitted on stdout as ``{"error":{"code":"INVALID_PORT"|"DIAGNOSIS_FAILED","message":"...","port":"..."}}``. Terminal mode writes failures to stderr.
+With legacy ``diagnose --json``, invalid arguments and discovery failures are emitted on stdout as ``{"error":{"code":"INVALID_PORT"|"DIAGNOSIS_FAILED","message":"...","port":"..."}}``. With ``--json-version 1`` (and on JSON-mode ``list``/``inspect`` errors), errors use ``{"schemaVersion":1,"error":{"code":"...","message":"...","port":"..."}}``; ``port`` is omitted for commands without a port argument. Terminal mode writes failures to stderr.
 
 ## Errors and limitations
 

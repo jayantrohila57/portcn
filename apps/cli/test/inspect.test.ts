@@ -1,7 +1,8 @@
 import { Command } from 'commander';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   formatInspectedPorts,
+  formatProcessCommand,
   inspectListeningPort,
   parsePort,
   readProcessDetails,
@@ -16,6 +17,11 @@ const listeners: ListeningPort[] = [
 ];
 
 describe('port inspect', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    process.exitCode = 0;
+  });
+
   it('validates inclusive port boundaries', () => {
     expect(parsePort('1')).toBe(1);
     expect(parsePort('65535')).toBe(65535);
@@ -56,10 +62,62 @@ describe('port inspect', () => {
     ).toBeNull();
   });
 
+  it('redacts sensitive command arguments and credentials', () => {
+    expect(
+      formatProcessCommand(
+        'node\0server.js\0--api-key\0sensitive-value\0DATABASE_PASSWORD=hunter2\0https://user:pass@example.test/path\0',
+      ),
+    ).toBe(
+      'node server.js --api-key [REDACTED] DATABASE_PASSWORD=[REDACTED] https://user:[REDACTED]@example.test/path',
+    );
+  });
+
   it('registers inspect in Commander help', () => {
     const command = new Command().name('portcn');
     registerInspectCommand(command);
     expect(command.commands[0]?.helpInformation()).toContain('inspect [options] <port>');
     expect(command.commands[0]?.helpInformation()).toContain('--json');
+    expect(command.commands[0]?.helpInformation()).toContain('--json-version');
+  });
+
+  it('provides opt-in versioned JSON while preserving the legacy array shape', async () => {
+    const output: string[] = [];
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      output.push(String(chunk));
+      return true;
+    });
+    const command = new Command().name('portcn');
+    registerInspectCommand(command, (port) =>
+      listeners.filter((listener) => listener.port === port).map((listener) => ({ ...listener, details: null })),
+    );
+    await command.parseAsync(['node', 'portcn', 'inspect', '8080', '--json-version', '1']);
+    const versioned = JSON.parse(output.join('')) as {
+      schemaVersion: number;
+      port: number;
+      listeners: Array<{ port: number }>;
+    };
+    expect(versioned.schemaVersion).toBe(1);
+    expect(versioned.port).toBe(8080);
+    expect(versioned.listeners.map(({ port }) => port)).toEqual([8080, 8080]);
+    expect(output.join('').includes('\u001b')).toBe(false);
+    output.length = 0;
+    await command.parseAsync(['node', 'portcn', 'inspect', '8080', '--json']);
+    expect(Array.isArray(JSON.parse(output.join('')))).toBe(true);
+  });
+
+  it('returns structured invalid-port errors with the documented exit status', async () => {
+    const output: string[] = [];
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      output.push(String(chunk));
+      return true;
+    });
+    const command = new Command().name('portcn');
+    registerInspectCommand(command);
+    await command.parseAsync(['node', 'portcn', 'inspect', '0', '--json-version', '1']);
+    expect(JSON.parse(output.join(''))).toMatchObject({
+      schemaVersion: 1,
+      error: { code: 'INVALID_PORT', port: '0' },
+    });
+    expect(process.exitCode).toBe(2);
   });
 });

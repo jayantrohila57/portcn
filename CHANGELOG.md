@@ -6,6 +6,28 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- report potential service exposure and bind scope ([#102](https://github.com/jayantrohila57/portcn/issues/102)) <!-- task:feat/potential-bind-exposure -->
+
+- discover containers and compose port mappings ([#101](https://github.com/jayantrohila57/portcn/issues/101)) <!-- task:feat/docker-compose-discovery -->
+
+- persist favorites aliases and custom service groups ([#100](https://github.com/jayantrohila57/portcn/issues/100)) <!-- task:feat/saved-service-config -->
+
+- add service table and contextual details ([#97](https://github.com/jayantrohila57/portcn/issues/97)) <!-- task:feat/service-table-context -->
+
+- establish terminal design system ([#118](https://github.com/jayantrohila57/portcn/issues/118)) <!-- task:feat/tui-design-system -->
+
+- verify endpoints against expected projects ([#108](https://github.com/jayantrohila57/portcn/issues/108)) <!-- task:feat/endpoint-project-verification -->
+
+- add read-only process ownership safety checks ([#111](https://github.com/jayantrohila57/portcn/issues/111)) <!-- task:fix/read-only-process-safety -->
+
+- attribute agent-started services and detect leftover processes ([#103](https://github.com/jayantrohila57/portcn/issues/103)) <!-- task:feat/agent-process-attribution -->
+
+- associate listening services with projects and worktrees ([#96](https://github.com/jayantrohila57/portcn/issues/96)) <!-- task:feat/project-worktree-evidence -->
+
+- check port availability and suggest alternatives ([#99](https://github.com/jayantrohila57/portcn/issues/99)) <!-- task:feat/port-availability -->
+
+- add versioned JSON contracts ([#98](https://github.com/jayantrohila57/portcn/issues/98)) <!-- task:feat/agent-json-diagnostics -->
+
 ### Changed
 
 ### Fixed

@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { AgentAttribution } from '../src/commands/agent-attribution.js';
 import {
   diagnoseListeningPort,
   formatDiagnosis,
@@ -8,6 +9,7 @@ import {
 } from '../src/commands/diagnose.js';
 import { inspectProcessDetails } from '../src/commands/inspect.js';
 import type { ListeningPort } from '../src/commands/list.js';
+import type { ProjectContext } from '../src/commands/project-context.js';
 
 const sockets: ListeningPort[] = [
   {
@@ -48,13 +50,41 @@ describe('port diagnose', () => {
         details: { command: `/usr/bin/process-${pid}`, user: 'uid:1000' },
         status: 'available',
       }),
+      inspectProject: (pid) =>
+        ({
+          status: 'identified',
+          confidence: 'high',
+          source: 'owner',
+          cwd: `/workspace/service-${pid}`,
+          executable: '/usr/bin/node',
+          projectRoot: `/workspace/service-${pid}`,
+          gitDir: `/workspace/service-${pid}/.git`,
+          gitCommonDir: `/workspace/service-${pid}/.git`,
+          checkoutBranch: 'main',
+          checkoutCommit: 'abc123',
+          worktree: false,
+          ancestors: [],
+          evidence: ['Git reported the project root.'],
+        }) satisfies ProjectContext,
+      inspectAgent: () =>
+        ({
+          status: 'unknown',
+          confidence: 'none',
+          agentName: null,
+          sessionId: null,
+          sourcePid: null,
+          source: null,
+          leftoverAssessment: 'unknown',
+          observedAt: '2026-11-25T00:00:00.000Z',
+          evidence: ['No opt-in agent session marker.'],
+        }) satisfies AgentAttribution,
       readNamespace: (namespace) => `${namespace}:[4026531840]`,
     });
 
     expect(result.listeners).toHaveLength(4);
-    expect(result.listeners.map(({ addressFamily }) => addressFamily)).toEqual(['IPv4', 'IPv6', 'IPv4', 'IPv4']);
+    expect(result.listeners.map(({ addressFamily }) => addressFamily)).toEqual(['IPv4', 'IPv4', 'IPv6', 'IPv4']);
     expect(result.listeners[0]?.bindAddress).toBe('0.0.0.0');
-    expect(result.listeners[2]?.bindAddress).toBe('127.0.0.1');
+    expect(result.listeners[1]?.bindAddress).toBe('127.0.0.1');
     expect(result.listeners[3]?.protocol).toBe('udp');
     expect(result.listeners[0]?.owners.map(({ pid }) => pid)).toEqual([321, 322]);
     expect(result.listeners[0]?.owners[1]).toMatchObject({
@@ -62,8 +92,38 @@ describe('port diagnose', () => {
       command: '/usr/bin/process-322',
       user: 'uid:1000',
       detailsStatus: 'available',
+      projectContext: {
+        status: 'identified',
+        projectRoot: '/workspace/service-322',
+        worktree: false,
+      },
+      agentAttribution: { status: 'unknown', confidence: 'none', leftoverAssessment: 'unknown' },
     });
     expect(result.namespace).toEqual({ network: 'net:[4026531840]', pid: 'pid:[4026531840]' });
+  });
+
+  it('sorts listeners and shared owners deterministically', () => {
+    const result = diagnoseListeningPort(8080, {
+      discover: () => [
+        {
+          protocol: 'tcp',
+          state: 'LISTEN',
+          address: '127.0.0.1',
+          port: 8080,
+          pid: 9,
+          processName: 'z',
+          owners: [
+            { pid: 9, processName: 'z' },
+            { pid: 2, processName: 'a' },
+          ],
+        },
+        { protocol: 'tcp', state: 'LISTEN', address: '[::1]', port: 8080, pid: null, processName: null },
+      ],
+      inspectProcess: () => ({ details: null, status: 'unavailable' }),
+      readNamespace: () => null,
+    });
+    expect(result.listeners.map((listener) => listener.bindAddress)).toEqual(['127.0.0.1', '[::1]']);
+    expect(result.listeners[0]?.owners.map((owner) => owner.pid)).toEqual([2, 9]);
   });
 
   it('explains hidden owners, permission limits, and the current namespace', () => {
@@ -130,6 +190,13 @@ describe('port diagnose', () => {
     expect(process.exitCode).toBe(0);
     output.length = 0;
 
+    const versionedProgram = new Command().name('portcn');
+    registerDiagnoseCommand(versionedProgram, () => diagnosis);
+    await versionedProgram.parseAsync(['node', 'portcn', 'diagnose', '8080', '--json-version', '1']);
+    expect(JSON.parse(output.join(''))).toMatchObject({ schemaVersion: 1, port: 8080, listeners: [] });
+    expect(output.join('').includes('\u001b')).toBe(false);
+    output.length = 0;
+
     const invalidProgram = new Command().name('portcn');
     registerDiagnoseCommand(invalidProgram, () => diagnosis);
     await invalidProgram.parseAsync(['node', 'portcn', 'diagnose', '0', '--json']);
@@ -153,5 +220,6 @@ describe('port diagnose', () => {
     expect(process.exitCode).toBe(1);
     expect(program.commands[0]?.helpInformation()).toContain('diagnose [options] <port>');
     expect(program.commands[0]?.helpInformation()).toContain('--json');
+    expect(program.commands[0]?.helpInformation()).toContain('--json-version');
   });
 });

@@ -19,7 +19,13 @@ test('generates one categorized user-facing entry, includes issue refs, and pres
   assert.equal(validate(base, base, 'feat(cli): add example', 'feat/example').allowed, false);
 });
 test('allows documentation-only PRs to leave the release changelog unchanged', () => {
-  const files = ['apps/docs/content/docs/releases/index.mdx', 'RELEASE-MANAGEMENT-PLAN.md'];
+  const files = [
+    'apps/docs/content/docs/releases/index.mdx',
+    'PRODUCT-ROADMAP.md',
+    'RELEASE-MANAGEMENT-PLAN.md',
+    'scripts/changelog-policy.cjs',
+    'scripts/changelog.test.mjs',
+  ];
   assert.equal(
     validate(base, base, 'docs(release): record verified lifecycle status', 'docs/release-status', undefined, files)
       .allowed,
