@@ -2,6 +2,7 @@ import type { Command } from 'commander';
 import { registerAvailabilityCommands } from './availability.js';
 import { registerConfigCommand } from './config.js';
 import { registerDiagnoseCommand } from './diagnose.js';
+import { registerDockerCommand } from './docker.js';
 import { registerEndpointVerificationCommand } from './endpoint-verification.js';
 import { registerInspectCommand } from './inspect.js';
 import { registerListCommand } from './list.js';
@@ -16,4 +17,5 @@ export function registerCommands(program: Command): void {
   registerProcessAssessmentCommand(program);
   registerEndpointVerificationCommand(program);
   registerConfigCommand(program);
+  registerDockerCommand(program);
 }

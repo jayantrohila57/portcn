@@ -1,0 +1,57 @@
+[
+  {
+    "Id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "Name": "/api-1",
+    "Config": {
+      "Image": "api:latest",
+      "Labels": {
+        "com.docker.compose.project": "demo",
+        "com.docker.compose.service": "api"
+      },
+      "ExposedPorts": {}
+    },
+    "State": { "Status": "running" },
+    "HostConfig": { "NetworkMode": "bridge" },
+    "NetworkSettings": { "Ports": {}, "Networks": {} }
+  },
+  {
+    "Id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "Name": "/web-1",
+    "Config": {
+      "Image": "nginx:stable",
+      "Labels": {
+        "com.docker.compose.project": "demo",
+        "com.docker.compose.service": "web",
+        "custom.private-label": "must-not-be-returned"
+      },
+      "ExposedPorts": { "80/tcp": {}, "443/tcp": {}, "53/udp": {}, "8443/tcp": {} }
+    },
+    "State": { "Status": "running", "Health": { "Status": "healthy" } },
+    "HostConfig": { "NetworkMode": "bridge" },
+    "NetworkSettings": {
+      "Ports": {
+        "80/tcp": [{ "HostIp": "0.0.0.0", "HostPort": "8080" }, { "HostIp": "::", "HostPort": "8080" }],
+        "443/tcp": null,
+        "8443/tcp": [{ "HostIp": "::", "HostPort": "" }],
+        "53/udp": [{ "HostIp": "127.0.0.1", "HostPort": "5353" }]
+      },
+      "Networks": { "demo_default": { "IPAddress": "172.20.0.2/16", "GlobalIPv6Address": "2001:db8::2/64" } }
+    }
+  },
+  {
+    "Id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "Name": "/stopped-worker",
+    "Config": { "Image": "worker:latest", "Labels": {}, "ExposedPorts": { "9000/tcp": {} } },
+    "State": { "Status": "exited" },
+    "HostConfig": { "NetworkMode": "bridge" },
+    "NetworkSettings": { "Ports": { "9000/tcp": null }, "Networks": {} }
+  },
+  {
+    "Id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "Name": "/host-service",
+    "Config": { "Image": "service:latest", "Labels": {}, "ExposedPorts": { "3000/tcp": {} } },
+    "State": { "Status": "running" },
+    "HostConfig": { "NetworkMode": "host" },
+    "NetworkSettings": { "Ports": { "3000/tcp": null }, "Networks": {} }
+  }
+]

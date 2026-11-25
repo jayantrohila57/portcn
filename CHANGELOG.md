@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- discover containers and compose port mappings ([#101](https://github.com/jayantrohila57/portcn/issues/101)) <!-- task:feat/docker-compose-discovery -->
+
 - persist favorites aliases and custom service groups ([#100](https://github.com/jayantrohila57/portcn/issues/100)) <!-- task:feat/saved-service-config -->
 
 - add service table and contextual details ([#97](https://github.com/jayantrohila57/portcn/issues/97)) <!-- task:feat/service-table-context -->
