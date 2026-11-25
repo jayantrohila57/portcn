@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
-const { requestMerge } = createRequire(import.meta.url)('./merge-strategy.cjs');
+const { mergeStrategyFor, requestMerge } = createRequire(import.meta.url)('./merge-strategy.cjs');
 
 export function mergePullRequest(run, number, pullRequest, options) {
   return requestMerge(run, number, pullRequest, options);
@@ -28,8 +28,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
         'number,baseRefName,headRefName,state,mergeable,statusCheckRollup',
       ]),
     );
-    const args = requestMerge((cmd, argv) => run(cmd, argv), number, pullRequest, { auto: option === '--auto' });
-    console.log(`Requested ${args.at(-1) === '--merge' ? 'merge-commit' : 'squash'} merge for PR #${number}.`);
+    const strategy = mergeStrategyFor(pullRequest);
+    requestMerge((cmd, argv) => run(cmd, argv), number, pullRequest, { auto: option === '--auto' });
+    console.log(`Requested ${strategy === 'merge' ? 'merge-commit' : 'squash'} merge for PR #${number}.`);
   } catch (error) {
     console.error(`Pull request merge stopped: ${error.message}`);
     process.exitCode = 1;
