@@ -6,12 +6,6 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
-- diagnose local service connection failures ([#109](https://github.com/jayantrohila57/portcn/issues/109)) <!-- task:feat/connection-diagnostics -->
-
-- check service readiness with explicit local probes ([#114](https://github.com/jayantrohila57/portcn/issues/114)) <!-- task:feat/service-readiness-checks -->
-
-- detect local HTTP HTTPS endpoints and open service URLs ([#107](https://github.com/jayantrohila57/portcn/issues/107)) <!-- task:feat/local-endpoint-verification -->
-
 ### Changed
 
 ### Fixed
@@ -21,6 +15,18 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 ### Removed
 
 ### Security
+
+## [0.5.0] - 2026-11-25
+
+[0.5.0]: https://github.com/jayantrohila57/portcn/compare/v0.4.0...v0.5.0
+
+**Title:** Local service readiness and diagnostics
+
+### Added
+
+- diagnose local service connection failures ([#109](https://github.com/jayantrohila57/portcn/issues/109)) <!-- task:feat/connection-diagnostics -->
+- check service readiness with explicit local probes ([#114](https://github.com/jayantrohila57/portcn/issues/114)) <!-- task:feat/service-readiness-checks -->
+- detect local HTTP HTTPS endpoints and open service URLs ([#107](https://github.com/jayantrohila57/portcn/issues/107)) <!-- task:feat/local-endpoint-verification -->
 
 ## [0.4.0] - 2026-11-25
 
