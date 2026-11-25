@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { AgentAttribution } from '../src/commands/agent-attribution.js';
 import {
   diagnoseListeningPort,
   formatDiagnosis,
@@ -63,6 +64,18 @@ describe('port diagnose', () => {
           ancestors: [],
           evidence: ['Git reported the project root.'],
         }) satisfies ProjectContext,
+      inspectAgent: () =>
+        ({
+          status: 'unknown',
+          confidence: 'none',
+          agentName: null,
+          sessionId: null,
+          sourcePid: null,
+          source: null,
+          leftoverAssessment: 'unknown',
+          observedAt: '2026-11-25T00:00:00.000Z',
+          evidence: ['No opt-in agent session marker.'],
+        }) satisfies AgentAttribution,
       readNamespace: (namespace) => `${namespace}:[4026531840]`,
     });
 
@@ -82,6 +95,7 @@ describe('port diagnose', () => {
         projectRoot: '/workspace/service-322',
         worktree: false,
       },
+      agentAttribution: { status: 'unknown', confidence: 'none', leftoverAssessment: 'unknown' },
     });
     expect(result.namespace).toEqual({ network: 'net:[4026531840]', pid: 'pid:[4026531840]' });
   });

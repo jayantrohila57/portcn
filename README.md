@@ -6,7 +6,7 @@ An open-source, developer-first CLI for understanding local development services
 
 ## Development status
 
-Portcn `v0.3.0` is published. It provides read-only Linux commands to list listeners, inspect a port, and diagnose visible owners and namespace limits. The development branch adds versioned JSON output, point-in-time port checks and suggestions, and best-effort project/worktree evidence in diagnosis. Process termination is not implemented.
+Portcn `v0.3.0` is published. It provides read-only Linux commands to list listeners, inspect a port, and diagnose visible owners and namespace limits. The development branch adds versioned JSON output, point-in-time port checks and suggestions, best-effort project/worktree evidence, and opt-in agent session attribution in diagnosis. Process termination is not implemented.
 
 ## Implemented
 
@@ -17,6 +17,7 @@ Portcn `v0.3.0` is published. It provides read-only Linux commands to list liste
 - Read-only `portcn inspect <port>` on Linux: protocol, state, local address, PID, process name, and best-effort `/proc` details for all visible listeners on a validated port.
 - Read-only `portcn diagnose <port>` on Linux: visible listeners, owners, address families, and namespace/permission visibility limits. Missing listeners do not guarantee a later bind will succeed.
 - Development branch: diagnosis also reports bounded process ancestry and Git project/worktree evidence when visible; this is evidence, not proof of service ownership.
+- Optional development branch metadata: set `PORTCN_AGENT_SESSION_ID` and optionally `PORTCN_AGENT_NAME` to annotate a process tree; attribution is not identity verification and possible leftovers are not safe-to-stop decisions.
 - Development branch: `portcn check <port>` reports visible listener overlap for a TCP/UDP protocol and bind address; `portcn suggest` returns bounded candidate ports without observed conflicts. Neither command binds or reserves ports.
 - Human-readable list and inspect output uses bordered ASCII tables with colors in interactive terminals and plain text when piped.
 - Private `@portcn/core` package for future shared functionality.
