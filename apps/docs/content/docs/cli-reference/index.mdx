@@ -3,7 +3,24 @@ title: CLI reference
 description: Portcn port listing, inspection, conflict diagnosis, ownership evidence, output, and exit codes.
 ---
 
-The published ``v0.3.0`` Linux CLI provides read-only ``portcn list``, ``portcn inspect``, and ``portcn diagnose`` commands. The development branch adds ``check`` and ``suggest`` for point-in-time listener overlap checks and bounded port suggestions; these commands will ship in a later package release.
+The published ``v0.3.0`` Linux CLI provides read-only ``portcn list``, ``portcn inspect``, and ``portcn diagnose`` commands. The development branch adds ``check`` and ``suggest`` for point-in-time listener overlap checks, bounded port suggestions, and ``config`` for local user-authored saved service details; these commands will ship in a later package release.
+
+## ``portcn config``
+
+Save service identities using their protocol, bind address, and port. A service can have a favorite, alias, note, and memberships in multiple groups. The identity includes protocol and the exact bind address, so TCP/UDP and wildcard/specific binds remain distinct. Use `add`, `edit`, and `remove` for saved services, and `group` to manage group records.
+
+```sh
+portcn config add tcp 127.0.0.1 3000 --favorite --alias web --group local --group projects
+portcn config group add projects
+portcn config edit tcp://127.0.0.1:3000 --favorite false --note "development server"
+portcn config list
+portcn config list --json
+portcn config remove tcp://127.0.0.1:3000
+portcn config group remove local
+portcn config recover
+```
+
+The configuration is stored at ``$XDG_CONFIG_HOME/portcn/config.json`` or ``~/.config/portcn/config.json`` when ``XDG_CONFIG_HOME`` is unset. Portcn restricts the directory to owner access and the file to mode ``0600``. Writes use a same-directory temporary file and retain the preceding valid version as ``config.json.bak``. Config version 0 favorites migrate to version 1 when loaded. If the primary file is invalid, the CLI uses a valid backup with a warning; ``recover`` explicitly restores that backup. Invalid config without a valid backup is reported and left untouched. Saved status is ``online`` or ``offline`` only when listener discovery succeeds; it is ``unknown`` when discovery is unavailable. Process metadata and discovery results are never persisted.
 
 ```sh
 node apps/cli/dist/index.js --help

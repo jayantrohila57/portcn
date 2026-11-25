@@ -51,6 +51,8 @@ node apps/cli/dist/index.js check 3000            # read-only listener overlap c
 node apps/cli/dist/index.js suggest               # bounded port suggestions on dev
 node apps/cli/dist/index.js assess 1234 --project "$PWD" # read-only ownership evidence on dev
 node apps/cli/dist/index.js verify 127.0.0.1:3000 --project "$PWD" # local endpoint/project evidence on dev
+node apps/cli/dist/index.js config add tcp 127.0.0.1 3000 --favorite --alias web --group local # saved details on dev
+node apps/cli/dist/index.js config list --json # saved services and current status on dev
 ```
 
 Optional Docker Compose commands build and run the packaged CLI image. For example, `pnpm docker:cli -- --version` rebuilds the current artifact before running it. Unit tests and package checks run with the regular pnpm scripts.
