@@ -20,7 +20,13 @@ const listeners: ListeningPort[] = [
 function fixture(overrides: Partial<SystemdDependencies> = {}): SystemdDependencies {
   return {
     platform: 'linux',
-    run: (_scope: SystemdScope, args: string[]) => (args[0] === 'list-units' ? LIST : (SHOW[args.at(-1) ?? ''] ?? '')),
+    run: (_scope: SystemdScope, args: string[]) =>
+      args[0] === 'list-units'
+        ? LIST
+        : args
+            .slice(args.indexOf('--') + 1)
+            .map((unit) => `Id=${unit}\n${SHOW[unit] ?? ''}`)
+            .join('\n\n'),
     listeners: () => listeners,
     now: () => new Date('2026-11-25T12:00:00.000Z'),
     ...overrides,
@@ -58,7 +64,12 @@ describe('systemd unit discovery', () => {
       fixture({
         run: (scope, args) => {
           if (scope === 'user') throw new Error('Failed to connect to bus');
-          return args[0] === 'list-units' ? LIST : (SHOW[args.at(-1) ?? ''] ?? '');
+          return args[0] === 'list-units'
+            ? LIST
+            : args
+                .slice(args.indexOf('--') + 1)
+                .map((unit) => `Id=${unit}\n${SHOW[unit] ?? ''}`)
+                .join('\n\n');
         },
       }),
     );

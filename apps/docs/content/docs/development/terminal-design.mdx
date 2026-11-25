@@ -76,7 +76,7 @@ Measure strings in terminal cells, not JavaScript string length. Keep grapheme c
 
 | Key | Current dashboard behavior |
 | --- | --- |
-| `1`–`4`, `Tab` | Select a resource tab; `Tab` advances to the next tab |
+| `1`–`5`, `Tab` | Select a resource tab; `5` opens unified services on Linux and `Tab` advances to the next tab |
 | `/` | Enter search mode |
 | `j`/`k`, arrows | Move the selected row |
 | `Enter` | Finish search; selected details update immediately |
@@ -86,7 +86,7 @@ Measure strings in terminal cells, not JavaScript string length. Keep grapheme c
 | `:` then `r`/`a` | Open the command palette, refresh, or toggle auto-refresh |
 | `q`, `Ctrl+C` | Quit and restore terminal state |
 
-Do not capture navigation keys while the user is editing a query. Keep focus, selection, search text, and active tab as separate state. On filtering, sorting, refresh, or resize, clamp selection to the visible result set before rendering details. Escape closes the active transient interaction before the dashboard exits.
+Do not capture navigation keys while the user is editing a query. The Linux services tab combines native listeners, Docker, Podman, Nginx, and systemd records while preserving each provider’s identity, evidence, and status; unavailable providers remain represented in the view. Keep focus, selection, search text, and active tab as separate state. On filtering, sorting, refresh, or resize, clamp selection to the visible result set before rendering details. Escape closes the active transient interaction before the dashboard exits.
 
 ## Component contracts
 

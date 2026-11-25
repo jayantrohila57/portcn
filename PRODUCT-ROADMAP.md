@@ -71,13 +71,13 @@ Sequence work by these dependencies. The owner authorized the next service-disco
 
 ### Remaining issue states
 
-- **Pending (10):** #105, #106, #110, #112, #113, #115, #116, #144, and new Linux work #186–#187.
+- **Pending (9):** #105, #106, #110, #112, #113, #115, #116, #144, and new Linux work #186.
 - **Partially implemented (1):** #117. Local HTTP(S) requests already use strict TLS validation and report failures; certificate metadata and explicit certificate-state inspection are missing.
 - **Deferred (1):** #141 Windows support, until the Linux product is complete.
 - **Blocked (0):** No currently open issue is blocked on an external dependency. Process-management implementation remains gated on owner approval after the design is complete.
-- **Completed (31 of 43 tracked issues):** 19 previously completed issues were verified during reconciliation; #180–#185 deliver shared architecture, Podman inventory, safe reconciliation, rootlessport attribution, Nginx configuration, and systemd discovery on `dev`. Dashboard integration remains open in #186–#187.
+- **Completed (32 of 43 tracked issues):** 19 previously completed issues were verified during reconciliation; #180–#185 deliver shared architecture, Podman inventory, safe reconciliation, rootlessport attribution, Nginx configuration, and systemd discovery; #187 adds the unified Linux dashboard on `dev`. Service relationships remain open in #186.
 
-Verified issue-level roadmap completion is **26 of 37 Linux-first capability issues (70.3%)**. This counts #180's architecture deliverable plus #181–#185 merged implementations on `dev`; it does not imply a released unified runtime discovery feature. The denominator excludes documentation/release-process/runtime-compatibility research and deferred Windows issue #141; partial #117 is not complete.
+Verified issue-level roadmap completion is **27 of 37 Linux-first capability issues (73.0%)**. This counts #180's architecture deliverable plus #181–#185 and #187 merged implementations on `dev`; it does not imply a released unified runtime discovery feature. The denominator excludes documentation/release-process/runtime-compatibility research and deferred Windows issue #141; partial #117 is not complete.
 
 ## Release, docs, and development policy
 

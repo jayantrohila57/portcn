@@ -1,19 +1,111 @@
-import { fitTerminalText } from '../terminal.js';
+import { fitTerminalText, formatTable } from '../terminal.js';
 import type { ListeningPort } from './list.js';
 import { formatListeningPorts } from './list.js';
 import { inspectProjectContext, type ProjectContext, readProcessStartTime } from './project-context.js';
+import { type DashboardServiceRecord, searchDashboardServices, sortDashboardServices } from './service-dashboard.js';
 
 export const PORT_TABS = ['all', 'tcp', 'udp', 'process'] as const;
 export type PortTab = (typeof PORT_TABS)[number];
+export type DashboardTab = PortTab | 'services';
 
-export function tabForKey(key: string, current: PortTab = 'all'): PortTab | 'quit' | null {
+export function tabForKey(key: string, current: DashboardTab = 'all'): DashboardTab | 'quit' | null {
   if (key === 'q' || key === 'Q' || key === '\u001b') return 'quit';
   if (key === '1') return 'all';
   if (key === '2') return 'tcp';
   if (key === '3') return 'udp';
   if (key === '4') return 'process';
-  if (key === '\t') return PORT_TABS[(PORT_TABS.indexOf(current) + 1) % PORT_TABS.length] ?? 'all';
+  if (key === '5') return 'services';
+  if (key === '\t') {
+    const tabs: DashboardTab[] = [...PORT_TABS, 'services'];
+    return tabs[(tabs.indexOf(current) + 1) % tabs.length] ?? 'all';
+  }
   return null;
+}
+
+export function formatServiceDashboardView(
+  records: DashboardServiceRecord[],
+  page: number,
+  height: number,
+  query: string,
+  sort: PortSort,
+  selected: number,
+  palette: boolean,
+  width: number,
+): string {
+  const frameWidth = Math.max(40, width);
+  const framed = (text: string) => `| ${fitTerminalText(text, Math.max(0, frameWidth - 4))} |`;
+  const divider = `+${'-'.repeat(Math.max(1, frameWidth - 2))}+`;
+  const filtered = sortDashboardServices(searchDashboardServices(records, query), sort);
+  const compact = height <= 16;
+  const pageSize = dashboardPageSize(height, palette);
+  const pageCount = pageCountFor(filtered.length, pageSize);
+  const currentPage = Math.min(Math.max(page, 0), pageCount - 1);
+  const currentSelection = clampSelection(selected, filtered.length);
+  const visible = filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+  const rows = visible.map((record) => [
+    record.source.toUpperCase(),
+    record.status,
+    record.name,
+    record.endpoint,
+    record.owner,
+  ]);
+  const headers = ['SOURCE', 'STATUS', 'SERVICE', 'ENDPOINT', 'OWNER'];
+  const visibleColumns = frameWidth < 58 ? [0, 1, 2] : frameWidth < 78 ? [0, 1, 2, 3] : [0, 1, 2, 3, 4];
+  const minimumWidths = [6, 8, 10, 12, 8];
+  const caps = [10, 18, 28, 40, 18];
+  const naturalWidths = headers.map((header, index) =>
+    Math.min(
+      caps[index] ?? 12,
+      Math.max(
+        header.length,
+        ...filtered.map(
+          (record) =>
+            [record.source.toUpperCase(), record.status, record.name, record.endpoint, record.owner][index]?.length ??
+            0,
+        ),
+      ),
+    ),
+  );
+  const columnWidths = naturalWidths.map((value, index) => Math.max(minimumWidths[index] ?? 8, value));
+  const tableWidth = frameWidth - 4;
+  const separatorWidth = visibleColumns.length * 3 + 1;
+  let occupied = visibleColumns.reduce((sum, index) => sum + (columnWidths[index] ?? 0), 0) + separatorWidth;
+  for (const index of [3, 2, 1, 4, 0]) {
+    while (occupied > tableWidth && (columnWidths[index] ?? 0) > (minimumWidths[index] ?? 1)) {
+      columnWidths[index] -= 1;
+      occupied -= 1;
+    }
+  }
+  const table = formatTable(headers, rows, {
+    columnWidths,
+    selectedRow: currentSelection - currentPage * pageSize,
+    visibleColumns,
+  });
+  const active = filtered[currentSelection];
+  const detailLines = active
+    ? [
+        `Source/status: ${active.source} / ${active.status}`,
+        `Service: ${active.name}`,
+        `Endpoint: ${active.endpoint}`,
+        `Owner: ${active.owner} | Project/scope: ${active.project}`,
+        ...active.evidence.slice(0, 2).map((item) => `Evidence: ${item}`),
+      ]
+    : ['No service records are available.', 'Provider access may be missing or restricted.'];
+  const paletteLine = palette ? 'Command palette: [r] refresh  [a] auto-refresh  [q/Esc] close' : '';
+  return [
+    ...(compact ? [] : [divider]),
+    framed('PORTCN  DISCOVERED SERVICES'),
+    ...(compact ? [] : [divider]),
+    framed('Tabs: 1:ALL  2:TCP  3:UDP  4:WITH PROCESS  [5:SERVICES]'),
+    ...(compact ? [] : [divider]),
+    table,
+    ...(compact ? [] : [divider]),
+    ...detailLines.map(framed),
+    ...(compact ? [] : [divider]),
+    ...(paletteLine ? [framed(paletteLine), ...(compact ? [] : [divider])] : []),
+    framed(`Page ${currentPage + 1}/${pageCount} | ${filtered.length} services | / search | j/k move | q quit`),
+    ...(compact ? [] : [divider]),
+  ].join('\n');
 }
 
 export function filterPorts(ports: ListeningPort[], tab: PortTab): ListeningPort[] {
@@ -119,14 +211,21 @@ export function formatTabView(
   palette = false,
   terminalWidth = process.stdout.columns ?? 100,
   projectContext: ProjectContext | null = null,
+  servicesAvailable = false,
 ): string {
-  const labels: Record<PortTab, string> = { all: 'ALL', tcp: 'TCP', udp: 'UDP', process: 'WITH PROCESS' };
+  const labels: Record<DashboardTab, string> = {
+    all: 'ALL',
+    tcp: 'TCP',
+    udp: 'UDP',
+    process: 'WITH PROCESS',
+    services: 'SERVICES',
+  };
   const width = Math.max(40, terminalWidth);
   const divider = `+${'-'.repeat(Math.max(1, width - 2))}+`;
   const framed = (text: string) => `| ${fitTerminalText(text, Math.max(0, width - 4))} |`;
-  const tabs = PORT_TABS.map(
-    (name, index) => `${name === tab ? '[' : ' '} ${index + 1}:${labels[name]} ${name === tab ? ']' : ' '}`,
-  ).join('  ');
+  const tabs = [...PORT_TABS, ...(servicesAvailable ? (['services'] as const) : [])]
+    .map((name, index) => `${name === tab ? '[' : ' '} ${index + 1}:${labels[name]} ${name === tab ? ']' : ' '}`)
+    .join('  ');
   const filtered = sortPorts(searchPorts(filterPorts(ports, tab), query), sort);
   const compact = terminalHeight <= 16;
   const pageSize = dashboardPageSize(terminalHeight, palette);
@@ -213,14 +312,20 @@ export function stableColumnWidths(ports: ListeningPort[], terminalWidth = proce
   return widths;
 }
 
-export async function runTabbedList(ports: ListeningPort[], refresh?: () => ListeningPort[]): Promise<void> {
+export async function runTabbedList(
+  ports: ListeningPort[],
+  refresh?: () => ListeningPort[],
+  services: DashboardServiceRecord[] = [],
+  refreshServices?: () => DashboardServiceRecord[],
+): Promise<void> {
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     process.stdout.write(`${formatListeningPorts(ports)}\n`);
     return;
   }
 
   let currentPorts = ports;
-  let current: PortTab = 'all';
+  let current: DashboardTab = 'all';
+  let currentServices = services;
   let page = 0;
   let query = '';
   let sort: PortSort = 'port';
@@ -249,16 +354,55 @@ export async function runTabbedList(ports: ListeningPort[], refresh?: () => List
   };
   const render = () => {
     if (settled) return;
-    const filtered = sortPorts(searchPorts(filterPorts(currentPorts, current), query), sort);
+    const filtered =
+      current === 'services' ? [] : sortPorts(searchPorts(filterPorts(currentPorts, current), query), sort);
+    const filteredServices =
+      current === 'services' ? sortDashboardServices(searchDashboardServices(currentServices, query), sort) : [];
     const terminalHeight = process.stdout.rows ?? 24;
     const pageSize = dashboardPageSize(terminalHeight, palette);
-    selected = reconcileSelection(filtered, selectedIdentity, selectedIdentity ? 0 : selected);
-    selectedIdentity = filtered[selected] ? listenerIdentity(filtered[selected]) : null;
+    if (selectedIdentity) {
+      const found =
+        current === 'services'
+          ? filteredServices.findIndex((record) => record.identity === selectedIdentity)
+          : filtered.findIndex((port) => listenerIdentity(port) === selectedIdentity);
+      selected =
+        found >= 0 ? found : clampSelection(0, current === 'services' ? filteredServices.length : filtered.length);
+    } else selected = clampSelection(selected, current === 'services' ? filteredServices.length : filtered.length);
+    selectedIdentity =
+      current === 'services'
+        ? (filteredServices[selected]?.identity ?? null)
+        : filtered[selected]
+          ? listenerIdentity(filtered[selected])
+          : null;
     page = Math.floor(selected / pageSize);
-    const selectedService = filtered[selected] ?? null;
-    process.stdout.write(
-      `\u001b[2J\u001b[3J\u001b[H\u001b[?25l${formatTabView(currentPorts, current, page, terminalHeight, query, sort, selected, selectedService, palette, process.stdout.columns ?? 100, contextFor(selectedService))}\n`,
-    );
+    const selectedService = current === 'services' ? null : (filtered[selected] ?? null);
+    const view =
+      current === 'services'
+        ? formatServiceDashboardView(
+            currentServices,
+            page,
+            terminalHeight,
+            query,
+            sort,
+            selected,
+            palette,
+            process.stdout.columns ?? 100,
+          )
+        : formatTabView(
+            currentPorts,
+            current,
+            page,
+            terminalHeight,
+            query,
+            sort,
+            selected,
+            selectedService,
+            palette,
+            process.stdout.columns ?? 100,
+            contextFor(selectedService),
+            currentServices.length > 0,
+          );
+    process.stdout.write(`\u001b[2J\u001b[3J\u001b[H\u001b[?25l${view}\n`);
   };
   const onResize = () => {
     try {
@@ -324,6 +468,11 @@ export async function runTabbedList(ports: ListeningPort[], refresh?: () => List
           } catch {
             // Keep the last good listener snapshot and its selected context.
           }
+          try {
+            if (refreshServices) currentServices = refreshServices();
+          } catch {
+            /* keep last good service snapshot */
+          }
           palette = false;
         }
         if (action === 'auto-refresh' && refresh) {
@@ -335,6 +484,11 @@ export async function runTabbedList(ports: ListeningPort[], refresh?: () => List
                 projectCache = null;
               } catch {
                 return;
+              }
+              try {
+                if (refreshServices) currentServices = refreshServices();
+              } catch {
+                /* keep last good service snapshot */
               }
               try {
                 render();
@@ -380,12 +534,21 @@ export async function runTabbedList(ports: ListeningPort[], refresh?: () => List
         render();
         return;
       }
-      const filtered = sortPorts(searchPorts(filterPorts(currentPorts, current), query), sort);
-      selected = clampSelection(selected, filtered.length);
-      const nextSelection = selectionForKey(key, selected, filtered.length);
+      const filtered =
+        current === 'services' ? [] : sortPorts(searchPorts(filterPorts(currentPorts, current), query), sort);
+      const filteredServices =
+        current === 'services' ? sortDashboardServices(searchDashboardServices(currentServices, query), sort) : [];
+      const activeLength = current === 'services' ? filteredServices.length : filtered.length;
+      selected = clampSelection(selected, activeLength);
+      const nextSelection = selectionForKey(key, selected, activeLength);
       if (nextSelection !== selected || key === 'j' || key === 'k' || key === '\u001b[A' || key === '\u001b[B') {
         selected = nextSelection;
-        selectedIdentity = filtered[selected] ? listenerIdentity(filtered[selected]) : null;
+        selectedIdentity =
+          current === 'services'
+            ? (filteredServices[selected]?.identity ?? null)
+            : filtered[selected]
+              ? listenerIdentity(filtered[selected])
+              : null;
         page = Math.floor(selected / dashboardPageSize(process.stdout.rows ?? 24, palette));
         render();
         return;
@@ -393,6 +556,8 @@ export async function runTabbedList(ports: ListeningPort[], refresh?: () => List
       const next = tabForKey(key, current);
       if (next === 'quit') {
         finish();
+      } else if (next === 'services' && currentServices.length === 0) {
+        return;
       } else if (next) {
         current = next;
         page = 0;
@@ -401,10 +566,15 @@ export async function runTabbedList(ports: ListeningPort[], refresh?: () => List
         const pageAction = pageForKey(key);
         if (pageAction) {
           const pageSize = dashboardPageSize(process.stdout.rows ?? 24, palette);
-          const pageCount = pageCountFor(filtered.length, pageSize);
+          const pageCount = pageCountFor(activeLength, pageSize);
           page = pageAction === 'next' ? (page + 1) % pageCount : (page - 1 + pageCount) % pageCount;
-          selected = Math.min(page * pageSize, Math.max(0, filtered.length - 1));
-          selectedIdentity = filtered[selected] ? listenerIdentity(filtered[selected]) : null;
+          selected = Math.min(page * pageSize, Math.max(0, activeLength - 1));
+          selectedIdentity =
+            current === 'services'
+              ? (filteredServices[selected]?.identity ?? null)
+              : filtered[selected]
+                ? listenerIdentity(filtered[selected])
+                : null;
           render();
         }
       }

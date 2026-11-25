@@ -72,7 +72,7 @@ function parseListUnits(
   });
 }
 
-function parseShow(output: string): { mainPid: number | null; listen: string[] } {
+function parseShow(output: string): { id: string | null; mainPid: number | null; listen: string[] } {
   const props = new Map<string, string[]>();
   for (const line of output.split(/\r?\n/)) {
     const index = line.indexOf('=');
@@ -84,7 +84,20 @@ function parseShow(output: string): { mainPid: number | null; listen: string[] }
   }
   const rawPid = props.get('MainPID')?.[0] ?? '';
   const pid = /^\d+$/.test(rawPid) ? Number(rawPid) : 0;
-  return { mainPid: pid > 0 && Number.isSafeInteger(pid) ? pid : null, listen: props.get('Listen') ?? [] };
+  return {
+    id: props.get('Id')?.[0] ?? null,
+    mainPid: pid > 0 && Number.isSafeInteger(pid) ? pid : null,
+    listen: props.get('Listen') ?? [],
+  };
+}
+
+function parseShows(output: string): Map<string, ReturnType<typeof parseShow>> {
+  return new Map(
+    output.split(/\n\s*\n/).flatMap((block) => {
+      const parsed = parseShow(block);
+      return parsed.id ? [[parsed.id, parsed] as const] : [];
+    }),
+  );
 }
 
 function parseListen(value: string): { address: string | null; port: number | null } {
@@ -146,11 +159,28 @@ export function discoverSystemdInventory(dependencies: SystemdDependencies = {})
       managers[scope] = { status };
       continue;
     }
+    let details = new Map<string, ReturnType<typeof parseShow>>();
+    try {
+      const unitNames = parsed.map(({ name }) => name);
+      if (unitNames.length)
+        details = parseShows(
+          run(scope, [
+            'show',
+            '--no-pager',
+            '--property=Id',
+            '--property=MainPID',
+            '--property=Listen',
+            '--',
+            ...unitNames,
+          ]),
+        );
+    } catch {
+      partialResult = true;
+    }
     for (const unit of parsed) {
       try {
-        const detail = parseShow(
-          run(scope, ['show', '--no-pager', '--property=MainPID', '--property=Listen', unit.name]),
-        );
+        const detail = details.get(unit.name);
+        if (!detail) throw new Error('systemctl omitted this unit detail');
         const processListenerPorts =
           detail.mainPid && listeners
             ? listeners
