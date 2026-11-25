@@ -10,6 +10,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Fixed
 
+- clarify diagnose platform support <!-- task:docs/linux-first-reconciliation -->
+
 ### Deprecated
 
 ### Removed
