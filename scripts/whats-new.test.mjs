@@ -8,15 +8,20 @@ const { parseChangelog } = require('./changelog-policy.cjs');
 const source = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8');
 const page = readFileSync(new URL('../apps/docs/app/whats-new/page.tsx', import.meta.url), 'utf8');
 
-test("What's New renders only dated published releases from CHANGELOG.md", () => {
+test("What's New renders dated release sections from CHANGELOG.md and omits Unreleased", () => {
   const { releases } = parseChangelog(source);
   assert.deepEqual(
     releases.map(({ version }) => version),
-    ['0.1.1', '0.1.0', '0.0.1'],
+    ['0.2.0', '0.1.1', '0.1.0', '0.0.1'],
   );
   assert.deepEqual(
     releases.map(({ title }) => title),
-    ['More reliable package publishing', 'Port discovery and an interactive dashboard', 'Portcn CLI foundation'],
+    [
+      'A steadier terminal dashboard',
+      'More reliable package publishing',
+      'Port discovery and an interactive dashboard',
+      'Portcn CLI foundation',
+    ],
   );
   assert.equal(
     releases.find(({ version }) => version === '0.1.0')?.demo,

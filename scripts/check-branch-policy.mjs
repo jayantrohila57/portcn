@@ -122,6 +122,34 @@ const cases = [
     true,
   ],
   [
+    'valid Release Please PR with reviewed release notes commit',
+    {
+      eventName: 'pull_request',
+      pullRequest: pr({
+        base: 'main',
+        head: 'release-please--branches--main--components--portcn',
+        title: 'chore(main): release 0.0.2',
+        actor: bot,
+      }),
+      commits: [...commit('chore(main): release 0.0.2'), ...commit('docs(release): review canonical release notes')],
+    },
+    true,
+  ],
+  [
+    'reject non Conventional release review commit',
+    {
+      eventName: 'pull_request',
+      pullRequest: pr({
+        base: 'main',
+        head: 'release-please--branches--main--components--portcn',
+        title: 'chore(main): release 0.0.2',
+        actor: bot,
+      }),
+      commits: [...commit('chore(main): release 0.0.2'), ...commit('Update release notes')],
+    },
+    false,
+  ],
+  [
     'reject wrong release bot identity',
     {
       eventName: 'pull_request',
