@@ -13,6 +13,8 @@ The ``config`` commands store user-authored service identities, favorites, alias
 
 ``readiness check`` is also opt-in and targets only a currently observed local TCP service. Without a saved URL it performs bounded TCP connection attempts and reports reachability, not application health. A saved URL is validated as local HTTP(S) and matching the service port; readiness sends bounded HTTP HEAD requests, does not follow redirects, and keeps default TLS checks. Timeouts, retries, and intervals have hard limits; Ctrl-C and SIGTERM cancel the work. A listener snapshot alone is never reported as ready. The command does not run arbitrary shell checks, contact external hosts, restart services, or change system state.
 
+``connection check`` diagnoses one selected local service from the CLI process's current network namespace. Resolution remains limited to the service's local name or address; TCP connects use a bounded timeout, and an HTTP request is sent only when an explicit, validated local URL is saved. Redirects are not followed and TLS certificate checks stay enabled. Docker data comes from the selected Docker CLI context and reports port mapping configuration only; it is not a test from inside a container or proof of reachability, especially for remote contexts. The command does not scan external hosts, inspect firewall rules, execute commands in containers, or change system state.
+
 <Callout title="Report privately" type="warn">
 Include a clear impact and reproduction steps in a private report. Do not include credentials, tokens, or unrelated personal data.
 </Callout>
