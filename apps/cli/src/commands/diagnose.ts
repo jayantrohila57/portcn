@@ -2,6 +2,7 @@ import { readlinkSync } from 'node:fs';
 import { isIP } from 'node:net';
 import type { Command } from 'commander';
 import { formatEmpty, formatTable } from '../terminal.js';
+import { type AgentAttribution, inspectAgentAttribution } from './agent-attribution.js';
 import { InvalidPortError, inspectProcessDetails, type ProcessDetailStatus, parsePort } from './inspect.js';
 import { JSON_SCHEMA_VERSION, jsonSchemaIsSupported, UnsupportedJsonVersionError, versionedJsonError } from './json.js';
 import { discoverListeningPorts, type ListeningOwner, type ListeningPort } from './list.js';
@@ -16,6 +17,7 @@ export interface DiagnosedOwner {
   user: string | null;
   detailsStatus: ProcessDetailStatus;
   projectContext: ProjectContext;
+  agentAttribution: AgentAttribution;
 }
 
 export interface DiagnosedListener {
@@ -42,6 +44,7 @@ export interface DiagnosisOptions {
   discover?: () => ListeningPort[];
   inspectProcess?: (pid: number) => ReturnType<typeof inspectProcessDetails>;
   inspectProject?: (pid: number) => ProjectContext;
+  inspectAgent?: (pid: number, ancestors: ProjectContext['ancestors']) => AgentAttribution;
   readNamespace?: (namespace: 'net' | 'pid') => string | null;
 }
 
@@ -90,6 +93,7 @@ export function diagnoseListeningPort(port: number, options: DiagnosisOptions = 
   const discover = options.discover ?? (() => discoverListeningPorts());
   const inspectProcess = options.inspectProcess ?? inspectProcessDetails;
   const inspectProject = options.inspectProject ?? inspectProjectContext;
+  const inspectAgent = options.inspectAgent ?? inspectAgentAttribution;
   const readNamespace = options.readNamespace ?? readCurrentNamespace;
   const namespace = { network: readNamespace('net'), pid: readNamespace('pid') };
   const visiblePorts = discover()
@@ -109,12 +113,14 @@ export function diagnoseListeningPort(port: number, options: DiagnosisOptions = 
     addressFamily: familyForAddress(listener.address),
     owners: ownersFor(listener).map((owner) => {
       const details = inspectProcess(owner.pid);
+      const projectContext = inspectProject(owner.pid);
       return {
         ...owner,
         command: details.details?.command ?? null,
         user: details.details?.user ?? null,
         detailsStatus: details.status,
-        projectContext: inspectProject(owner.pid),
+        projectContext,
+        agentAttribution: inspectAgent(owner.pid, projectContext.ancestors),
       };
     }),
   }));
@@ -168,6 +174,7 @@ export function formatDiagnosis(diagnosis: PortDiagnosis): string {
       owner?.detailsStatus ?? 'owner hidden',
       owner?.projectContext.projectRoot ?? 'unknown project',
       owner?.projectContext.status ?? 'unknown',
+      owner?.agentAttribution.agentName ?? owner?.agentAttribution.status ?? 'unknown agent',
     ]);
   });
   const lines = [`Port diagnosis: ${diagnosis.port}`, ...diagnosis.messages];
@@ -186,10 +193,11 @@ export function formatDiagnosis(diagnosis: PortDiagnosis): string {
           'DETAILS',
           'PROJECT',
           'PROJECT STATUS',
+          'AGENT',
         ],
         rows,
         {
-          columnWidths: [6, 8, 7, 24, 8, 16, 32, 12, 17, 30, 12],
+          columnWidths: [6, 8, 7, 24, 8, 16, 32, 12, 17, 30, 12, 16],
           columnColors: { 0: '\u001b[36m', 1: '\u001b[32m' },
         },
       ),
