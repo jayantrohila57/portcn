@@ -6,29 +6,25 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
-- modernize release management and changelog ([#119](https://github.com/jayantrohila57/portcn/issues/119)) <!-- task:feat/release-management-changelog-whats-new -->
-
 ### Changed
 
 ### Fixed
-
-- restore terminal state on interrupt ([#94](https://github.com/jayantrohila57/portcn/issues/94)) <!-- task:fix/tui-terminal-cleanup -->
-
-- stabilize dashboard navigation and terminal lifecycle ([#94](https://github.com/jayantrohila57/portcn/issues/94)) <!-- task:fix/tui-dashboard-stability -->
-
-- set deployment-aware metadata ([#119](https://github.com/jayantrohila57/portcn/issues/119)) <!-- task:fix/docs-vercel-deployment-readiness -->
-
-- skip unsupported MDX in staged Biome checks <!-- task:fix/biome-mdx-staged-checks -->
-
-- allow documentation-only task PRs <!-- task:fix/docs-only-lifecycle -->
-
-- exclude tooling from release eligibility ([#119](https://github.com/jayantrohila57/portcn/issues/119)) <!-- task:fix/accurate-release-eligibility -->
 
 ### Deprecated
 
 ### Removed
 
 ### Security
+
+## [0.2.0] - 2026-11-25
+
+[0.2.0]: https://github.com/jayantrohila57/portcn/compare/v0.1.1...v0.2.0
+
+**Title:** A steadier terminal dashboard
+
+### Fixed
+
+- Keep dashboard selection and pagination aligned after filtering or tab changes, and restore the terminal and cursor on quit, Ctrl+C, or rendering failures ([#94](https://github.com/jayantrohila57/portcn/issues/94)).
 
 ## [0.1.1] - 2026-11-24
 
