@@ -63,6 +63,8 @@ describe('Docker container inventory', () => {
           {
             address: '127.0.0.1',
             port: 5353,
+            exposure: 'published',
+            bindingState: 'active',
             listenerStatus: 'observed',
             listeners: [{ address: '127.0.0.1', pid: null, processName: null }],
           },
@@ -76,12 +78,16 @@ describe('Docker container inventory', () => {
           {
             address: '0.0.0.0',
             port: 8080,
+            exposure: 'published',
+            bindingState: 'active',
             listenerStatus: 'observed',
             listeners: [{ address: '127.0.0.1', pid: 10, processName: 'node' }],
           },
           {
             address: '::',
             port: 8080,
+            exposure: 'published',
+            bindingState: 'active',
             listenerStatus: 'observed',
             listeners: [{ address: '[::1]', pid: 11, processName: 'node' }],
           },
@@ -92,7 +98,16 @@ describe('Docker container inventory', () => {
         containerPort: 8443,
         protocol: 'tcp',
         exposure: 'direct',
-        hostBindings: [{ address: '::', port: null, listenerStatus: 'unknown', listeners: [] }],
+        hostBindings: [
+          {
+            address: '::',
+            port: null,
+            exposure: 'direct',
+            bindingState: 'active',
+            listenerStatus: 'unknown',
+            listeners: [],
+          },
+        ],
       },
     ]);
     expect(JSON.stringify(containers)).not.toContain('must-not-be-returned');
@@ -103,6 +118,22 @@ describe('Docker container inventory', () => {
     expect(containers.find(({ name }) => name === 'stopped-worker')).toMatchObject({
       state: 'exited',
       health: 'not-configured',
+      ports: [
+        {
+          containerPort: 9000,
+          protocol: 'tcp',
+          exposure: 'configured',
+          hostBindings: [
+            {
+              address: '0.0.0.0',
+              port: 9001,
+              exposure: 'published',
+              bindingState: 'configured',
+              listenerStatus: 'unknown',
+            },
+          ],
+        },
+      ],
     });
     expect(containers.find(({ name }) => name === 'host-service')).toMatchObject({
       hostNetwork: true,
@@ -191,5 +222,17 @@ describe('Docker container inventory', () => {
     expect(output).toContain('[::] (direct route; no host port) -> 8443/tcp');
     expect(output).toContain('do not prove reachability');
     expect(output).not.toContain('docker-proxy pid');
+  });
+
+  it('labels retained stopped-container mappings as configured and inactive', () => {
+    const containers = parseDockerInspect(FIXTURE, LISTENERS);
+    const output = formatDockerInventory({
+      schemaVersion: 1,
+      availability: 'available',
+      containers,
+      hostListenerDiscovery: 'available',
+      limitations: [],
+    });
+    expect(output).toContain('0.0.0.0:9001 -> 9000/tcp (configured; not active)');
   });
 });

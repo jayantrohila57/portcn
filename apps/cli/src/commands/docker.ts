@@ -19,10 +19,12 @@ export interface DockerHostListener {
 export interface DockerPort {
   containerPort: number;
   protocol: 'tcp' | 'udp' | 'sctp';
-  exposure: 'exposed' | 'published' | 'direct';
+  exposure: 'exposed' | 'published' | 'direct' | 'configured';
   hostBindings: Array<{
     address: string;
     port: number | null;
+    exposure: 'published' | 'direct' | 'configured';
+    bindingState: 'active' | 'configured';
     listenerStatus: 'observed' | 'not-observed' | 'unknown';
     listeners: DockerHostListener[];
   }>;
@@ -61,8 +63,11 @@ interface InspectContainer {
   Id?: string;
   Name?: string;
   Config?: { Image?: string; Labels?: Record<string, string> | null; ExposedPorts?: Record<string, unknown> | null };
-  State?: { Status?: string; Health?: { Status?: string } | null };
-  HostConfig?: { NetworkMode?: string };
+  State?: { Status?: string; Running?: boolean; Health?: { Status?: string } | null };
+  HostConfig?: {
+    NetworkMode?: string;
+    PortBindings?: Record<string, InspectPortBinding[] | null> | null;
+  };
   NetworkSettings?: {
     Ports?: Record<string, InspectPortBinding[] | null> | null;
     Networks?: Record<string, { IPAddress?: string; GlobalIPv6Address?: string } | null> | null;
@@ -110,12 +115,17 @@ function listenerMatchesBinding(binding: string, listener: string): boolean {
 function mapPorts(inspect: InspectContainer, listeners: ListeningPort[] | null): DockerPort[] {
   const configured = inspect.Config?.ExposedPorts ?? {};
   const runtime = inspect.NetworkSettings?.Ports ?? {};
+  const declaredBindings = inspect.HostConfig?.PortBindings ?? {};
+  const isRunning = inspect.State?.Running ?? inspect.State?.Status === 'running';
   const keys = new Set([...Object.keys(configured), ...Object.keys(runtime)]);
+  for (const key of Object.keys(declaredBindings)) keys.add(key);
   const ports: DockerPort[] = [];
   for (const key of keys) {
     const parsed = parsePortKey(key);
     if (!parsed) continue;
-    const bindings = runtime[key] ?? [];
+    const runtimeBindings = runtime[key] ?? [];
+    const declared = declaredBindings[key] ?? [];
+    const bindings = runtimeBindings.length ? runtimeBindings : declared;
     if (!bindings.length) {
       ports.push({ containerPort: parsed.port, protocol: parsed.protocol, exposure: 'exposed', hostBindings: [] });
       continue;
@@ -123,10 +133,19 @@ function mapPorts(inspect: InspectContainer, listeners: ListeningPort[] | null):
     const hostBindings = bindings.map((binding) => {
       const address = binding.HostIp ?? '';
       const rawPort = binding.HostPort ?? '';
+      const isRuntimeBinding = runtimeBindings.length > 0;
       const hostPort =
         /^\d+$/.test(rawPort) && Number(rawPort) >= 1 && Number(rawPort) <= 65535 ? Number(rawPort) : null;
+      const exposure: DockerPort['hostBindings'][number]['exposure'] =
+        hostPort !== null
+          ? 'published'
+          : isRuntimeBinding && rawPort === '' && address !== ''
+            ? 'direct'
+            : 'configured';
+      const bindingState: DockerPort['hostBindings'][number]['bindingState'] =
+        isRuntimeBinding && isRunning && exposure !== 'configured' ? 'active' : 'configured';
       const matches =
-        listeners && hostPort !== null && parsed.protocol !== 'sctp'
+        listeners && hostPort !== null && parsed.protocol !== 'sctp' && bindingState === 'active'
           ? listeners.filter(
               (listener) =>
                 listener.protocol === parsed.protocol &&
@@ -135,7 +154,7 @@ function mapPorts(inspect: InspectContainer, listeners: ListeningPort[] | null):
             )
           : [];
       const listenerStatus: DockerPort['hostBindings'][number]['listenerStatus'] =
-        listeners === null || parsed.protocol === 'sctp' || hostPort === null
+        listeners === null || parsed.protocol === 'sctp' || hostPort === null || bindingState !== 'active'
           ? 'unknown'
           : matches.length
             ? 'observed'
@@ -143,6 +162,8 @@ function mapPorts(inspect: InspectContainer, listeners: ListeningPort[] | null):
       return {
         address,
         port: hostPort,
+        exposure,
+        bindingState,
         listenerStatus,
         listeners: matches.map(({ address: listenerAddress, pid, processName }) => ({
           address: listenerAddress,
@@ -154,11 +175,13 @@ function mapPorts(inspect: InspectContainer, listeners: ListeningPort[] | null):
     ports.push({
       containerPort: parsed.port,
       protocol: parsed.protocol,
-      exposure: hostBindings.some(({ port }) => port !== null)
+      exposure: hostBindings.some(({ exposure, bindingState }) => exposure === 'published' && bindingState === 'active')
         ? 'published'
-        : hostBindings.some(({ address }) => address !== '')
+        : hostBindings.some(({ exposure, bindingState }) => exposure === 'direct' && bindingState === 'active')
           ? 'direct'
-          : 'exposed',
+          : hostBindings.length
+            ? 'configured'
+            : 'exposed',
       hostBindings,
     });
   }
@@ -308,14 +331,16 @@ export function formatDockerInventory(result: DockerInventory): string {
       const target = `${port.containerPort}/${port.protocol}`;
       if (!port.hostBindings.length) return [`${target} (exposed)`];
       return port.hostBindings.map((binding) => {
-        if (binding.port === null)
-          return binding.address
-            ? `${displayAddress(binding.address)} (direct route; no host port) -> ${target}`
-            : `${target} (exposed)`;
+        const bindingState = binding.bindingState === 'configured' ? ' (configured; not active)' : '';
+        if (binding.exposure === 'configured')
+          return `${binding.address ? `${displayAddress(binding.address)}:` : ''}${binding.port ?? 'dynamic'} (configured) -> ${target}`;
+        if (binding.exposure === 'direct')
+          return `${displayAddress(binding.address)} (direct route; no host port)${bindingState} -> ${target}`;
+        if (binding.port === null) return `${target} (exposed)`;
         const listeners = binding.listeners.length
           ? `; listener ${binding.listeners.map((listener) => `${listener.address}${listener.pid ? ` pid=${listener.pid}` : ''}`).join(', ')}`
           : '';
-        return `${binding.address ? displayAddress(binding.address) : '*'}:${binding.port} -> ${target}${listeners}`;
+        return `${binding.address ? displayAddress(binding.address) : '*'}:${binding.port} -> ${target}${bindingState}${listeners}`;
       });
     });
     return [

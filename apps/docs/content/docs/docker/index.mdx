@@ -7,7 +7,7 @@ Docker support includes an optional packaging workflow and a development-branch 
 
 ## Inspect local containers
 
-The development command ``portcn docker`` lists running and stopped containers from the Docker CLI's selected daemon context. It reports Compose project/service labels, configured health, network addresses, exposed ports, published host bindings, and any matching host listeners visible in Portcn's current namespace.
+The development command ``portcn docker`` lists running and stopped containers from the Docker CLI's selected daemon context. It reports Compose project/service labels, configured health, network addresses, exposed ports, published host bindings, and any matching host listeners visible in Portcn's current namespace. A stopped container's saved port configuration is labeled configured rather than active.
 
 ```sh
 portcn docker
@@ -15,6 +15,17 @@ portcn docker --json
 ```
 
 This is a read-only Docker CLI query. Missing Docker, denied daemon access, and an unavailable daemon are reported separately. Port mappings describe Docker configuration; matching listeners are observations and do not prove reachability. Listener observations come from Portcn's current network namespace and may not describe a remote Docker daemon host. IPv6 routed-mode mappings without a host port are reported as direct routes. Host-network containers share the host network stack and are not attributed from exposed-port metadata alone.
+
+## Classify potential exposure
+
+Use ``portcn exposure`` to combine visible host listeners with Docker mapping metadata and classify loopback, interface-specific, wildcard, direct-routed, and container-only scopes:
+
+```sh
+portcn exposure
+portcn exposure --json
+```
+
+The command does not inspect firewalls or test remote reachability. Wildcard scope is not a claim that a service is publicly reachable. Docker's [port publishing reference](https://docs.docker.com/engine/network/port-publishing/) notes that localhost-published ports may be reachable by same-layer-2 peers with Engine versions before 28.0.0; Portcn does not inspect that version.
 
 ## Build the CLI image
 

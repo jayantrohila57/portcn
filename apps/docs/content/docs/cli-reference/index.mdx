@@ -3,7 +3,7 @@ title: CLI reference
 description: Portcn port listing, inspection, conflict diagnosis, ownership evidence, output, and exit codes.
 ---
 
-The published ``v0.3.0`` Linux CLI provides read-only ``portcn list``, ``portcn inspect``, and ``portcn diagnose`` commands. The development branch adds ``check`` and ``suggest`` for point-in-time listener overlap checks, bounded port suggestions, ``config`` for local user-authored saved service details, and ``docker`` for read-only container and published-port inventory; these commands will ship in a later package release.
+The published ``v0.3.0`` Linux CLI provides read-only ``portcn list``, ``portcn inspect``, and ``portcn diagnose`` commands. The development branch adds ``check`` and ``suggest`` for point-in-time listener overlap checks, bounded port suggestions, ``config`` for local user-authored saved service details, ``docker`` for read-only container and published-port inventory, and ``exposure`` for bind-scope classification; these commands will ship in a later package release.
 
 ## ``portcn config``
 
@@ -24,7 +24,7 @@ The configuration is stored at ``$XDG_CONFIG_HOME/portcn/config.json`` or ``~/.c
 
 ## ``portcn docker``
 
-Read a snapshot of all containers in the Docker CLI's selected daemon context, including stopped containers. Portcn lists container IDs and inspects them without changing container state. The output includes state, configured health, Compose project/service labels, network addresses, exposed ports, and published host bindings.
+Read a snapshot of all containers in the Docker CLI's selected daemon context, including stopped containers. Portcn lists container IDs and inspects them without changing container state. The output includes state, configured health, Compose project/service labels, network addresses, exposed ports, and published host bindings. Stopped containers can retain mapping configuration; Portcn labels those entries as configured and does not treat them as active host bindings.
 
 ```sh
 portcn docker
@@ -32,6 +32,19 @@ portcn docker --json
 ```
 
 Ports marked ``exposed`` are container metadata and are not necessarily published or listening. Published bindings retain every host address and port, including separate IPv4 and IPv6 mappings. IPv6 routed-mode entries with no host port are marked ``direct``. Portcn compares published host bindings with visible local TCP/UDP listeners by protocol, port, and bind address; this is a point-in-time observation, not proof of reachability or ownership by a Docker proxy process. When the Docker context is remote, listener observations still come from Portcn's current network namespace and may not describe the daemon host. Host-network containers share the host network stack, so Portcn does not attribute listeners to them from declared exposed ports alone. Docker CLI absence, daemon unavailability, and permission denial have distinct statuses and return code 1; ``--json`` emits a version 1 result with a stable error code.
+
+## ``portcn exposure``
+
+Classify each visible host listener and Docker port record by address family and bind scope. Loopback, interface-specific, wildcard, direct-routed, and container-only records remain distinct. A wildcard address means the socket or mapping uses all addresses in that family; it does not establish internet reachability. Portcn does not inspect firewalls, routers, external routes, or public reachability.
+
+```sh
+portcn exposure
+portcn exposure --json
+```
+
+The version 1 JSON report includes an observation timestamp, listener and Docker availability, findings, and limitations. Docker findings use the currently selected Docker CLI context; listener observations come from Portcn's current network namespace and may refer to a different host for remote contexts. Docker daemon permission or availability failures do not hide successfully discovered host listeners. The command returns code 1 only when both listener discovery and Docker inventory are unavailable.
+
+Docker documents a same-layer-2 reachability caveat for localhost-published ports with Engine versions earlier than 28.0.0. Portcn does not inspect the daemon version; see Docker's [port publishing and mapping reference](https://docs.docker.com/engine/network/port-publishing/).
 
 ```sh
 node apps/cli/dist/index.js --help
