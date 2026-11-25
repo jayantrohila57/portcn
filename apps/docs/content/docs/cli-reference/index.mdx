@@ -3,7 +3,7 @@ title: CLI reference
 description: Portcn port listing, inspection, conflict diagnosis, ownership evidence, output, and exit codes.
 ---
 
-The published ``v0.5.0`` Linux CLI includes read-only listener and process diagnostics, versioned JSON, project evidence, saved services, Docker inventory, and bind-scope reports. The development branch adds the stdio MCP server described below; it will be available in a later package release.
+The published ``v0.5.0`` Linux CLI declares Node.js 24 or newer. The development CLI package lowers its runtime engine floor to Node.js 22 after packaged runtime validation; the Node 24 build target and workspace requirement remain unchanged. This metadata update will be available in a later package release. The development branch also adds the stdio MCP server described below.
 
 Registered top-level commands include `list`, `inspect`, `diagnose`, `assess`, `verify`, `check`, `suggest`, `config`, `endpoint`, `open`, `readiness`, `connection`, `docker`, `exposure`, and `mcp`. Configuration subcommands include `add`, `edit`, `remove`, `group`, and `recover`.
 

@@ -91,6 +91,72 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm package:check
+      - name: Pack CLI for Node 22 runtime validation
+        run: mkdir -p "$RUNNER_TEMP/portcn-package" && npm pack --pack-destination "$RUNNER_TEMP/portcn-package"
+        working-directory: apps/cli
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portcn-package
+          path: ${{ runner.temp }}/portcn-package/*.tgz
+          if-no-files-found: error
       - run: pnpm boundaries:check
       - run: pnpm release:check
       - run: pnpm docs:check
+
+  node22-runtime:
+    name: Node 22 packaged runtime
+    needs: validate
+    runs-on: ubuntu-latest
+    env:
+      HUSKY: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: portcn-package
+          path: ${{ runner.temp }}/portcn-package
+      - name: Install and exercise the packed CLI under Node 22
+        run: |
+          package_file="$(find "$RUNNER_TEMP/portcn-package" -name 'portcn-*.tgz' -print -quit)"
+          test -n "$package_file"
+          install_dir="$RUNNER_TEMP/portcn-node22"
+          client_version="$(node -p "require('./apps/cli/package.json').devDependencies['@modelcontextprotocol/client']")"
+          package_version="$(node -p "require('./apps/cli/package.json').version")"
+          npm install --prefix "$install_dir" --engine-strict --no-audit --no-fund --omit=dev "$package_file" "@modelcontextprotocol/client@${client_version}"
+          executable="$install_dir/node_modules/portcn/dist/index.js"
+          test "$(node "$executable" --version)" = "$package_version"
+          node "$executable" --help | grep -q 'Usage: portcn'
+          cd "$install_dir"
+          PORTCN_EXECUTABLE="$executable" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { Client } from '@modelcontextprotocol/client';
+          import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+
+          const transport = new StdioClientTransport({
+            command: process.execPath,
+            args: [process.env.PORTCN_EXECUTABLE, 'mcp'],
+            cwd: process.cwd(),
+          });
+          const client = new Client({ name: 'node22-runtime-check', version: '1.0.0' });
+          try {
+            await client.connect(transport);
+            const { tools } = await client.listTools();
+            assert.deepEqual(tools.map(({ name }) => name).sort(), [
+              'check_port_availability',
+              'diagnose_port',
+              'list_listeners',
+              'suggest_ports',
+            ]);
+            const result = await client.callTool({
+              name: 'suggest_ports',
+              arguments: { range: '1-65535', limit: 5 },
+            });
+            assert.equal(result.isError, true);
+            assert.equal(result.structuredContent?.error?.code, 'INVALID_ARGUMENT');
+          } finally {
+            await client.close();
+          }
+          NODE
