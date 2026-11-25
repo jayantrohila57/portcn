@@ -40,6 +40,15 @@ function relatedRefs(commit) {
   return refs.length ? ` (${refs.join(', ')})` : '';
 }
 
+function normalizedSummary(entry) {
+  return entry
+    .replace(/^-\s+/, '')
+    .replace(/\s*<!-- task:[^>]+ -->$/, '')
+    .replace(/\s+\((?:\[#\d+\]\([^)]+\)(?:,\s*)?)+\)$/, '')
+    .trim()
+    .toLocaleLowerCase();
+}
+
 export function renderRelease({ source, version, previousVersion, title, commits, date = dateInIst() }) {
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Invalid release version.');
   if (typeof title !== 'string' || !title.trim()) throw new Error('A meaningful release title is required.');
@@ -50,6 +59,9 @@ export function renderRelease({ source, version, previousVersion, title, commits
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('Release date must use YYYY-MM-DD.');
   const groups = new Map(order.map((category) => [category, []]));
   const seen = new Set();
+  const authored = parseCategories(unreleased.content);
+  const authoredSummaries = new Set(authored.flatMap(({ entries }) => entries.map(normalizedSummary)));
+  const summaries = new Set();
   for (const commit of commits) {
     if (seen.has(commit.sha)) continue;
     seen.add(commit.sha);
@@ -58,11 +70,18 @@ export function renderRelease({ source, version, previousVersion, title, commits
     if (!userTypes.has(item.type) && !item.breaking) continue;
     const summary = item.breaking ? { ...item, category: 'Changed' } : item;
     const markdown = `- ${summary.summary}${relatedRefs(commit)}`;
-    if (!groups.get(summary.category).includes(markdown)) groups.get(summary.category).push(markdown);
+    const key = normalizedSummary(markdown);
+    if (authoredSummaries.has(key) || summaries.has(key)) continue;
+    summaries.add(key);
+    groups.get(summary.category).push(markdown);
   }
-  const authored = parseCategories(unreleased.content);
   for (const { name, entries } of authored) {
-    for (const entry of entries) if (!groups.get(name).includes(entry)) groups.get(name).push(entry);
+    for (const entry of entries) {
+      const key = normalizedSummary(entry);
+      if (summaries.has(key)) continue;
+      summaries.add(key);
+      if (!groups.get(name).includes(entry)) groups.get(name).push(entry);
+    }
   }
   const sections = order
     .filter((name) => groups.get(name).length)

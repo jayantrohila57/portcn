@@ -52,6 +52,27 @@ test('creates concise categorized release notes with issue, PR, and compare link
   assert.ok(result.includes(`\n\n## [${previousVersion}]`));
   assert.match(result, /## Unreleased\n\n### Added\n### Changed\n### Fixed/);
 });
+test('deduplicates commit-derived release notes against authored Unreleased entries', () => {
+  const issueUrl = 'https://github.com/jayantrohila57/portcn/issues/139';
+  const authoredSource = source.replace(
+    '## Unreleased\n\n### Added\n### Changed\n### Fixed\n### Deprecated\n### Removed\n### Security',
+    `## Unreleased\n\n### Added\n\n- add bounded port wait ([#139](${issueUrl})) <!-- task:feat/port-watch -->\n\n### Changed\n### Fixed\n### Deprecated\n### Removed\n### Security`,
+  );
+  const result = renderRelease({
+    source: authoredSource,
+    version,
+    previousVersion,
+    title: 'Dashboard improvements',
+    date: '2026-11-24',
+    commits: [commit('a', 'feat(cli): add bounded port wait (#171)')],
+  });
+  assert.equal([...result.matchAll(/add bounded port wait/g)].length, 1);
+  assert.match(
+    result,
+    /add bounded port wait \(\[#139\]\(https:\/\/github\.com\/jayantrohila57\/portcn\/issues\/139\)\)/,
+  );
+  assert.doesNotMatch(result, /pull\/171/);
+});
 test('handles breaking changes and refuses duplicates or empty releases', () => {
   assert.equal(summarize('feat!: remove old config').category, 'Changed');
   assert.throws(
