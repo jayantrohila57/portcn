@@ -102,6 +102,17 @@ portcn nginx --config ./nginx.conf --json
 
 Includes are followed through local readable files with a 256-file bound. Missing or unreadable files yield partial results. A configured listener does not establish active routing or reachability; matching sockets are read from Portcn's current network namespace. The command does not run or reload Nginx and does not elevate privileges.
 
+## ``portcn systemd``
+
+The `systemd` command reads visible user and systemd service/socket units. Schema version 1 JSON includes each manager's availability separately, unit scope and state, MainPID when present, matching listener ports for MainPID, and socket listen endpoints with point-in-time observation state. Missing `systemctl`, an unavailable user manager, and permission denial remain distinct.
+
+```sh
+portcn systemd
+portcn systemd --json
+```
+
+The command is read-only. It does not elevate privileges or start, stop, restart, enable, or disable units. Socket activation configuration is kept distinct from a live service process; only the unit's MainPID is used for process/listener correlation.
+
 ## ``portcn exposure``
 
 Classify each visible host listener and Docker port record by address family and bind scope. Loopback, interface-specific, wildcard, direct-routed, and container-only records remain distinct. A wildcard address means the socket or mapping uses all addresses in that family; it does not establish internet reachability. Portcn does not inspect firewalls, routers, external routes, or public reachability.
