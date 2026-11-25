@@ -54,12 +54,17 @@ describe('port inspect', () => {
     const read = vi.fn((path: string) =>
       path.endsWith('status') ? 'Name:\tserver\nUid:\t1000\t1000\t1000\t1000\n' : 'node\0server\0',
     );
-    expect(readProcessDetails(42, read)).toEqual({ command: 'node server', user: 'uid:1000' });
+    expect(readProcessDetails(42, read, 'linux')).toEqual({ command: 'node server', user: 'uid:1000' });
     expect(
-      readProcessDetails(42, () => {
-        throw new Error('permission denied');
-      }),
+      readProcessDetails(
+        42,
+        () => {
+          throw new Error('permission denied');
+        },
+        'linux',
+      ),
     ).toBeNull();
+    expect(readProcessDetails(42, read, 'darwin')).toBeNull();
   });
 
   it('redacts sensitive command arguments and credentials', () => {

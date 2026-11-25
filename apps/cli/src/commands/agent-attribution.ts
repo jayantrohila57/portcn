@@ -17,6 +17,7 @@ export interface AgentAttribution {
 }
 
 export interface AgentAttributionDependencies {
+  platform?: NodeJS.Platform;
   readFile?: (path: string, encoding: BufferEncoding) => string;
   now?: () => Date;
 }
@@ -79,6 +80,19 @@ export function inspectAgentAttribution(
 ): AgentAttribution {
   const read = dependencies.readFile ?? readFile;
   const observedAt = (dependencies.now ?? (() => new Date()))().toISOString();
+  if ((dependencies.platform ?? process.platform) !== 'linux') {
+    return {
+      status: 'unknown',
+      confidence: 'none',
+      agentName: null,
+      sessionId: null,
+      sourcePid: null,
+      source: null,
+      leftoverAssessment: 'unknown',
+      observedAt,
+      evidence: ['Agent environment markers are unavailable on this platform.'],
+    };
+  }
   const chain = [
     { pid, source: 'owner' as const },
     ...ancestors.map(({ pid: ancestorPid }) => ({ pid: ancestorPid, source: 'ancestor' as const })),

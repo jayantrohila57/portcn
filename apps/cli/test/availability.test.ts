@@ -42,6 +42,13 @@ describe('read-only port availability', () => {
     expect(conflict.limitations.join(' ')).toContain('does not bind or reserve');
   });
 
+  it('describes macOS host-view scope without claiming a Linux namespace', () => {
+    const result = checkPortAvailability(3000, { platform: 'darwin', discover: () => sockets });
+    expect(result.namespace).toBeNull();
+    expect(result.limitations.join('\n')).toContain('current macOS host process');
+    expect(result.limitations.join('\n')).not.toContain('network namespace could not be identified');
+  });
+
   it('orders multiple overlapping listeners deterministically', () => {
     const first = checkPortAvailability(3000, { discover: () => sockets });
     const second = checkPortAvailability(3000, {

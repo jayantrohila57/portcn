@@ -3,7 +3,7 @@ title: CLI reference
 description: Portcn port listing, inspection, conflict diagnosis, ownership evidence, output, and exit codes.
 ---
 
-The published ``v0.5.0`` Linux CLI declares Node.js 24 or newer. The development CLI package lowers its runtime engine floor to Node.js 22 after packaged runtime validation; the Node 24 build target and workspace requirement remain unchanged. This metadata update will be available in a later package release. The development branch also adds the stdio MCP server described below.
+The published ``v0.5.0`` Linux CLI declares Node.js 24 or newer. The development CLI package supports Node.js 22 or newer; the Node 24 build target and workspace requirement remain unchanged. The development branch supports ``list``, ``inspect``, and ``diagnose`` on Linux and macOS, plus the stdio MCP server described below. The macOS adapter uses ``lsof`` and reports PID/process names when visible; Linux-only process details, project context, and agent markers are unavailable there. This support is not yet part of a published package release.
 
 Registered top-level commands include `list`, `inspect`, `diagnose`, `assess`, `verify`, `check`, `suggest`, `config`, `endpoint`, `open`, `readiness`, `connection`, `docker`, `exposure`, and `mcp`. Configuration subcommands include `add`, `edit`, `remove`, `group`, and `recover`.
 
@@ -124,7 +124,7 @@ On the development branch, all three commands also accept ``--json-version 1`` f
 
 ## ``portcn list``
 
-Lists listening TCP and UDP sockets on Linux. Requires ``ss`` (provided by ``iproute2`` on Ubuntu). This command runs ``ss --no-header --listening --tcp --udp --numeric --processes`` without using a shell. It does not change ports, processes, or services.
+Lists listening TCP and UDP sockets on Linux or macOS. Linux requires ``ss`` (provided by ``iproute2`` on Ubuntu) and runs ``ss --no-header --listening --tcp --udp --numeric --processes``. macOS runs two ``lsof`` queries: ``lsof -nP -iTCP -sTCP:LISTEN -F0pcPn`` and ``lsof -nP -iUDP -F0pcPn``. They run without a shell and perform read-only discovery. macOS UDP entries have no socket state from ``lsof`` and are represented as ``UNCONN``; connected UDP endpoints are excluded. Neither path changes ports, processes, or services.
 
 ```sh
 node apps/cli/dist/index.js list
@@ -145,17 +145,17 @@ If no listening sockets are found, Portcn prints ``No listening TCP or UDP ports
 
 ## ``portcn inspect <port>``
 
-The `inspect` subcommand inspects all visible TCP and UDP listeners for one port using the same read-only Linux discovery path as ``list``. It prints a bordered ASCII table with protocol, socket state, local address, PID, process name, and best-effort ``/proc`` command details. IPv4, IPv6, and multiple listeners are retained. A missing listener is informational and returns status 0; an invalid port returns status 2. Interactive terminals receive color; piped output stays plain.
+The `inspect` subcommand inspects all visible TCP and UDP listeners for one port using the same read-only platform discovery as ``list``. It prints a bordered ASCII table with protocol, socket state, local address, PID, process name, and best-effort command details. Linux reads command details from ``/proc``; macOS reports them as unavailable. IPv4, IPv6, and multiple listeners are retained. A missing listener is informational and returns status 0; an invalid port returns status 2. Interactive terminals receive color; piped output stays plain.
 
 ```sh
 node apps/cli/dist/index.js inspect 3000
 ```
 
-The command never changes sockets or processes and does not require sudo. Process details may show ``unavailable`` when ``/proc`` access is restricted. Linux and ``ss``/``iproute2`` limitations are the same as ``list``.
+The command never changes sockets or processes and does not require elevation. Process details may show ``unavailable`` when access is restricted or when running on macOS. Platform discovery requirements are the same as ``list``.
 
 ## ``portcn diagnose <port>``
 
-Diagnoses every TCP or UDP listening socket visible on the requested port. It reuses the read-only ``ss`` discovery used by ``list`` and ``inspect`` and reports each bind address, IPv4/IPv6 family, socket state, and every PID/process owner shown by ``ss``. For each visible PID it adds the best-effort command and user from ``/proc``, plus project context from the process working directory and up to five parent processes. Git identifies the project root, worktree metadata, and current checkout branch/commit for those directories; these are current filesystem facts and do not prove which source the running process loaded. Results distinguish identified, ambiguous, not-found, permission-denied, process-exited, and unavailable context. Shared sockets with multiple visible PIDs appear once in JSON with an ``owners`` array and as one row per owner in terminal output.
+Diagnoses every TCP or UDP listening socket visible on the requested port. It reuses the read-only platform discovery used by ``list`` and ``inspect`` and reports each bind address, IPv4/IPv6 family, socket state, and visible PID/process owners. On Linux, it adds best-effort command and user details from ``/proc``, plus project context from the process working directory and up to five parent processes. macOS uses ``lsof`` for socket owners; command lines, user IDs, project context, and agent markers are reported unavailable. Linux project evidence remains current filesystem facts and does not prove which source the running process loaded. Shared sockets with multiple visible PIDs appear once in JSON with an ``owners`` array and as one row per owner in terminal output.
 
 Project context is evidence, not proof that a project launched or owns a service. Portcn reads only the owner and a bounded parent chain; it does not scan repositories or inspect agent conversations. Paths and executable locations are included in JSON when visible. A PID start-time check discards context if the process exits or the PID is reused during inspection. Git metadata lookup is read-only and time-limited.
 
@@ -239,7 +239,7 @@ With legacy ``diagnose --json``, invalid arguments and discovery failures are em
 
 ## Errors and limitations
 
-- Supported platform: Linux only. On other platforms, discovery commands print ``Port listing currently supports Linux only.`` and exit with status 1.
+- ``list``, ``inspect``, and ``diagnose`` support Linux and macOS on the development branch. Linux requires ``ss`` from ``iproute2``; macOS requires the system ``lsof`` command. Windows and other platforms are unsupported for listener discovery.
 - If ``ss`` is missing, install ``iproute2`` (Ubuntu: ``sudo apt install iproute2``). Portcn exits with status 1 instead of hiding the error.
 - Failures or unexpected output from ``ss`` produce a nonzero exit and explanatory error. Hidden process metadata appears as `` - `` rather than an invented owner.
 - Containers only see sockets in the current network namespace unless explicitly configured otherwise. ``diagnose`` shows the current namespace identifiers and does not inspect host namespaces automatically.

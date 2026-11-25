@@ -1,8 +1,10 @@
+import { createServer } from 'node:net';
 import { Command } from 'commander';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   discoverListeningPorts,
   formatListeningPorts,
+  parseLsofOutput,
   parseSsOutput,
   registerListCommand,
 } from '../src/commands/list.js';
@@ -13,7 +15,7 @@ const SAMPLE = [
   'tcp LISTEN 0 4096 [::]:22 [::]:* users:(("sshd",pid=12,fd=4))',
 ].join('\n');
 
-describe('read-only Linux port listing', () => {
+describe('read-only port listing', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     process.exitCode = 0;
@@ -81,10 +83,76 @@ describe('read-only Linux port listing', () => {
     expect(runSs).toHaveBeenCalledWith(['--no-header', '--listening', '--tcp', '--udp', '--numeric', '--processes']);
   });
 
-  it('explains unsupported platforms without inspecting the host', () => {
+  it('uses lsof for macOS TCP and UDP discovery', () => {
+    const runLsof = vi.fn((args: string[]) =>
+      args.includes('-iUDP') ? 'p654\0cpython\0\nPUDP\0n*:5353\0\n' : 'p321\0cnode\0\nPTCP\0n127.0.0.1:3000\0\n',
+    );
+    expect(discoverListeningPorts({ platform: 'darwin', runLsof })).toEqual([
+      {
+        protocol: 'tcp',
+        state: 'LISTEN',
+        address: '127.0.0.1',
+        port: 3000,
+        pid: 321,
+        processName: 'node',
+        owners: [{ pid: 321, processName: 'node' }],
+      },
+      {
+        protocol: 'udp',
+        state: 'UNCONN',
+        address: '*',
+        port: 5353,
+        pid: 654,
+        processName: 'python',
+        owners: [{ pid: 654, processName: 'python' }],
+      },
+    ]);
+    expect(runLsof).toHaveBeenNthCalledWith(1, ['-nP', '-iTCP', '-sTCP:LISTEN', '-F0pcPn']);
+    expect(runLsof).toHaveBeenNthCalledWith(2, ['-nP', '-iUDP', '-F0pcPn']);
+  });
+
+  it('parses shared lsof owners and skips connected UDP endpoints', () => {
+    expect(
+      parseLsofOutput(
+        'p321\0cnode\0\nPTCP\0n[::1]:3000\0\np654\0cworker\0\nPTCP\0n[::1]:3000\0\nPUDP\0n127.0.0.1:5000->127.0.0.1:5001\0',
+      ),
+    ).toEqual([
+      {
+        protocol: 'tcp',
+        state: 'LISTEN',
+        address: '[::1]',
+        port: 3000,
+        pid: 321,
+        processName: 'node',
+        owners: [
+          { pid: 321, processName: 'node' },
+          { pid: 654, processName: 'worker' },
+        ],
+      },
+    ]);
+  });
+
+  it('explains unsupported platforms without inspecting host tools', () => {
     const runSs = vi.fn(() => '');
-    expect(() => discoverListeningPorts({ platform: 'darwin', runSs })).toThrow('Linux only');
+    expect(() => discoverListeningPorts({ platform: 'win32', runSs })).toThrow('Linux and macOS');
     expect(runSs).not.toHaveBeenCalled();
+  });
+
+  it.skipIf(process.platform !== 'darwin')('discovers a real macOS listener owned by this process', async () => {
+    const server = createServer();
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', resolve);
+    });
+    try {
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('Expected an ephemeral TCP port.');
+      expect(discoverListeningPorts({ platform: 'darwin' })).toEqual(
+        expect.arrayContaining([expect.objectContaining({ protocol: 'tcp', port: address.port, pid: process.pid })]),
+      );
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+    }
   });
 
   it('explains the missing system dependency', () => {
@@ -152,7 +220,7 @@ describe('read-only Linux port listing', () => {
       schemaVersion: 1,
       error: {
         code: 'DISCOVERY_FAILED',
-        message: 'Port discovery failed. Check permissions, iproute2, and namespace visibility.',
+        message: 'Port discovery failed. Check platform tooling and process permissions.',
       },
     });
     expect(output.join('')).not.toContain('private detail');

@@ -49,9 +49,9 @@ export function versionedJsonError(error: unknown, port?: string): VersionedJson
           ? 'INVALID_INPUT'
           : error instanceof UnsupportedJsonVersionError
             ? 'UNSUPPORTED_JSON_VERSION'
-            : message.includes('Linux only')
+            : message.includes('supports Linux and macOS')
               ? 'UNSUPPORTED_PLATFORM'
-              : message.includes('ss command is missing')
+              : message.includes('ss command is missing') || message.includes('lsof command is missing')
                 ? 'MISSING_DEPENDENCY'
                 : 'DISCOVERY_FAILED';
   const stableMessage =
@@ -62,10 +62,12 @@ export function versionedJsonError(error: unknown, port?: string): VersionedJson
         : code === 'UNSUPPORTED_JSON_VERSION'
           ? 'Supported JSON schema version: 1.'
           : code === 'UNSUPPORTED_PLATFORM'
-            ? 'Port discovery currently supports Linux only.'
+            ? 'Port discovery currently supports Linux and macOS.'
             : code === 'MISSING_DEPENDENCY'
-              ? 'The ss command is required. Install iproute2.'
-              : 'Port discovery failed. Check permissions, iproute2, and namespace visibility.';
+              ? message.includes('lsof')
+                ? 'The lsof command is required on macOS.'
+                : 'The ss command is required on Linux. Install iproute2.'
+              : 'Port discovery failed. Check platform tooling and process permissions.';
   return {
     schemaVersion: JSON_SCHEMA_VERSION,
     error: { code, message: stableMessage, ...(port === undefined ? {} : { port }) },

@@ -38,13 +38,13 @@ function safeFailure(error: unknown) {
   if (name === 'InvalidPortError' || name === 'InvalidAvailabilityInputError')
     return toolFailure('INVALID_ARGUMENT', 'The requested port or availability options are invalid.');
   const message = error instanceof Error ? error.message : '';
-  if (message.includes('supports Linux only'))
-    return toolFailure('UNSUPPORTED_PLATFORM', 'Port discovery currently supports Linux only.');
+  if (message.includes('supports Linux and macOS'))
+    return toolFailure('UNSUPPORTED_PLATFORM', 'Port discovery currently supports Linux and macOS.');
   if (message.includes('command is missing'))
-    return toolFailure('DISCOVERY_UNAVAILABLE', 'Port discovery requires ss from iproute2.');
+    return toolFailure('DISCOVERY_UNAVAILABLE', 'Port discovery requires ss on Linux or lsof on macOS.');
   if (message.includes('timed out'))
     return toolFailure('DISCOVERY_TIMEOUT', 'Port discovery exceeded its 10 second limit.');
-  return toolFailure('DISCOVERY_FAILED', 'Port discovery failed in the current namespace.');
+  return toolFailure('DISCOVERY_FAILED', 'Port discovery failed in the current platform view.');
 }
 
 function boundedDiagnosis(port: number, diagnose: typeof diagnoseListeningPort) {
@@ -87,7 +87,7 @@ export function createPortcnMcpServer(dependencies: Partial<McpDependencies> = {
     'list_listeners',
     {
       description:
-        'List visible listening TCP and UDP sockets in the current Linux network namespace. Read-only snapshot; process command lines and environment values are never returned.',
+        'List visible listening TCP and UDP sockets from the current Linux or macOS host view. Read-only snapshot; process command lines and environment values are never returned.',
       inputSchema: z.object({
         protocol: z.enum(['tcp', 'udp']).optional().describe('Limit results to one transport protocol.'),
         limit: z
@@ -114,7 +114,11 @@ export function createPortcnMcpServer(dependencies: Partial<McpDependencies> = {
             owners: (listener.owners ?? []).slice(0, 20),
           })),
           truncated: filtered.length > limit,
-          limitations: ['Snapshot covers only the current network namespace; no future bind is guaranteed.'],
+          limitations: [
+            process.platform === 'linux'
+              ? 'Snapshot covers only the current network namespace; no future bind is guaranteed.'
+              : 'Snapshot covers sockets visible to the current macOS host process; no future bind is guaranteed.',
+          ],
         });
       } catch (error) {
         return safeFailure(error);

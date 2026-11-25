@@ -26,7 +26,7 @@ Applications can depend on workspace packages. Packages must not depend on apps.
 
 ## Current CLI flow
 
-The executable entry point creates a Commander root program, sets its package version, and parses arguments only when invoked as the process entry point. In an interactive terminal, invoking `portcn` opens the keyboard-first listener dashboard; non-interactive invocation remains help-oriented and machine-safe. Explicit `list`, `inspect`, and `diagnose` commands share the same read-only Linux socket discovery; diagnosis adds process and namespace explanations in the CLI app.
+The executable entry point creates a Commander root program, sets its package version, and parses arguments only when invoked as the process entry point. In an interactive terminal, invoking `portcn` opens the keyboard-first listener dashboard; non-interactive invocation remains help-oriented and machine-safe. Explicit `list`, `inspect`, and `diagnose` commands use read-only platform adapters: Linux `ss` and macOS `lsof`. Linux diagnosis adds `/proc` process and namespace explanations; macOS reports those fields unavailable.
 
 ## Terminal dashboard implementation
 
