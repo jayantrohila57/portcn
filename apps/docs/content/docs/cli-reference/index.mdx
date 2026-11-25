@@ -50,6 +50,17 @@ portcn readiness check tcp://127.0.0.1:3000 --timeout 1500 --retries 2 --interva
 
 The timeout applies per attempt (100–5000 ms), retries are capped at five (default two), and the interval is capped at 2000 ms (default 250). Ctrl-C or SIGTERM cancels the in-flight probe or wait. Results use JSON schema version 1 with attempt count, endpoint mode, observation time, HTTP status when received, and a human-readable detail. A missing current listener is reported as ``stopped`` without sending a probe. All probes target the validated local bind or saved local URL; Portcn does not issue arbitrary shell checks, restart services, or make external requests.
 
+## ``portcn connection`` (`connection`)
+
+Run staged diagnostics for one saved or currently observed service from the current host and network namespace. The command resolves the local bind target, reports IPv4/IPv6 addresses and bind scope, attempts TCP connections with a bounded per-address timeout, checks an explicitly saved HTTP(S) URL when present, and adds matching Docker host-port mapping metadata when the Docker CLI is available. A successful TCP connection proves reachability only from Portcn's current namespace. Docker mapping records are configuration evidence and do not prove container reachability; a remote Docker context may describe a different host.
+
+```sh
+portcn connection check tcp://127.0.0.1:3000
+portcn connection check tcp://127.0.0.1:3000 --timeout 2500 --json
+```
+
+The timeout defaults to 1500 ms and is capped at 5000 ms per TCP address and HTTP request. JSON schema version 1 contains observation time, hostname and network namespace, per-stage statuses and evidence, per-address connection outcomes, Docker mappings, and limitations. Refusal, timeout, resolution failure, HTTP redirect, non-success response, and TLS validation failure remain distinct. Redirects are not followed and certificate validation is not disabled. UDP services include bind and Docker evidence but skip TCP and HTTP probes. The command does not scan external hosts, inspect firewall rules, execute commands in containers, or change system state.
+
 ## ``portcn docker``
 
 Read a snapshot of all containers in the Docker CLI's selected daemon context, including stopped containers. Portcn lists container IDs and inspects them without changing container state. The output includes state, configured health, Compose project/service labels, network addresses, exposed ports, and published host bindings. Stopped containers can retain mapping configuration; Portcn labels those entries as configured and does not treat them as active host bindings.
