@@ -10,4 +10,5 @@
 - Follow the root task branch lifecycle: branch from `dev`, target task PRs at `dev`, and use Conventional Commit titles for release-relevant changes.
 - Every commit and PR title must be Conventional; do not use narrative subjects.
 - `diagnose` must reuse the CLI's existing listener discovery and process inspection, preserve every visible owner, and explain permission/namespace visibility limits without elevating privileges or changing processes.
+- For terminal UI changes, follow the [terminal design system](../docs/content/docs/development/terminal-design.mdx) for semantic styles, monochrome selection, layout, keyboard, Unicode width, and PTY coverage.
 - Before coding, identify CLI reference and guide impact. Update Fumadocs pages in the same task, documenting only implemented behavior, and verify commands, options, output, errors, and exit codes against code. PRs must list changed docs or justify `No documentation change required`.

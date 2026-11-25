@@ -48,7 +48,7 @@ Lists listening TCP and UDP sockets on Linux. Requires ``ss`` (provided by ``ipr
 node apps/cli/dist/index.js list
 ```
 
-Output is rendered as an ASCII table with colored headers and protocol/state values in an interactive terminal. Colors are automatically omitted when output is piped. Columns are ``PROTO`` (TCP/UDP), ``STATE``, ``PORT`` (numeric), ``LOCAL ADDRESS`` (bind address), ``PID`` and ``PROCESS``. Results are sorted by ascending port number. PID and process may display `` - `` when the operating system does not expose ownership to your current user. You do not need to run with sudo just to list visible sockets.
+Output is rendered as an ASCII table with colored headers and protocol/state values in a capable interactive terminal. Color is omitted when output is piped, ``NO_COLOR`` is set to a non-empty value, or ``TERM=dumb``. Columns are ``PROTO`` (TCP/UDP), ``STATE``, ``PORT`` (numeric), ``LOCAL ADDRESS`` (bind address), ``PID`` and ``PROCESS``. Results are sorted by ascending port number. PID and process may display `` - `` when the operating system does not expose ownership to your current user. You do not need to run with sudo just to list visible sockets.
 
 Example with sample data from tests:
 

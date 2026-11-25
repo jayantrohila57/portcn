@@ -16,7 +16,7 @@ import {
   tabForKey,
   visibleColumnsForWidth,
 } from '../src/commands/tabs.js';
-import { displayWidth, sanitizeTerminalText } from '../src/terminal.js';
+import { displayWidth, sanitizeTerminalText, TERMINAL_THEME, terminalColorEnabled } from '../src/terminal.js';
 
 const ports: ListeningPort[] = [
   { protocol: 'tcp', state: 'LISTEN', address: '127.0.0.1', port: 3000, pid: 10, processName: 'node' },
@@ -53,6 +53,8 @@ describe('interactive port tabs', () => {
   it('keeps hostile and narrow-terminal content bounded', () => {
     expect(sanitizeTerminalText('node\u001b[31m')).not.toContain('\u001b');
     expect(displayWidth('界')).toBe(2);
+    expect(displayWidth('e\u0301')).toBe(1);
+    expect(displayWidth('👩‍💻')).toBe(2);
     expect(visibleColumnsForWidth(50)).toEqual([0, 1, 2]);
     expect(visibleColumnsForWidth(70)).toEqual([0, 1, 2, 3, 4]);
     expect(visibleColumnsForWidth(100)).toHaveLength(6);
@@ -80,6 +82,24 @@ describe('interactive port tabs', () => {
     expect(formatTabView(manyPorts, 'all', 0, 15)).not.toContain('3005');
   });
 
+  it('fits the compact dashboard into a 40 by 12 viewport', () => {
+    const rendered = formatTabView(
+      [{ ...ports[0], processName: '界'.repeat(30) }, ports[1]],
+      'all',
+      0,
+      12,
+      '',
+      'port',
+      0,
+      { ...ports[0], processName: '界👩‍💻'.repeat(20) },
+      false,
+      40,
+    );
+    const lines = rendered.split('\n');
+    expect(lines).toHaveLength(12);
+    expect(Math.max(...lines.map((line) => displayWidth(line)))).toBeLessThanOrEqual(40);
+  });
+
   it('clamps selection and calculates pages from the active result set', () => {
     expect(clampSelection(4, 0)).toBe(0);
     expect(clampSelection(4, 3)).toBe(2);
@@ -90,11 +110,29 @@ describe('interactive port tabs', () => {
 
   it('highlights the selected row with a stable row index', () => {
     const rendered = formatListeningPorts(ports, { color: true, selectedRow: 1 });
-    expect(rendered).toContain('\u001b[33m');
-    const rows = rendered.split('\n').filter((line) => line.includes('\u001b[33m'));
+    expect(rendered).toContain(TERMINAL_THEME.selected);
+    const rows = rendered.split('\n').filter((line) => line.includes(TERMINAL_THEME.selected));
     expect(rows).toHaveLength(1);
+    expect(rows[0]).toContain('> UDP');
     expect(rows[0]).toContain('5353');
     expect(rows[0]).not.toContain('3000');
+  });
+
+  it('keeps selection visible without color and honors terminal color settings', () => {
+    const monochrome = formatListeningPorts(ports, { color: false, selectedRow: 0 });
+    expect(monochrome).toContain('> TCP');
+    expect(terminalColorEnabled(true, { NO_COLOR: '1' })).toBe(false);
+    expect(terminalColorEnabled(true, { TERM: 'dumb' })).toBe(false);
+    expect(terminalColorEnabled(false, {})).toBe(false);
+    expect(terminalColorEnabled(true, {})).toBe(true);
+  });
+
+  it('clips text at grapheme boundaries using terminal cell widths', () => {
+    const rendered = formatListeningPorts([{ ...ports[0], address: `${'界'.repeat(20)}👩‍💻` }], {
+      columnWidths: [5, 6, 4, 12, 3, 8],
+    });
+    expect(rendered).toContain('界界界界界~');
+    expect(rendered).not.toContain('👩‍~');
   });
 
   it('restores terminal state when the first render fails', async () => {

@@ -21,7 +21,7 @@ Portcn `v0.3.0` is published. It provides read-only Linux commands to list liste
 - Development branch: `portcn assess <pid> --project <path>` compares visible process evidence with a Git project; add `--session <id>` for an explicit session comparison. It never signals or stops a process.
 - Development branch: `portcn verify <endpoint> --project <path>` compares a local listener's visible owner and current checkout metadata with the expected project. It never connects to the endpoint and cannot prove which code a running process loaded.
 - Development branch: `portcn check <port>` reports visible listener overlap for a TCP/UDP protocol and bind address; `portcn suggest` returns bounded candidate ports without observed conflicts. Neither command binds or reserves ports.
-- Human-readable list and inspect output uses bordered ASCII tables with colors in interactive terminals and plain text when piped.
+- Human-readable list and inspect output uses bordered ASCII tables with color only in capable terminals; set `NO_COLOR` or `TERM=dumb` to disable it. Interactive selection remains marked in monochrome.
 - Private `@portcn/core` package for future shared functionality.
 - GitHub Actions validation and Release Please version/changelog workflow for `portcn`.
 

@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- establish terminal design system ([#118](https://github.com/jayantrohila57/portcn/issues/118)) <!-- task:feat/tui-design-system -->
+
 - verify endpoints against expected projects ([#108](https://github.com/jayantrohila57/portcn/issues/108)) <!-- task:feat/endpoint-project-verification -->
 
 - add read-only process ownership safety checks ([#111](https://github.com/jayantrohila57/portcn/issues/111)) <!-- task:fix/read-only-process-safety -->

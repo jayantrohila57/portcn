@@ -1,7 +1,7 @@
 import { readlinkSync } from 'node:fs';
 import { isIP } from 'node:net';
 import type { Command } from 'commander';
-import { formatEmpty, formatTable } from '../terminal.js';
+import { formatEmpty, formatTable, TERMINAL_THEME } from '../terminal.js';
 import { type AgentAttribution, inspectAgentAttribution } from './agent-attribution.js';
 import { InvalidPortError, inspectProcessDetails, type ProcessDetailStatus, parsePort } from './inspect.js';
 import { JSON_SCHEMA_VERSION, jsonSchemaIsSupported, UnsupportedJsonVersionError, versionedJsonError } from './json.js';
@@ -198,7 +198,7 @@ export function formatDiagnosis(diagnosis: PortDiagnosis): string {
         rows,
         {
           columnWidths: [6, 8, 7, 24, 8, 16, 32, 12, 17, 30, 12, 16],
-          columnColors: { 0: '\u001b[36m', 1: '\u001b[32m' },
+          columnColors: { 0: TERMINAL_THEME.focused, 1: TERMINAL_THEME.success },
         },
       ),
     );
