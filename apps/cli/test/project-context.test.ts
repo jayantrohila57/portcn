@@ -41,7 +41,13 @@ describe('process project context', () => {
       ...proc,
       runGit: (cwd) =>
         cwd.startsWith('/repo')
-          ? { projectRoot: '/repo', gitDir: '/repo/.git/worktrees/feature', gitCommonDir: '/repo/.git' }
+          ? {
+              projectRoot: '/repo',
+              gitDir: '/repo/.git/worktrees/feature',
+              gitCommonDir: '/repo/.git',
+              checkoutBranch: 'feature',
+              checkoutCommit: 'abc123',
+            }
           : null,
     });
     expect(result).toMatchObject({
@@ -51,6 +57,8 @@ describe('process project context', () => {
       cwd: '/repo/packages/app',
       executable: '/usr/bin/node',
       projectRoot: '/repo',
+      checkoutBranch: 'feature',
+      checkoutCommit: 'abc123',
       worktree: true,
       ancestors: [{ pid: 10, name: 'process-10', cwd: '/repo', executable: '/usr/bin/bash' }],
     });
@@ -74,7 +82,15 @@ describe('process project context', () => {
       inspectProjectContext(42, {
         ...fakeProc(),
         runGit: (cwd) =>
-          cwd === '/repo' ? { projectRoot: '/repo', gitDir: '/repo/.git', gitCommonDir: '/repo/.git' } : null,
+          cwd === '/repo'
+            ? {
+                projectRoot: '/repo',
+                gitDir: '/repo/.git',
+                gitCommonDir: '/repo/.git',
+                checkoutBranch: 'main',
+                checkoutCommit: 'abc123',
+              }
+            : null,
       }),
     ).toMatchObject({ status: 'identified', confidence: 'medium', source: 'ancestor' });
     let index = 0;
@@ -85,6 +101,8 @@ describe('process project context', () => {
           projectRoot: index++ === 0 ? '/repo-a' : '/repo-b',
           gitDir: '/repo/.git',
           gitCommonDir: '/repo/.git',
+          checkoutBranch: 'main',
+          checkoutCommit: 'abc123',
         }),
       }),
     ).toMatchObject({ status: 'ambiguous', confidence: 'low' });

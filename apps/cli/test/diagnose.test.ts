@@ -60,6 +60,8 @@ describe('port diagnose', () => {
           projectRoot: `/workspace/service-${pid}`,
           gitDir: `/workspace/service-${pid}/.git`,
           gitCommonDir: `/workspace/service-${pid}/.git`,
+          checkoutBranch: 'main',
+          checkoutCommit: 'abc123',
           worktree: false,
           ancestors: [],
           evidence: ['Git reported the project root.'],
