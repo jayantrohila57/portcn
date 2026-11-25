@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- expose Portcn as a read-only MCP server for coding agents ([#104](https://github.com/jayantrohila57/portcn/issues/104)) <!-- task:feat/agent-mcp-server -->
+
 ### Changed
 
 ### Fixed

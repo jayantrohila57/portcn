@@ -31,9 +31,12 @@
     "test": "pnpm --filter @portcn/core build && pnpm build && vitest run"
   },
   "dependencies": {
-    "commander": "^14.0.3"
+    "@modelcontextprotocol/server": "^2.4.0",
+    "commander": "^14.0.3",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.4.0",
     "@portcn/core": "workspace:*",
     "@types/node": "^24.10.0",
     "tsup": "^8.5.1",
