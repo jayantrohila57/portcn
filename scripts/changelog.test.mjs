@@ -73,6 +73,7 @@ test('allows documentation and release-excluded maintenance PRs to leave the rel
         'packages/core/src/port-number.ts',
         'packages/core/test/discovery.test.ts',
         'apps/docs/content/docs/architecture/unified-service-discovery.mdx',
+        'apps/docs/content/docs/architecture/_meta.json',
         'PRODUCT-ROADMAP.md',
         'scripts/changelog-policy.cjs',
         'scripts/changelog.test.mjs',

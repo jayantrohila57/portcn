@@ -126,6 +126,7 @@ function isReleaseExcludedMaintenance(files) {
           file.startsWith('.github/') ||
           file.startsWith('scripts/') ||
           /^apps\/docs\/content\/docs\/.*\.mdx$/.test(file) ||
+          /^apps\/docs\/content\/docs\/.*\/_meta\.json$/.test(file) ||
           /(?:^|\/)(?:AGENTS\.md|CONTRIBUTING\.md|PRODUCT-ROADMAP\.md|README\.md|RELEASE-[^/]+\.md|[^/]+\.mdx)$/.test(
             file,
           )),
