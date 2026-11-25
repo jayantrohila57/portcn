@@ -100,7 +100,7 @@ export function renderRelease({ source, version, previousVersion, title, commits
   const clear = oldUnreleased
     .split('\n')
     .filter((line) => /^### (Added|Changed|Fixed|Deprecated|Removed|Security)$/.test(line))
-    .join('\n');
+    .join('\n\n');
   const versionBlock = `${header}\n\n[${version}]: ${repo}/compare/${from}...v${version}\n\n**Title:** ${title.trim()}\n\n${sections}\n`;
   const historical = `${versionBlock}\n${suffix.trimStart()}`;
   return `${source.slice(0, unreleasedStart)}## Unreleased\n\n${clear}\n\n${historical}`.replace(/\n{3,}/g, '\n\n');
