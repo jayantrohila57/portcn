@@ -5,7 +5,8 @@
 - Keep output predictable, errors actionable, exit codes meaningful, and permissions minimal. Avoid platform inspection or side effects until a feature explicitly requires them.
 - Keep workspace-only packages out of published runtime dependencies; verify the bundled package with `pnpm package:check`.
 - Run unit tests and workspace validation with the regular pnpm scripts. Docker Compose commands (`pnpm docker:cli`, `pnpm docker:build`) are optional packaged-image checks; they are not required by Git hooks or CI.
-- Add focused tests for command output, package imports, and behavior. Do not implement discovery, process management, Docker, or a TUI in the foundation.
+- Add focused tests for command output, package imports, and behavior. The existing CLI already includes Linux listener discovery, Docker inventory, and a terminal dashboard; do not introduce new provider architectures outside the reviewed Linux-first roadmap.
+- Process termination and service lifecycle management are not implemented. Do not add signals or start/stop/restart operations without a separately approved design and issue.
 - Let the root Husky pre-commit hook run workspace validation; CI independently runs the full validation suite.
 - Follow the root task branch lifecycle: branch from `dev`, target task PRs at `dev`, and use Conventional Commit titles for release-relevant changes.
 - Every commit and PR title must be Conventional; do not use narrative subjects.

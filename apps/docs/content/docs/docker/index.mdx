@@ -3,11 +3,11 @@ title: Docker
 description: Build and run the Portcn CLI image or execute repository checks with Docker Compose.
 ---
 
-Docker support includes an optional packaging workflow and a development-branch read-only container inventory command. Git hooks and GitHub Actions do not require Docker. Container runs see only sockets exposed in the container's network namespace; running Portcn in its packaged image does not add host discovery or service management.
+Docker support includes an optional packaging workflow and a released read-only container inventory command. Git hooks and GitHub Actions do not require Docker. Container runs see only sockets exposed in the container's network namespace; running Portcn in its packaged image does not add host discovery or service management.
 
 ## Inspect local containers
 
-The development command ``portcn docker`` lists running and stopped containers from the Docker CLI's selected daemon context. It reports Compose project/service labels, configured health, network addresses, exposed ports, published host bindings, and any matching host listeners visible in Portcn's current namespace. A stopped container's saved port configuration is labeled configured rather than active.
+The released ``portcn docker`` command lists running and stopped containers from the Docker CLI's selected daemon context. It reports Compose project/service labels, configured health, network addresses, exposed ports, published host bindings, and any matching host listeners visible in Portcn's current namespace. A stopped container's saved port configuration is labeled configured rather than active. Podman is not implemented.
 
 ```sh
 portcn docker

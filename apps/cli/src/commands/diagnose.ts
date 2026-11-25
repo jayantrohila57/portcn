@@ -224,7 +224,7 @@ export function registerDiagnoseCommand(
 ): void {
   program
     .command('diagnose <port>')
-    .description('Explain visible listeners and ownership limits for a port (Linux)')
+    .description('Explain visible listeners and ownership limits for a port (Linux and macOS)')
     .option('--json', 'Print the complete diagnosis as JSON')
     .option('--json-version <version>', 'Print versioned JSON (supported: 1)')
     .action((value: string, options: { json?: boolean; jsonVersion?: string }) => {

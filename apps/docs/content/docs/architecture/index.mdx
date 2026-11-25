@@ -26,7 +26,23 @@ Applications can depend on workspace packages. Packages must not depend on apps.
 
 ## Current CLI flow
 
-The executable entry point creates a Commander root program, sets its package version, and parses arguments only when invoked as the process entry point. In an interactive terminal, invoking `portcn` opens the keyboard-first listener dashboard; non-interactive invocation remains help-oriented and machine-safe. Explicit `list`, `inspect`, and `diagnose` commands use read-only platform adapters: Linux `ss` and macOS `lsof`. Linux diagnosis adds `/proc` process and namespace explanations; macOS reports those fields unavailable.
+The executable entry point creates a Commander root program, registers command modules, sets its package version, and parses arguments only when invoked as the process entry point. In an interactive terminal, invoking `portcn` opens the keyboard-first listener dashboard; non-interactive invocation prints help. Linux discovery uses `ss` and Linux process details use bounded `/proc` reads. The limited macOS adapter uses `lsof` for `list`, `inspect`, and `diagnose`; it does not provide Linux process, project, or agent-marker fields.
+
+## Implemented command modules
+
+| Module | Current responsibility |
+| --- | --- |
+| `list`, `inspect`, `diagnose` | Read-only native listener discovery, port details, process/project evidence, and visibility limits. |
+| `availability` | Point-in-time overlap checks, bounded suggestions, and cancellable port wait. |
+| `project-context`, `agent-attribution`, `process-assessment`, `endpoint-verification` | Linux project/session evidence with PID reuse checks and conservative results. |
+| `config-store`, `config`, `endpoints` | Versioned local saved-service data, local URL candidates, explicit probes, and browser open. |
+| `readiness`, `connection` | Bounded local readiness and staged connectivity diagnostics. |
+| `docker`, `exposure` | Optional Docker CLI inventory and bind-scope classification; host listener and remote daemon evidence can refer to different hosts. |
+| `mcp` | Bounded, read-only stdio tools for visible listeners, diagnosis, availability, and suggestions. |
+
+These modules are implemented in `apps/cli`; `@portcn/core` currently exports a port-number type and range validation only. Operating-system discovery and terminal presentation stay out of the platform-independent package.
+
+The current providers do not share a unified service identity. Native sockets, Docker records, and the selected service configuration have separate data shapes; there is no Podman, Nginx, or systemd provider and no service relationship graph. The reviewed target architecture is tracked by issues #180–#186. The dashboard currently shows native listeners, not all service providers; issue #187 tracks that integration. Do not treat configured mappings or an Nginx/systemd declaration as proof of an active listener.
 
 ## Terminal dashboard implementation
 
@@ -34,7 +50,7 @@ The dashboard uses a shared terminal lifecycle, full redraw, resize-aware layout
 
 The UI acceptance checklist for each slice is: no layout shift across tabs/pages, no clipped or wrapped table borders, correct page totals and visible ranges, matching row highlight and details, selection clamped to the filtered results after view changes, restored cursor/raw mode on exit, graceful behavior for small or non-interactive terminals, and unchanged plain-text/JSON command output. `list --json` and `inspect --json` bypass the screen renderer and always return complete machine-readable results.
 
-The current implementation intentionally uses a small in-house renderer over Node's terminal APIs. A framework such as Ink or blessed would add a dependency and a second rendering model before Portcn has a component tree or event abstraction; the existing renderer already supports deterministic output, raw-mode cleanup, and focused Vitest coverage. `@clack/prompts` is not added because Portcn has no guided setup flow today, and Clack is not a persistent dashboard renderer. Reassess it when configuration, groups, or aliases require a linear prompt flow.
+The current implementation intentionally uses a small in-house renderer over Node's terminal APIs. A framework such as Ink or blessed would add a dependency and a second rendering model before Portcn has a component tree or event abstraction; the existing renderer already supports deterministic output, raw-mode cleanup, and focused Vitest coverage. `@clack/prompts` is not added because saved service configuration currently uses explicit CLI arguments and does not need a guided setup flow. Reassess it only if a guided setup or confirmation task appears; Clack is not a persistent dashboard renderer.
 
 The current interaction map includes `/` to search, `Enter` to finish a query, `Esc` to cancel it, `j`/`k` or arrow keys to select rows, `s` to cycle port/protocol/process sorting, and `:` for refresh/auto-refresh commands. Bind, process owner, and best-effort project evidence update with the selected listener; context explains status and confidence and does not prove which code a running process loaded. Refresh preserves the selected listener when it remains visible and retains the last good snapshot when discovery fails. The renderer sanitizes control characters, measures grapheme and wide-cell text, and hides lower-priority columns on narrow terminals.
 

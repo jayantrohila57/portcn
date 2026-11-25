@@ -101,7 +101,7 @@ Do not capture navigation keys while the user is editing a query. Keep focus, se
 
 Keep the existing small renderer over Node terminal APIs. The current dashboard already has full redraw, resize handling, selection, search, sorting, detail output, Unicode width helpers, and terminal cleanup. A component framework such as Ink or blessed would add a second rendering model without a current component tree or measured maintenance benefit.
 
-`@clack/prompts` is a better fit for future linear setup or confirmation flows than for a persistent dashboard. Portcn has no current guided configuration flow that justifies adding it. Re-evaluate Clack when configuration, groups, or aliases are implemented; it must not own the live dashboard renderer. `picocolors` is also unnecessary while the CLI uses a small semantic palette with explicit `NO_COLOR` behavior.
+`@clack/prompts` is a better fit for optional linear setup or confirmation flows than for a persistent dashboard. Portcn's saved services use explicit CLI arguments and do not currently need a guided prompt flow. Re-evaluate Clack if setup or confirmation becomes a user task; it must not own the live dashboard renderer. `picocolors` is also unnecessary while the CLI uses a small semantic palette with explicit `NO_COLOR` behavior.
 
 ## Verification
 

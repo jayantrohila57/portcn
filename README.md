@@ -4,31 +4,17 @@
 
 An open-source, developer-first CLI for understanding local development services. Portcn is Linux-first, starting with Ubuntu.
 
-## Development status
+## Current release
 
-Portcn `v0.4.0` is published. It includes read-only listener and process diagnostics, versioned JSON, project/worktree evidence, a contextual terminal view, saved services, Docker inventory, and bind-scope reports. The development branch adds local HTTP(S) URL candidates, explicit bounded endpoint checks, and browser opening for saved services. Process termination is not implemented.
+Portcn `v0.6.0` is published on npm. It is a Linux-first CLI for discovering local listeners and understanding the processes and services behind them. Runtime discovery is read-only; process and service lifecycle management are not implemented.
 
-## Implemented
+The Linux CLI includes TCP/UDP listing and diagnosis, process/project evidence, versioned JSON, an interactive terminal dashboard, saved service groups, read-only Docker inventory and bind-scope reports, local endpoint/readiness/connectivity checks, bounded port waiting, and a read-only stdio MCP server. Port observations are scoped to the current namespace; Docker metadata follows the selected CLI context and may describe another host.
 
-- Fumadocs documentation site with navigation, search, Markdown negotiation, LLM-friendly exports, and generated Open Graph images.
-- pnpm workspace and Turborepo task orchestration.
-- `portcn` CLI package with branded default/help/version output and a Node.js executable.
-- Read-only `portcn list` on Linux: listening TCP/UDP ports, local addresses, and process details when visible; requires `ss` from `iproute2`.
-- Read-only `portcn inspect <port>` on Linux: protocol, state, local address, PID, process name, and best-effort `/proc` details for all visible listeners on a validated port.
-- Read-only `portcn diagnose <port>` on Linux: visible listeners, owners, address families, and namespace/permission visibility limits. Missing listeners do not guarantee a later bind will succeed.
-- Development branch: diagnosis also reports bounded process ancestry and Git project/worktree evidence when visible; this is evidence, not proof of service ownership.
-- Optional development branch metadata: set `PORTCN_AGENT_SESSION_ID` and optionally `PORTCN_AGENT_NAME` to annotate a process tree; attribution is not identity verification and possible leftovers are not safe-to-stop decisions.
-- Development branch: `portcn assess <pid> --project <path>` compares visible process evidence with a Git project; add `--session <id>` for an explicit session comparison. It never signals or stops a process.
-- Development branch: `portcn verify <endpoint> --project <path>` compares a local listener's visible owner and current checkout metadata with the expected project. It never connects to the endpoint and cannot prove which code a running process loaded.
-- Development branch: `portcn check <port>` reports visible listener overlap for a TCP/UDP protocol and bind address; `portcn suggest` returns bounded candidate ports without observed conflicts. Neither command binds or reserves ports.
-- Development branch: `portcn config add ... --url <url>` saves a local HTTP(S) override; `portcn endpoint list` shows unverified URL candidates, and `portcn endpoint check <service-id>` sends one bounded HEAD request without following redirects or bypassing TLS validation. `portcn open <service-id>` explicitly opens a local URL with `xdg-open`.
-- Human-readable list and inspect output uses bordered ASCII tables with color only in capable terminals; set `NO_COLOR` or `TERM=dumb` to disable it. Interactive selection remains marked in monochrome.
-- Private `@portcn/core` package for future shared functionality.
-- GitHub Actions validation and Release Please version/changelog workflow for `portcn`.
+The published package also includes limited macOS `list`, `inspect`, and `diagnose` support through `lsof`. Process command lines, user IDs, project paths, and agent markers are unavailable on macOS. Windows listener discovery is not implemented. See the [platform and capability roadmap](PRODUCT-ROADMAP.md) for verified status and deferred work.
 
 ## Requirements and platform
 
-- Node.js 24 or later and pnpm 12.3.4
+- Node.js 24 or later and pnpm 12.3.4 for the source workspace; the published CLI package requires Node.js 22 or later.
 - Docker Engine with the Compose plugin (optional, for packaged CLI image checks)
 - The CLI currently targets Linux first, beginning with Ubuntu. The documentation site runs anywhere supported by Next.js.
 
@@ -49,19 +35,16 @@ node apps/cli/dist/index.js list --interactive  # header, tabs, paginated table,
 node apps/cli/dist/index.js diagnose 3000 --json # visible listeners and diagnostic limits
 node apps/cli/dist/index.js list --json-version 1 # stable versioned JSON
 node apps/cli/dist/index.js check 3000            # read-only listener overlap check
+node apps/cli/dist/index.js wait 3000             # bounded wait; does not reserve the port
 node apps/cli/dist/index.js suggest               # bounded port suggestions
 node apps/cli/dist/index.js assess 1234 --project "$PWD" # read-only ownership evidence
 node apps/cli/dist/index.js verify 127.0.0.1:3000 --project "$PWD" # local endpoint/project evidence
 node apps/cli/dist/index.js config add tcp 127.0.0.1 3000 --favorite --alias web --group local # saved details
-node apps/cli/dist/index.js config list --json # saved services and current status
-node apps/cli/dist/index.js docker             # container health and mappings
-node apps/cli/dist/index.js docker --json      # versioned container inventory
-node apps/cli/dist/index.js exposure           # bind scope and potential exposure
-node apps/cli/dist/index.js exposure --json    # versioned exposure report
-node apps/cli/dist/index.js config edit tcp://127.0.0.1:3000 --url http://127.0.0.1:3000/ # local URL override on dev
-node apps/cli/dist/index.js endpoint list --json # unverified local endpoint candidates on dev
-node apps/cli/dist/index.js endpoint check tcp://127.0.0.1:3000 # one bounded HTTP request on dev
-node apps/cli/dist/index.js open tcp://127.0.0.1:3000 # explicit local browser open on dev
+node apps/cli/dist/index.js docker --json         # read-only container inventory
+node apps/cli/dist/index.js exposure --json       # bind scope and potential exposure
+node apps/cli/dist/index.js readiness list        # current listener and saved-service state
+node apps/cli/dist/index.js connection check tcp://127.0.0.1:3000 --json
+node apps/cli/dist/index.js mcp                   # read-only stdio MCP server
 ```
 
 Optional Docker Compose commands build and run the packaged CLI image. For example, `pnpm docker:cli --version` rebuilds the current artifact before running it. Unit tests and package checks run with the regular pnpm scripts.
@@ -104,13 +87,13 @@ Docker Compose packaged-image checks are optional and are documented in [Docker]
 
 The searchable [project documentation](apps/docs/content/docs/index.mdx) in `apps/docs` covers getting started, CLI behavior, architecture, development, Docker, contributing, releases, security, and open source. Community policies remain in the canonical root and GitHub files.
 
-The [product roadmap](https://github.com/jayantrohila57/portcn/blob/dev/PRODUCT-ROADMAP.md) tracks implemented status, planned capabilities, dependencies, and acceptance criteria. Planned items are proposals, not shipped features or release commitments.
+The [product roadmap](PRODUCT-ROADMAP.md) is the status summary for capabilities; GitHub issue state and acceptance criteria are authoritative. Planned items are proposals, not shipped features or release commitments.
 
 ## Repository structure
 
 - `apps/docs` — independent Fumadocs website.
 - `apps/cli` — standalone `portcn` command line package.
-- `packages/core` — private shared library for future CLI logic.
+- `packages/core` — private, platform-independent port validation and shared domain types.
 - `.github` — CI, release automation, contribution templates, and Dependabot configuration.
 - `scripts` — version consistency checks.
 
