@@ -6,20 +6,40 @@ import {
   type DockerContainer,
   type DockerInventory,
   formatDockerInventory,
+  listenerMatchesBinding,
   parseDockerInspect,
 } from './docker.js';
 import type { ListeningPort } from './list.js';
 import { discoverListeningPorts } from './list.js';
+import { inspectRootlessportProcess, type RootlessPortDependencies } from './rootlessport.js';
 
 export type PodmanAvailability = DockerAvailability;
 export interface PodmanInventory extends Omit<DockerInventory, 'containers' | 'limitations'> {
-  containers: DockerContainer[];
+  containers: PodmanContainer[];
   limitations: string[];
 }
 export interface PodmanDependencies {
   runPodman?: (args: string[]) => string;
   discoverListeners?: () => ListeningPort[];
+  rootlessport?: RootlessPortDependencies;
 }
+
+export interface RootlessportAttribution {
+  status: 'attributed' | 'ambiguous' | 'unknown';
+  processIdentity: { pid: number; startTime: string } | null;
+  evidence: string[];
+}
+export type PodmanContainer = Omit<DockerContainer, 'ports'> & {
+  ports: Array<
+    Omit<DockerContainer['ports'][number], 'hostBindings'> & {
+      hostBindings: Array<
+        DockerContainer['ports'][number]['hostBindings'][number] & {
+          rootlessForwarder: RootlessportAttribution;
+        }
+      >;
+    }
+  >;
+};
 
 const LIMITATIONS = [
   'Podman inventory uses the Podman CLI, current user, and configured connection; rootless and rootful containers are visible only to the selected user/context.',
@@ -29,7 +49,11 @@ const LIMITATIONS = [
   'Portcn does not elevate privileges, enter container namespaces, or change container state.',
 ];
 
-function parsePodmanInspect(input: string, listeners: ListeningPort[] | null): DockerContainer[] {
+function parsePodmanInspect(
+  input: string,
+  listeners: ListeningPort[] | null,
+  dependencies?: RootlessPortDependencies,
+): PodmanContainer[] {
   const decoded: unknown = JSON.parse(input);
   if (!Array.isArray(decoded)) throw new Error('Podman inspect returned an unexpected response.');
   const containers = parseDockerInspect(input, listeners);
@@ -39,14 +63,89 @@ function parsePodmanInspect(input: string, listeners: ListeningPort[] | null): D
     const inspect = value as { Id?: string; Config?: { Labels?: Record<string, string> | null } };
     labelsById.set(inspect.Id ?? '', inspect.Config?.Labels ?? {});
   }
-  return containers.map((container) => {
-    const labels = labelsById.get(container.id) ?? {};
-    return {
+  return containers
+    .map((container) => {
+      const labels = labelsById.get(container.id) ?? {};
+      return {
+        ...container,
+        composeProject: labels['io.podman.compose.project'] || labels['com.docker.compose.project'] || null,
+        composeService: labels['io.podman.compose.service'] || labels['com.docker.compose.service'] || null,
+      };
+    })
+    .map((container) => ({
       ...container,
-      composeProject: labels['io.podman.compose.project'] || labels['com.docker.compose.project'] || null,
-      composeService: labels['io.podman.compose.service'] || labels['com.docker.compose.service'] || null,
-    };
-  });
+      ports: container.ports.map((port) => ({
+        ...port,
+        hostBindings: port.hostBindings.map((binding) => {
+          const unknown = (evidence: string): RootlessportAttribution => ({
+            status: 'unknown',
+            processIdentity: null,
+            evidence: [evidence],
+          });
+          let rootlessForwarder = unknown('Rootlessport forwarding could not be verified from visible local evidence.');
+          if (binding.bindingState !== 'active' || binding.exposure !== 'published') {
+            rootlessForwarder = unknown('Configured or inactive mappings are not attributed to a forwarding process.');
+          } else if (!listeners) {
+            rootlessForwarder = unknown('Host listener discovery is unavailable in the current namespace.');
+          } else if (!binding.port || !container.networkAddresses.length) {
+            rootlessForwarder = unknown('The published host port or container network address is unavailable.');
+          } else {
+            const candidates = listeners.filter(
+              (listener) =>
+                listener.protocol === port.protocol &&
+                listener.port === binding.port &&
+                listenerMatchesBinding(binding.address, listener.address),
+            );
+            const visibleOwnerCount = new Set(
+              candidates.flatMap(
+                (listener) => listener.owners?.map(({ pid }) => pid) ?? (listener.pid === null ? [] : [listener.pid]),
+              ),
+            ).size;
+            const matches: Array<{ pid: number; startTime: string }> = [];
+            let ambiguous = false;
+            for (const listener of candidates) {
+              const owners = listener.owners?.map(({ pid }) => pid) ?? (listener.pid === null ? [] : [listener.pid]);
+              for (const pid of new Set(owners)) {
+                const inspected = inspectRootlessportProcess(pid, dependencies);
+                if (inspected.status === 'ambiguous') ambiguous = true;
+                if (inspected.status !== 'available' || !inspected.startTime) continue;
+                if (
+                  !inspected.forwards.some(
+                    (forward) =>
+                      forward.protocol === port.protocol &&
+                      forward.hostPort === binding.port &&
+                      listenerMatchesBinding(binding.address, forward.hostAddress) &&
+                      forward.containerPort === port.containerPort &&
+                      container.networkAddresses.some(({ address }) => address === forward.containerAddress),
+                  )
+                )
+                  continue;
+                if (inspectRootlessportProcess(pid, dependencies).startTime !== inspected.startTime) continue;
+                matches.push({ pid, startTime: inspected.startTime });
+              }
+            }
+            const unique = [...new Map(matches.map((match) => [`${match.pid}:${match.startTime}`, match])).values()];
+            const onlyMatch = unique[0];
+            if (onlyMatch && !ambiguous && visibleOwnerCount === 1) {
+              rootlessForwarder = {
+                status: 'attributed',
+                processIdentity: onlyMatch,
+                evidence: [
+                  'Listener protocol, host binding, verified rootlessport arguments, container IP and port, and stable PID lifetime matched.',
+                ],
+              };
+            } else if (unique.length > 1 || ambiguous || (unique.length === 1 && visibleOwnerCount > 1)) {
+              rootlessForwarder = {
+                status: 'ambiguous',
+                processIdentity: null,
+                evidence: ['Multiple or conflicting visible rootlessport forwarding candidates were found.'],
+              };
+            } else rootlessForwarder = unknown('No visible rootlessport process provided a complete matching mapping.');
+          }
+          return { ...binding, rootlessForwarder };
+        }),
+      })),
+    }));
 }
 
 function availabilityFromError(error: unknown): { availability: PodmanAvailability; code: string; message: string } {
@@ -134,7 +233,7 @@ export function discoverPodmanInventory(dependencies: PodmanDependencies = {}): 
     return {
       schemaVersion: 1,
       availability: 'available',
-      containers: parsePodmanInspect(runPodman(['container', 'inspect', ...ids]), listeners),
+      containers: parsePodmanInspect(runPodman(['container', 'inspect', ...ids]), listeners, dependencies.rootlessport),
       hostListenerDiscovery: listeners ? 'available' : 'unavailable',
       limitations: LIMITATIONS,
     };

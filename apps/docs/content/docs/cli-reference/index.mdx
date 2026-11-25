@@ -89,7 +89,7 @@ portcn podman
 portcn podman --json
 ```
 
-Only read-only ``podman container ls`` and ``podman container inspect`` operations are used. Missing CLI, denied access, unavailable service/connection, and malformed inventory are distinct in schema version 1 JSON. Stopped mappings are configured, not active. Listener matches come from Portcn's current network namespace and do not prove reachability or ownership; a remote runtime may describe another host. Docker and Podman remain separate command outputs until evidence-based unified discovery is implemented.
+Only read-only ``podman container ls`` and ``podman container inspect`` operations are used. Missing CLI, denied access, unavailable service/connection, and malformed inventory are distinct in schema version 1 JSON. Stopped mappings are configured, not active. On Linux, active published bindings include ``rootlessForwarder`` with ``attributed``, ``ambiguous``, or ``unknown`` status. Attribution requires a visible listener owner, the ``rootlessport`` executable, matching structured host/container mapping and network address, and a stable PID start time. Listener and process observations come from Portcn's current namespace and do not prove reachability; a remote runtime may describe another host. Docker and Podman remain separate command outputs.
 
 ## ``portcn exposure``
 
