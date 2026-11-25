@@ -446,10 +446,16 @@ export function registerAvailabilityCommands(program: Command, dependencies: Ava
               `Port ${result.port} has no observed ${result.protocol.toUpperCase()} listener overlap. Another process may claim it before you bind.\n`,
             );
         } catch (error) {
-          if (json)
+          if (json && error instanceof PortWatchTimeoutError)
             process.stdout.write(
-              `${JSON.stringify({ ...versionedJsonError(error, value), event: error instanceof PortWatchTimeoutError ? 'timeout' : error instanceof PortWatchCancelledError ? 'cancelled' : 'error' })}\n`,
+              `${JSON.stringify({ schemaVersion: JSON_SCHEMA_VERSION, event: 'timeout', error: { code: 'WATCH_TIMEOUT', message: error.message, port: value } })}\n`,
             );
+          else if (json && error instanceof PortWatchCancelledError)
+            process.stdout.write(
+              `${JSON.stringify({ schemaVersion: JSON_SCHEMA_VERSION, event: 'cancelled', error: { code: 'WATCH_CANCELLED', message: error.message, port: value } })}\n`,
+            );
+          else if (json)
+            process.stdout.write(`${JSON.stringify({ ...versionedJsonError(error, value), event: 'error' })}\n`);
           else if (!(error instanceof PortWatchCancelledError))
             process.stderr.write(`portcn: ${error instanceof Error ? error.message : String(error)}\n`);
           process.exitCode =
