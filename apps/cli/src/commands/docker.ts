@@ -100,7 +100,7 @@ function displayAddress(value: string): string {
   return isIP(address) === 6 ? `[${address}]` : address;
 }
 
-function listenerMatchesBinding(binding: string, listener: string): boolean {
+export function listenerMatchesBinding(binding: string, listener: string): boolean {
   const bind = bareAddress(binding);
   const local = bareAddress(listener);
   if (bind === '' || bind === '*' || bind === local) return true;
