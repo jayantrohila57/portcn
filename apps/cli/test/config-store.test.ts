@@ -19,7 +19,7 @@ describe('saved service config', () => {
     const file = await fixture();
     const id = serviceId('tcp', '127.0.0.1', 3000);
     const config: ServiceConfig = {
-      version: 1,
+      version: 2,
       groups: ['web', 'local'],
       services: [
         {
@@ -31,6 +31,7 @@ describe('saved service config', () => {
           alias: 'site',
           note: null,
           groups: ['web', 'local'],
+          url: 'http://127.0.0.1:3000/',
         },
       ],
     };
@@ -47,7 +48,7 @@ describe('saved service config', () => {
       { id: 'tcp://0.0.0.0:80', protocol: 'tcp' as const, address: '0.0.0.0', port: 80 },
     ];
     const config: ServiceConfig = {
-      version: 1,
+      version: 2,
       groups: [],
       services: services.map(({ id, protocol, address, port }) => {
         return {
@@ -59,6 +60,7 @@ describe('saved service config', () => {
           alias: null,
           note: null,
           groups: [],
+          url: null,
         };
       }),
     };
@@ -66,11 +68,11 @@ describe('saved service config', () => {
     expect((await readConfig(file)).config.services).toHaveLength(3);
   });
 
-  it('migrates version zero favorites to version one', async () => {
+  it('migrates version zero favorites to version two', async () => {
     const file = await fixture();
     await writeFile(file, JSON.stringify({ version: 0, favorites: [{ protocol: 'udp', address: '::1', port: 53 }] }));
     expect((await readConfig(file)).config).toEqual({
-      version: 1,
+      version: 2,
       groups: [],
       services: [
         {
@@ -82,14 +84,66 @@ describe('saved service config', () => {
           alias: null,
           note: null,
           groups: [],
+          url: null,
         },
       ],
     });
   });
 
+  it('migrates version one saved services with no URL override', async () => {
+    const file = await fixture();
+    await writeFile(
+      file,
+      JSON.stringify({
+        version: 1,
+        groups: [],
+        services: [
+          {
+            id: 'tcp://127.0.0.1:3000',
+            protocol: 'tcp',
+            address: '127.0.0.1',
+            port: 3000,
+            favorite: false,
+            alias: null,
+            note: null,
+            groups: [],
+          },
+        ],
+      }),
+    );
+    expect((await readConfig(file)).config.services[0]).toMatchObject({ url: null });
+    expect((await readConfig(file)).config.version).toBe(2);
+  });
+
+  it('rejects a saved URL that targets a remote host or a different port', async () => {
+    const file = await fixture();
+    await expect(
+      writeConfig(
+        {
+          version: 2,
+          groups: [],
+          services: [
+            {
+              id: 'tcp://127.0.0.1:3000',
+              protocol: 'tcp',
+              address: '127.0.0.1',
+              port: 3000,
+              favorite: false,
+              alias: null,
+              note: null,
+              groups: [],
+              url: 'http://example.com:3000/',
+            },
+          ],
+        },
+        file,
+      ),
+    ).rejects.toThrow('URL host must be localhost');
+  });
+
   it('recovers a corrupt primary from its validated backup and rejects corrupt-only data', async () => {
     const file = await fixture();
-    const config: ServiceConfig = { version: 1, services: [], groups: [] };
+    const config: ServiceConfig = { version: 2, services: [], groups: [] };
     await writeConfig(config, file);
     await writeConfig({ ...config, groups: ['saved'] }, file);
     await writeFile(file, '{bad');
