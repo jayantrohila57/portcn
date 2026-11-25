@@ -29,6 +29,8 @@ portcn assess 1234 --project "$PWD" # dev: read-only ownership evidence
 portcn verify 127.0.0.1:3000 --project "$PWD" # dev: local endpoint/project evidence
 portcn config add tcp 127.0.0.1 3000 --favorite --alias web --group local # dev: save user-authored details
 portcn config list --json    # dev: saved details with current listener status
+portcn docker               # dev: read-only containers, Compose labels, and port mappings
+portcn docker --json        # dev: versioned machine-readable container inventory
 ```
 
 All discovery is read-only. `diagnose` reports each visible TCP/UDP socket, bind address, IPv4/IPv6 family, every visible PID/process owner, best-effort `/proc` details, and the current network/PID namespaces. On `dev`, it also reports bounded process ancestry, Git project/worktree evidence, and optional agent session markers when visible. Set `PORTCN_AGENT_SESSION_ID` to a non-secret session label and optionally `PORTCN_AGENT_NAME`; Portcn extracts only these exact keys from visible process environments and does not retain or emit other values. Attribution is user-supplied evidence, can be incomplete or ambiguous, and does not prove service ownership or session liveness. A possible leftover is not a safe-to-stop decision. It explains when permissions or namespaces hide information. A missing listener is not a guarantee that a later bind will succeed. Port numbers must be between 1 and 65535.
