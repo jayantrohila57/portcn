@@ -1,6 +1,7 @@
 export {
   type AnyDiscoveryObservation,
   type CorrelationType,
+  correlateContainerMappings,
   createDiscoverySnapshot,
   DISCOVERY_SCHEMA_VERSION,
   type DiscoveryConfidence,
@@ -16,6 +17,7 @@ export {
   type DiscoveryRuntime,
   type DiscoveryScope,
   type DiscoverySnapshot,
+  deduplicateDiscoveryObservations,
   discoveryIdentityKey,
   type EvidenceFreshness,
   type EvidenceProvenance,

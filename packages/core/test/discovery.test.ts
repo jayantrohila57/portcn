@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { PortNumber } from '../src/index.js';
 import {
+  correlateContainerMappings,
   createDiscoverySnapshot,
   type DiscoveryCorrelation,
   type DiscoveryEvidence,
   type DiscoveryIdentity,
+  type DiscoveryObservation,
   type DiscoveryProviderResult,
   type DiscoveryScope,
+  deduplicateDiscoveryObservations,
   discoveryIdentityKey,
   evidenceFreshness,
 } from '../src/index.js';
@@ -83,6 +86,76 @@ function providerResult(providerId: string, status: DiscoveryProviderResult['sta
   };
 }
 
+function containerObservation(
+  runtime: 'docker' | 'podman',
+  containerId: string,
+  provider: 'docker' | 'podman',
+  source: string,
+  observedAt: string,
+  evidenceScope = scope,
+): DiscoveryObservation {
+  return {
+    identity: { kind: 'container', runtime, daemonContext: `${runtime}-local`, daemonHostId: 'host-a', containerId },
+    identityStatus: 'stable',
+    state: 'running',
+    displayName: containerId,
+    observedAt,
+    evidence: [{ ...evidence, id: source, provider, observedAt, scope: evidenceScope }],
+  };
+}
+
+function containerPortObservation(
+  runtime: 'docker' | 'podman',
+  containerId: string,
+  source: string,
+  provider: 'docker' | 'podman' = runtime,
+): DiscoveryObservation {
+  return {
+    identity: {
+      kind: 'container-port',
+      runtime,
+      daemonContext: `${runtime}-local`,
+      daemonHostId: 'host-a',
+      containerId,
+      protocol: 'tcp',
+      containerPort: 80 as PortNumber,
+    },
+    identityStatus: 'stable',
+    state: 'running',
+    displayName: null,
+    observedAt: evidence.observedAt,
+    evidence: [{ ...evidence, id: source, provider, observedAt: evidence.observedAt }],
+  };
+}
+
+function bindingObservation(
+  runtime: 'docker' | 'podman',
+  containerId: string,
+  hostAddress: string,
+  hostPort: number,
+  source: string,
+): DiscoveryObservation {
+  return {
+    identity: {
+      kind: 'published-binding',
+      runtime,
+      daemonContext: `${runtime}-local`,
+      daemonHostId: 'host-a',
+      containerId,
+      hostNetworkNamespace: 'net:[4026531833]',
+      protocol: 'tcp',
+      containerPort: 80 as PortNumber,
+      hostAddress,
+      hostPort: hostPort as PortNumber,
+    },
+    identityStatus: 'stable',
+    state: 'running',
+    displayName: null,
+    observedAt: evidence.observedAt,
+    evidence: [{ ...evidence, id: source, provider: runtime, observedAt: evidence.observedAt }],
+  };
+}
+
 describe('unified discovery contracts', () => {
   it('encodes source identity deterministically and distinguishes endpoint scope', () => {
     expect(discoveryIdentityKey(listener)).toBe(discoveryIdentityKey({ ...listener }));
@@ -136,6 +209,69 @@ describe('unified discovery contracts', () => {
     expect(discoveryIdentityKey(binding)).not.toBe(
       discoveryIdentityKey({ ...binding, containerPort: 443 as PortNumber }),
     );
+  });
+
+  it('deduplicates repeat runtime/container identities but keeps Docker and Podman distinct', () => {
+    const dockerFirst = containerObservation('docker', 'same-id', 'docker', 'docker:a', '2026-11-25T11:00:00.000Z');
+    const dockerSecond = containerObservation('docker', 'same-id', 'docker', 'docker:b', '2026-11-25T11:00:02.000Z');
+    const podman = containerObservation('podman', 'same-id', 'podman', 'podman:a', '2026-11-25T11:00:01.000Z');
+    const result = deduplicateDiscoveryObservations([dockerFirst, podman, dockerSecond]);
+    expect(result).toHaveLength(2);
+    const docker = result.find((item) => item.identity?.kind === 'container' && item.identity.runtime === 'docker');
+    expect(docker).toMatchObject({
+      observedAt: '2026-11-25T11:00:02.000Z',
+      evidence: [{ id: 'docker:a' }, { id: 'docker:b' }],
+    });
+    expect(result.map((item) => item.identity?.kind === 'container' && item.identity.runtime)).toEqual([
+      'docker',
+      'podman',
+    ]);
+  });
+
+  it('keeps shared host ports and multiple mappings distinct, then links only matching container ports', () => {
+    const dockerPort = containerPortObservation('docker', 'docker-a', 'docker:port:a');
+    const podmanPort = containerPortObservation('podman', 'podman-a', 'podman:port:a');
+    const dockerBinding = bindingObservation('docker', 'docker-a', '127.0.0.1', 8080, 'docker:binding:a');
+    const sameHostPortOtherContainer = bindingObservation('podman', 'podman-a', '127.0.0.1', 8080, 'podman:binding:a');
+    const secondMapping = bindingObservation('docker', 'docker-a', '::1', 8081, 'docker:binding:b');
+    const dockerBindingEvidence = dockerBinding.evidence.at(0);
+    if (!dockerBindingEvidence) throw new Error('Test fixture is missing Docker binding evidence.');
+    const observations = deduplicateDiscoveryObservations([
+      dockerPort,
+      podmanPort,
+      dockerBinding,
+      sameHostPortOtherContainer,
+      secondMapping,
+      { ...dockerBinding, evidence: [{ ...dockerBindingEvidence, id: 'docker:binding:repeat' }] },
+    ]);
+    expect(observations).toHaveLength(5);
+    const edges = correlateContainerMappings(observations);
+    expect(edges).toHaveLength(3);
+    expect(edges.every(({ type, confidence }) => type === 'published-as' && confidence === 'high')).toBe(true);
+    expect(new Set(edges.map(({ fromIdentityKey }) => fromIdentityKey)).size).toBe(3);
+    expect(correlateContainerMappings([dockerPort, { ...dockerBinding, evidence: [] }])).toEqual([]);
+    expect(
+      correlateContainerMappings([
+        dockerPort,
+        { ...dockerBinding, evidence: [{ ...dockerBindingEvidence, scope: { ...scope, hostId: 'host-b' } }] },
+      ]),
+    ).toEqual([]);
+  });
+
+  it('does not collapse the same key when known provider scopes conflict', () => {
+    const first = containerObservation('docker', 'container-a', 'docker', 'docker:host-a', evidence.observedAt);
+    const otherScope: DiscoveryScope = { ...scope, hostId: 'host-b' };
+    const second = containerObservation(
+      'docker',
+      'container-a',
+      'docker',
+      'docker:host-b',
+      evidence.observedAt,
+      otherScope,
+    );
+    const result = deduplicateDiscoveryObservations([first, second]);
+    expect(result).toHaveLength(2);
+    expect(result.every((item) => item.identityStatus === 'observation-only')).toBe(true);
   });
 
   it('preserves separate provider observations and partial-result reasons without port-based deduplication', () => {

@@ -276,6 +276,124 @@ export interface DiscoveryCorrelation {
   scope: DiscoveryScope;
 }
 
+const scopeFields: readonly (keyof DiscoveryScope)[] = [
+  'hostId',
+  'pidNamespace',
+  'networkNamespace',
+  'mountNamespace',
+  'daemonContext',
+];
+
+function scopesCompatible(left: DiscoveryScope, right: DiscoveryScope): boolean {
+  return scopeFields.every((field) => left[field] === null || right[field] === null || left[field] === right[field]);
+}
+
+function mergeObservationGroup(group: DiscoveryObservation[]): DiscoveryObservation {
+  const ordered = [...group].sort(
+    (left, right) =>
+      Date.parse(left.observedAt) - Date.parse(right.observedAt) || compareText(left.observedAt, right.observedAt),
+  );
+  const latest = ordered.at(-1);
+  if (!latest) throw new Error('Cannot merge an empty discovery identity group.');
+  const evidenceById = new Map<string, DiscoveryEvidence>();
+  for (const observation of ordered) {
+    for (const item of observation.evidence) {
+      if (!evidenceById.has(item.id)) evidenceById.set(item.id, item);
+    }
+  }
+  return {
+    ...latest,
+    displayName:
+      latest.displayName ?? [...ordered].reverse().find(({ displayName }) => displayName)?.displayName ?? null,
+    evidence: [...evidenceById.values()].sort((left, right) => compareText(left.id, right.id)),
+  };
+}
+
+/** Collapse only repeated stable identities with compatible known scope; retain every distinct source record. */
+export function deduplicateDiscoveryObservations(observations: AnyDiscoveryObservation[]): AnyDiscoveryObservation[] {
+  const byIdentity = new Map<string, DiscoveryObservation[][]>();
+  const unidentified: AnyDiscoveryObservation[] = [];
+  for (const observation of observations) {
+    if (observation.identity === null || observation.identityStatus !== 'stable') {
+      unidentified.push(observation);
+      continue;
+    }
+    const key = discoveryIdentityKey(observation.identity);
+    const groups = byIdentity.get(key) ?? [];
+    const compatibleGroup = groups.find((group) =>
+      group.every((item) =>
+        observation.evidence.every((evidence) =>
+          item.evidence.every((prior) => scopesCompatible(prior.scope, evidence.scope)),
+        ),
+      ),
+    );
+    if (compatibleGroup) compatibleGroup.push(observation);
+    else groups.push([observation]);
+    byIdentity.set(key, groups);
+  }
+  const stable = [...byIdentity.entries()].flatMap(([, groups]) =>
+    groups.map((group) =>
+      mergeObservationGroup(
+        group.map((item) => (groups.length > 1 ? { ...item, identityStatus: 'observation-only' } : item)),
+      ),
+    ),
+  );
+  return [...stable, ...unidentified].sort((left, right) => {
+    const leftKey = left.identity && left.identityStatus === 'stable' ? discoveryIdentityKey(left.identity) : '';
+    const rightKey = right.identity && right.identityStatus === 'stable' ? discoveryIdentityKey(right.identity) : '';
+    return compareText(leftKey, rightKey) || compareText(left.observedAt, right.observedAt);
+  });
+}
+
+/** Add published-as edges only when runtime, daemon, container, protocol, and target port all agree. */
+export function correlateContainerMappings(observations: AnyDiscoveryObservation[]): DiscoveryCorrelation[] {
+  const stable = observations.filter(
+    (item): item is DiscoveryObservation => item.identity !== null && item.identityStatus === 'stable',
+  );
+  const correlations: DiscoveryCorrelation[] = [];
+  for (const bindingObservation of stable) {
+    const binding = bindingObservation.identity;
+    if (binding.kind !== 'published-binding') continue;
+    for (const portObservation of stable) {
+      const port = portObservation.identity;
+      if (
+        port.kind !== 'container-port' ||
+        port.runtime !== binding.runtime ||
+        port.daemonContext !== binding.daemonContext ||
+        port.daemonHostId !== binding.daemonHostId ||
+        port.containerId !== binding.containerId ||
+        port.protocol !== binding.protocol ||
+        port.containerPort !== binding.containerPort
+      )
+        continue;
+      if (!bindingObservation.evidence.length || !portObservation.evidence.length) continue;
+      const evidence = [...bindingObservation.evidence, ...portObservation.evidence];
+      if (
+        bindingObservation.evidence.some((bindingEvidence) =>
+          portObservation.evidence.some((portEvidence) => !scopesCompatible(bindingEvidence.scope, portEvidence.scope)),
+        )
+      )
+        continue;
+      const observedAt = [bindingObservation.observedAt, portObservation.observedAt].sort(compareText).at(-1);
+      const correlationScope = evidence.at(0)?.scope;
+      if (!observedAt || !correlationScope) continue;
+      correlations.push({
+        fromIdentityKey: discoveryIdentityKey(binding),
+        toIdentityKey: discoveryIdentityKey(port),
+        type: 'published-as',
+        confidence: 'high',
+        evidenceIds: [...new Set(evidence.map(({ id }) => id))].sort(compareText),
+        observedAt,
+        scope: correlationScope,
+      });
+    }
+  }
+  return correlations.sort(
+    (left, right) =>
+      compareText(left.fromIdentityKey, right.fromIdentityKey) || compareText(left.toIdentityKey, right.toIdentityKey),
+  );
+}
+
 export interface DiscoverySnapshot {
   schemaVersion: typeof DISCOVERY_SCHEMA_VERSION;
   requestedAt: string;

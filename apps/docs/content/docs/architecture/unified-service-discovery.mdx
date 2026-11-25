@@ -99,7 +99,9 @@ Each `DiscoveryEvidence` entry records provider, method, source reference, claim
 
 ## Correlation and deduplication contract
 
-Source records are deduplicated only when their complete versioned identity keys are equal and their scope is compatible. An adapter must preserve source evidence even when another adapter reports the same endpoint. Cross-provider relationships are `DiscoveryCorrelation` edges with both identity keys, relation type, confidence, evidence IDs, observation time, and scope. `createDiscoverySnapshot()` rejects edges whose endpoints or evidence are absent from the collected provider results, and rejects self-edges.
+`deduplicateDiscoveryObservations()` collapses repeated records only when their complete stable identity keys match and all known evidence scopes are compatible. It keeps the latest state/time and retains source evidence IDs, providers, timestamps, and namespaces. Equal port numbers never identify a container: runtime, daemon context/host, full container ID, protocol, container port, bind address, and host port remain part of the corresponding keys. Docker and Podman are distinct runtimes even if their reported container IDs happen to be equal. If the same key arrives with conflicting known scopes, records remain separate and are downgraded to observation-only.
+
+`correlateContainerMappings()` creates `published-as` edges only when a published binding and its container-port record agree on runtime, daemon context and host, full container ID, transport, and target port, and both records have compatible scoped evidence. It does not correlate host listeners by port alone; native listener correlation also requires compatible host/network namespaces and the existing bind-address matching rules. Cross-provider relationships are `DiscoveryCorrelation` edges with both identity keys, relation type, confidence, evidence IDs, observation time, and scope. `createDiscoverySnapshot()` rejects edges whose endpoints or evidence are absent from the collected provider results, and rejects self-edges.
 
 For current Docker mappings, reuse the existing bind/address/protocol matching behavior rather than creating a second wildcard-IP matcher. Treat the match as derived evidence only. Promote it to `published-as` only when daemon host and network-namespace compatibility are established; otherwise preserve the Docker binding and listener as separate records. Forwarding attribution requires direct process evidence plus a compatible binding; port equality alone is insufficient.
 
@@ -107,10 +109,10 @@ Supported relationship vocabulary includes `same-endpoint`, `published-as`, `for
 
 ## Deterministic contract coverage
 
-`packages/core/test/discovery.test.ts` uses fixed identities, timestamps, provider results, and correlation edges. It verifies stable key serialization, separation by protocol/bind/namespace/container/process lifetime, separate published bindings, retention of partial provider results without port-only deduplication, deterministic ordering, and freshness outcomes. Tests require neither root privileges nor a Docker socket.
+`packages/core/test/discovery.test.ts` uses fixed Docker and Podman identities, timestamps, provider results, and correlations. It verifies stable key serialization, separation by runtime/context/container, preservation of multiple mappings and shared host ports, deduplication of repeated compatible observations, retention of conflicting-scope ambiguity, rejection of evidence-free mapping edges, retention of partial provider results without port-only deduplication, deterministic ordering, and freshness outcomes. Tests require neither root privileges nor runtime sockets.
 
 The existing command tests remain the compatibility fixtures for CLI JSON, listener ownership, Docker inventory, TUI identity, and MCP tool contracts. This architecture does not migrate those outputs; future adapter issues must add explicit compatibility tests before exposing a unified view.
 
 ## Deferred integrations
 
-This contract provides extension points for Podman, Docker/Podman deduplication, `rootlessport`, Nginx, systemd, service relationships, resource monitoring, and later terminal/MCP integration. Their implementations remain tracked separately in issues #181–#187, #112, and #116. They are not included in issue #180.
+The contracts and reconciliation helpers now support the separate Podman command (#181) and safe container-record deduplication (#182). Runtime listener and `rootlessport` attribution (#183), Nginx/systemd (#184–#185), service relationships (#186), and the unified dashboard (#187) remain independent integrations.
