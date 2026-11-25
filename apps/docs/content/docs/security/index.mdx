@@ -7,7 +7,7 @@ The [SECURITY.md policy](https://github.com/jayantrohila57/portcn/blob/main/SECU
 
 ## Current execution behavior
 
-The Linux CLI reads listening sockets from the current network namespace through `ss` and may read visible process metadata from `/proc`. It does not elevate privileges, change sockets, or terminate processes. It does not inspect host or other network namespaces automatically. The Docker test workflow mounts Git metadata read-only and does not expose the Docker socket.
+The Linux CLI reads listening sockets from the current network namespace through `ss` and may read visible process metadata from `/proc`. The `diagnose` command uses an owner process's working directory and up to five ancestors to query Git for project/worktree metadata. These reads are bounded, read-only, and may be incomplete due to permissions, process exits, namespaces, or missing Git metadata. The output includes visible filesystem paths and executable locations; it never reads agent conversations or scans repositories. It does not elevate privileges, change sockets, or terminate processes. It does not inspect host or other network namespaces automatically. The Docker test workflow mounts Git metadata read-only and does not expose the Docker socket.
 
 <Callout title="Report privately" type="warn">
 Include a clear impact and reproduction steps in a private report. Do not include credentials, tokens, or unrelated personal data.

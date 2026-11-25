@@ -8,6 +8,7 @@ import {
 } from '../src/commands/diagnose.js';
 import { inspectProcessDetails } from '../src/commands/inspect.js';
 import type { ListeningPort } from '../src/commands/list.js';
+import type { ProjectContext } from '../src/commands/project-context.js';
 
 const sockets: ListeningPort[] = [
   {
@@ -48,6 +49,20 @@ describe('port diagnose', () => {
         details: { command: `/usr/bin/process-${pid}`, user: 'uid:1000' },
         status: 'available',
       }),
+      inspectProject: (pid) =>
+        ({
+          status: 'identified',
+          confidence: 'high',
+          source: 'owner',
+          cwd: `/workspace/service-${pid}`,
+          executable: '/usr/bin/node',
+          projectRoot: `/workspace/service-${pid}`,
+          gitDir: `/workspace/service-${pid}/.git`,
+          gitCommonDir: `/workspace/service-${pid}/.git`,
+          worktree: false,
+          ancestors: [],
+          evidence: ['Git reported the project root.'],
+        }) satisfies ProjectContext,
       readNamespace: (namespace) => `${namespace}:[4026531840]`,
     });
 
@@ -62,6 +77,11 @@ describe('port diagnose', () => {
       command: '/usr/bin/process-322',
       user: 'uid:1000',
       detailsStatus: 'available',
+      projectContext: {
+        status: 'identified',
+        projectRoot: '/workspace/service-322',
+        worktree: false,
+      },
     });
     expect(result.namespace).toEqual({ network: 'net:[4026531840]', pid: 'pid:[4026531840]' });
   });
