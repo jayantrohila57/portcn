@@ -99,9 +99,10 @@ function isDocumentationOnly(files) {
     files.every(
       (file) =>
         file !== 'CHANGELOG.md' &&
-        /(?:^|\/)(?:AGENTS\.md|CONTRIBUTING\.md|PRODUCT-ROADMAP\.md|README\.md|RELEASE-[^/]+\.md|[^/]+\.mdx)$/.test(
-          file,
-        ),
+        (/^(?:scripts\/changelog-policy\.cjs|scripts\/changelog\.test\.mjs)$/.test(file) ||
+          /(?:^|\/)(?:AGENTS\.md|CONTRIBUTING\.md|PRODUCT-ROADMAP\.md|README\.md|RELEASE-[^/]+\.md|[^/]+\.mdx)$/.test(
+            file,
+          )),
     )
   );
 }
