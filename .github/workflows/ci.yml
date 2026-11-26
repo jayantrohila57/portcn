@@ -147,6 +147,7 @@ jobs:
             assert.deepEqual(tools.map(({ name }) => name).sort(), [
               'check_port_availability',
               'diagnose_port',
+              'discovery_snapshot',
               'list_listeners',
               'suggest_ports',
             ]);
