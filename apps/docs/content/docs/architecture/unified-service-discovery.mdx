@@ -18,8 +18,8 @@ This is an architecture baseline, not a claim that the current CLI uses a unifie
 | Docker inventory | `apps/cli/src/commands/docker.ts` invokes the selected Docker CLI context and parses inspect data. | Configured, exposed, direct, and published ports are distinct. Its existing listener matcher compares protocol, address, and port; it does not establish that a remote daemon and the local listener share a host or namespace. |
 | Saved services and probes | `config-store.ts`, `config.ts`, `endpoints.ts`, `readiness.ts`, and `connection.ts`. | Saved IDs such as `tcp://127.0.0.1:8080` are configuration keys, not global runtime identities. Probe outputs describe the current local observation. |
 | JSON contracts | Command modules return their existing `schemaVersion: 1` shapes; `json.ts` centralizes stable errors. | The shared model is internal/additive. Existing CLI response objects are not replaced or silently reshaped. |
-| Terminal dashboard | `tabs.ts` filters and selects listener rows; its current row identity uses protocol, address, port, and owner information. | It is listener-focused. Service-wide provider aggregation remains issue #187. |
-| MCP | `mcp.ts` exposes four bounded, read-only tools for listeners, diagnosis, availability, and suggestions. | It calls existing command-domain functions; service graph tools are future work. |
+| Terminal dashboard | `tabs.ts` plus `service-dashboard.ts` present listener tabs and a Linux services tab from coordinated provider inventories. | Listener JSON and per-command JSON stay unchanged; dashboard rows are a human summary. |
+| MCP | `mcp.ts` exposes bounded, read-only listener tools plus `discovery_snapshot` on Linux. | Relationship summaries use the same coordinator as `portcn discover snapshot`; they do not replace existing command JSON. |
 
 These separate implementations are the migration sources. The architecture must not reimplement Docker bind matching, process inspection, project attribution, or existing serializers. An adapter should call or wrap the existing owner and translate its result into the shared contract.
 
@@ -47,8 +47,10 @@ native adapter  Docker adapter  future adapters
           +-----------+------------+
           v           v            v
       CLI/TUI      JSON/API       MCP tools
-   later issue    additive only   later issue
-       #187        preserve v1       #116
+  dashboard +     `discover       `discovery_snapshot`
+  listeners       snapshot`       (Linux, bounded)
+                  additive
+                  preserve v1
 ```
 
 Current command paths continue to run as shown below until provider integration is separately implemented:
@@ -115,4 +117,4 @@ The existing command tests remain the compatibility fixtures for CLI JSON, liste
 
 ## Deferred integrations
 
-The contracts and reconciliation helpers support the separate Podman command (#181), safe container-record deduplication (#182), and advisory `rootlessport` attribution (#183). Attribution uses visible Linux listener owners, verified executable and structured mapping arguments, container network addresses, and stable PID start time. Nginx configuration discovery (#184) is implemented as separate configured evidence that can be compared with local listeners. Systemd unit discovery (#185) is implemented on `dev`, including manager scope and MainPID-only correlation. Service relationships (#186) and the unified dashboard (#187) remain independent integrations.
+The contracts and reconciliation helpers support Podman inventory (#181), scoped Docker/Podman reconciliation (#182), advisory `rootlessport` attribution (#183), Nginx configuration discovery (#184), systemd unit discovery (#185), and the unified dashboard (#187), shipped in `v0.7.0`. `buildDiscoveryCorrelations()` adds evidence-backed relationships with `nature` and `freshness` labels for container mappings, host endpoints, listener ownership, forwarding attribution, and configured manager records (#186). `createDiscoverySnapshot()` still rejects self-edges, missing identities, and evidence-free correlations.

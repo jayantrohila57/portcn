@@ -3,7 +3,7 @@ title: CLI reference
 description: Portcn port listing, inspection, conflict diagnosis, ownership evidence, output, and exit codes.
 ---
 
-The published ``v0.6.1`` CLI package requires Node.js 22 or newer; the source workspace and build require Node.js 24 or newer. Linux is the primary supported platform. The package also includes limited macOS ``list``, ``inspect``, and ``diagnose`` support through ``lsof``. On macOS, process command lines, user IDs, project context, and agent markers are unavailable. Windows listener discovery is not implemented. The macOS CI integration verifies real listener discovery; other command families are supported on Linux unless stated otherwise.
+The published ``v0.7.0`` CLI package requires Node.js 22 or newer; the source workspace and build require Node.js 24 or newer. Linux is the primary supported platform. The package also includes limited macOS ``list``, ``inspect``, and ``diagnose`` support through ``lsof``. On macOS, process command lines, user IDs, project context, and agent markers are unavailable. Windows listener discovery is not implemented. The macOS CI integration verifies real listener discovery; other command families are supported on Linux unless stated otherwise.
 
 | Platform | Verified CLI support | Requirements and limits |
 | --- | --- | --- |
@@ -11,7 +11,7 @@ The published ``v0.6.1`` CLI package requires Node.js 22 or newer; the source wo
 | macOS | `list`, `inspect`, and `diagnose` listener discovery | System `lsof`; visible PID/process names only. The live macOS CI check covers listener discovery. Linux `/proc`, project, and agent-marker details are unavailable. |
 | Windows | Help and version output | Listener/service discovery is unsupported. |
 
-Registered top-level commands include `list`, `inspect`, `diagnose`, `wait`, `check`, `suggest`, `assess`, `verify`, `config`, `endpoint`, `open`, `readiness`, `connection`, `docker`, `podman`, `exposure`, and `mcp`. Configuration subcommands include `add`, `edit`, `remove`, `group`, and `recover`.
+Registered top-level commands include `list`, `inspect`, `diagnose`, `wait`, `check`, `suggest`, `assess`, `verify`, `config`, `endpoint`, `open`, `readiness`, `connection`, `docker`, `podman`, `nginx`, `systemd`, `exposure`, `discover`, and `mcp`. Configuration subcommands include `add`, `edit`, `remove`, `group`, and `recover`.
 
 ## ``portcn config``
 
@@ -272,9 +272,19 @@ Both commands return status ``0`` when a check completes, including an ``unknown
 
 The JSON result has ``schemaVersion``, ``port``, ``namespace``, ``listeners``, ``messages``, and ``limitations`` fields. Each listener includes ``protocol``, ``state``, ``bindAddress``, ``addressFamily``, and ``owners``. Owner fields include ``pid``, ``processName``, ``command``, ``user``, and ``detailsStatus`` (``available``, ``permission-denied``, ``process-exited``, or ``unavailable``), plus ``projectContext`` with ``status``, evidence ``confidence`` (``high`` for owner cwd, ``medium`` for ancestor cwd, ``low`` when projects conflict, otherwise ``none``), ``source``, visible owner ``cwd``/``executable``, ``projectRoot``, ``gitDir``, ``gitCommonDir``, ``checkoutBranch``, ``checkoutCommit``, ``worktree``, bounded ``ancestors``, and evidence notes. The additive ``agentAttribution`` object includes ``status``, ``confidence``, opt-in ``agentName``/``sessionId``, source PID and relationship, ``leftoverAssessment``, UTC ``observedAt``, and evidence notes. Project context status is ``identified``, ``ambiguous``, ``not-found``, ``permission-denied``, ``process-exited``, or ``unavailable``. Sensitive command-line options, secret-like environment assignments, and URL passwords are redacted from process command details. When no process ID is visible, the listener's ``owners`` array is empty and the messages explain that permissions or namespace boundaries can hide ownership.
 
+## ``portcn discover`` (`discover` / `snapshot`)
+
+Linux-only. The ``discover`` command group includes ``snapshot``, which collects a unified discovery snapshot from native listeners, Docker, Podman, Nginx configuration, and systemd units through the shared coordinator. Output is additive: existing ``docker``, ``podman``, ``nginx``, and ``systemd`` command JSON is unchanged. Each relationship edge includes ``type``, ``confidence``, ``nature`` (`observed`, `configured`, `inferred`, `incomplete`, or `unavailable`), ``freshness``, evidence IDs, and scope. Use ``--full`` with ``--json`` to include provider observations.
+
+```sh
+portcn discover snapshot
+portcn discover snapshot --json
+portcn discover snapshot --json --full
+```
+
 ## ``portcn mcp``
 
-Starts a local read-only MCP server over stdio for coding-agent hosts. Configure the host to run ``portcn`` with the ``mcp`` argument. The server advertises ``list_listeners``, ``diagnose_port``, ``check_port_availability``, and ``suggest_ports``. Input schemas validate arguments before tool execution. Results are bounded and structured; tool errors use an error object with a stable code and a sanitized message. Stdout carries only MCP protocol messages, and SIGINT, SIGTERM, or client EOF closes the server.
+Starts a local read-only MCP server over stdio for coding-agent hosts. Configure the host to run ``portcn`` with the ``mcp`` argument. The server advertises ``list_listeners``, ``diagnose_port``, ``check_port_availability``, and ``suggest_ports``. On Linux it also advertises ``discovery_snapshot`` for bounded relationship summaries from the same coordinator as ``portcn discover snapshot``. Input schemas validate arguments before tool execution. Results are bounded and structured; tool errors use an error object with a stable code and a sanitized message. Stdout carries only MCP protocol messages, and SIGINT, SIGTERM, or client EOF closes the server.
 
 The server reuses the CLI's Linux listener, process, project, and availability contracts. It does not execute arbitrary shell commands, inspect remote namespaces, start an HTTP endpoint, or change processes or ports. Diagnosis returns visible PID/process name and selected Git project fields, but omits process command lines, user identifiers, agent names, session IDs, and environment values. Port results are point-in-time snapshots, not reservations. See [MCP server for coding agents](/docs/guides/mcp) for tool bounds and client setup.
 

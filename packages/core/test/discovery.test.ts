@@ -283,6 +283,8 @@ describe('unified discovery contracts', () => {
       evidenceIds: ['native-sockets:socket:8080', 'docker-local:binding:8080'],
       observedAt: '2026-11-25T11:00:01.000Z',
       scope,
+      nature: 'observed',
+      freshness: 'fresh',
     };
     const snapshot = createDiscoverySnapshot(
       [providerResult('docker-local', 'partial'), providerResult('native-local', 'complete')],

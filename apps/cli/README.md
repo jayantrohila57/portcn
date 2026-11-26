@@ -1,6 +1,6 @@
 # portcn
 
-Know what's running. Portcn is a Linux-first CLI for inspecting local development services. Runtime discovery is read-only; the published package is `portcn@0.6.0` and requires Node.js 22 or later. Process termination and service lifecycle management are not implemented.
+Know what's running. Portcn is a Linux-first CLI for inspecting local development services. Runtime discovery is read-only; the published package is `portcn@0.7.0` and requires Node.js 22 or later. Process termination and service lifecycle management are not implemented.
 
 ## Install
 
@@ -36,7 +36,8 @@ portcn readiness list          # saved services and current listener state
 portcn connection check tcp://127.0.0.1:3000 --json
 portcn docker --json           # read-only container inventory
 portcn exposure --json         # bind scope and potential exposure
-portcn mcp                     # read-only stdio MCP server
+portcn discover snapshot --json # unified Linux discovery relationships (additive)
+portcn mcp                     # read-only stdio MCP server (includes discovery_snapshot on Linux)
 ```
 
 The CLI also supports `config edit`, `config remove`, `config group`, and `config recover`. See the [CLI reference](https://jayantrohila57.github.io/portcn/docs/cli-reference) for bounds, JSON schemas, exit codes, and limitations.
