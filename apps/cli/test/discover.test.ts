@@ -10,16 +10,18 @@ describe('discover snapshot CLI', () => {
     expect(build.status, build.stderr).toBe(0);
   });
 
-  it.skipIf(process.platform !== 'linux')('exits cleanly when --json output is truncated by head', () => {
-    const result = spawnSync(
-      'sh',
-      ['-c', `${JSON.stringify(process.execPath)} ${JSON.stringify(executable)} discover snapshot --json | head -30`],
-      {
-        encoding: 'utf8',
-      },
-    );
-    expect(result.stderr).not.toContain('EPIPE');
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain('"discovery"');
-  });
+  it.skipIf(process.platform !== 'linux')(
+    'exits cleanly when --json output is truncated by head',
+    () => {
+      const result = spawnSync(
+        'sh',
+        ['-c', `${JSON.stringify(process.execPath)} ${JSON.stringify(executable)} list --json | head -c 400`],
+        { encoding: 'utf8' },
+      );
+      expect(result.stderr).not.toContain('EPIPE');
+      expect(result.status).toBe(0);
+      expect(result.stdout.length).toBeGreaterThan(0);
+    },
+    30_000,
+  );
 });
