@@ -221,6 +221,40 @@ function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
+function relationshipNatureFromEvidence(evidence: DiscoveryEvidence[]): DiscoveryRelationshipNature {
+  if (!evidence.length) return 'unavailable';
+  const provenances = new Set(evidence.map(({ provenance }) => provenance));
+  if (provenances.size > 1) {
+    if (provenances.has('configured') && (provenances.has('direct') || provenances.has('derived'))) return 'incomplete';
+    return 'incomplete';
+  }
+  const provenance = evidence[0]?.provenance;
+  if (provenance === 'configured') return 'configured';
+  if (provenance === 'inferred') return 'inferred';
+  if (provenance === 'direct' || provenance === 'derived') return 'observed';
+  return 'unavailable';
+}
+
+function relationshipFreshnessFromEvidence(evidence: DiscoveryEvidence[], requestedAt: string): EvidenceFreshness {
+  if (!evidence.length) return 'unknown';
+  const outcomes = evidence.map((item) => evidenceFreshness(item, requestedAt));
+  if (outcomes.includes('unknown')) return 'unknown';
+  if (outcomes.includes('stale')) return 'stale';
+  return 'fresh';
+}
+
+function withRelationshipMetadata(
+  correlation: Omit<DiscoveryCorrelation, 'nature' | 'freshness'>,
+  evidence: DiscoveryEvidence[],
+  requestedAt: string,
+): DiscoveryCorrelation {
+  return {
+    ...correlation,
+    nature: relationshipNatureFromEvidence(evidence),
+    freshness: relationshipFreshnessFromEvidence(evidence, requestedAt),
+  };
+}
+
 export type ProviderResultStatus = 'complete' | 'partial' | 'permission-denied' | 'unavailable' | 'failed';
 
 export interface ProviderIssue {
@@ -265,6 +299,8 @@ export type CorrelationType =
   | 'hosts'
   | 'depends-on';
 
+export type DiscoveryRelationshipNature = 'observed' | 'configured' | 'inferred' | 'incomplete' | 'unavailable';
+
 /** A correlation is a sourced claim between distinct identities; it does not merge either record. */
 export interface DiscoveryCorrelation {
   fromIdentityKey: string;
@@ -274,6 +310,8 @@ export interface DiscoveryCorrelation {
   evidenceIds: string[];
   observedAt: string;
   scope: DiscoveryScope;
+  nature: DiscoveryRelationshipNature;
+  freshness: EvidenceFreshness;
 }
 
 const scopeFields: readonly (keyof DiscoveryScope)[] = [
@@ -346,7 +384,10 @@ export function deduplicateDiscoveryObservations(observations: AnyDiscoveryObser
 }
 
 /** Add published-as edges only when runtime, daemon, container, protocol, and target port all agree. */
-export function correlateContainerMappings(observations: AnyDiscoveryObservation[]): DiscoveryCorrelation[] {
+export function correlateContainerMappings(
+  observations: AnyDiscoveryObservation[],
+  requestedAt = new Date(0).toISOString(),
+): DiscoveryCorrelation[] {
   const stable = observations.filter(
     (item): item is DiscoveryObservation => item.identity !== null && item.identityStatus === 'stable',
   );
@@ -377,15 +418,21 @@ export function correlateContainerMappings(observations: AnyDiscoveryObservation
       const observedAt = [bindingObservation.observedAt, portObservation.observedAt].sort(compareText).at(-1);
       const correlationScope = evidence.at(0)?.scope;
       if (!observedAt || !correlationScope) continue;
-      correlations.push({
-        fromIdentityKey: discoveryIdentityKey(binding),
-        toIdentityKey: discoveryIdentityKey(port),
-        type: 'published-as',
-        confidence: 'high',
-        evidenceIds: [...new Set(evidence.map(({ id }) => id))].sort(compareText),
-        observedAt,
-        scope: correlationScope,
-      });
+      correlations.push(
+        withRelationshipMetadata(
+          {
+            fromIdentityKey: discoveryIdentityKey(binding),
+            toIdentityKey: discoveryIdentityKey(port),
+            type: 'published-as',
+            confidence: 'high',
+            evidenceIds: [...new Set(evidence.map(({ id }) => id))].sort(compareText),
+            observedAt,
+            scope: correlationScope,
+          },
+          evidence,
+          requestedAt,
+        ),
+      );
     }
   }
   return correlations.sort(

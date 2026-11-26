@@ -1,10 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/server';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
+import { summarizeDiscoveryRelationships } from '@portcn/core';
 import type { Command } from 'commander';
 import { z } from 'zod/v4';
 import packageJson from '../../package.json' with { type: 'json' };
 import { checkPortAvailability, suggestAvailablePorts } from './availability.js';
 import { diagnoseListeningPort } from './diagnose.js';
+import { collectLinuxDiscoverySnapshot } from './discovery-coordinator.js';
 import { discoverListeningPorts } from './list.js';
 
 const MAX_LISTENERS = 100;
@@ -161,6 +163,30 @@ export function createPortcnMcpServer(dependencies: Partial<McpDependencies> = {
       }
     },
   );
+
+  if (process.platform === 'linux') {
+    server.registerTool(
+      'discovery_snapshot',
+      {
+        description:
+          'Collect a bounded unified Linux discovery snapshot with evidence-backed service relationships. Read-only; existing per-command JSON contracts remain unchanged.',
+        inputSchema: z.object({
+          full: z.boolean().optional().describe('Include provider observations in addition to relationship summary.'),
+          limit: z.number().int().min(1).max(200).optional().describe('Maximum relationships to return (default 100).'),
+        }),
+      },
+      async ({ full = false, limit = 100 }) => {
+        try {
+          const snapshot = collectLinuxDiscoverySnapshot();
+          const summary = summarizeDiscoveryRelationships(snapshot, { maxCorrelations: limit });
+          const payload = full ? { ...summary, providers: snapshot.providers } : summary;
+          return toolResult(payload);
+        } catch (error) {
+          return safeFailure(error);
+        }
+      },
+    );
+  }
 
   server.registerTool(
     'suggest_ports',

@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- model service relationships and dependencies ([#186](https://github.com/jayantrohila57/portcn/issues/186)) <!-- task:feat/service-relationships -->
+
 ### Changed
 
 ### Fixed

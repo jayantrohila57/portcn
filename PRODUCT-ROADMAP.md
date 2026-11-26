@@ -1,6 +1,6 @@
 # Portcn Linux-first product roadmap
 
-**Status date:** 2026-11-25 (Asia/Kolkata)
+**Status date:** 2026-11-26 (Asia/Kolkata)
 **Latest published CLI version:** `v0.7.0`
 **Current integration branch:** `dev`
 **Canonical capability tracker:** [GitHub Issues](https://github.com/jayantrohila57/portcn/issues)
@@ -27,7 +27,7 @@ The provider foundation and unified Linux dashboard shipped in `v0.7.0`. The nex
 - The release tag set is `v0.0.1`, `v0.1.0`, `v0.1.1`, `v0.2.0`, `v0.3.0`, `v0.4.0`, `v0.5.0`, `v0.6.0`, `v0.6.1`, and `v0.7.0`. Release Please remains the only version and tag authority.
 - Issue #180 established the shared discovery contracts. Provider integrations and dashboard work in #181–#185 and #187 followed that contract and shipped in `v0.7.0`; #180 itself did not change CLI behavior.
 - Issues #181–#185 and #187 are included in published `v0.7.0`: read-only Podman discovery, scoped Docker/Podman observation deduplication, rootlessport attribution, Nginx configuration discovery, systemd service/socket discovery, and the unified service dashboard.
-- Issue #180 supplies the shared discovery contracts. Issue #186 remains open for evidence-backed relationships and dependencies; it is not included in `v0.7.0`.
+- Issue #180 supplies the shared discovery contracts. Issue #186 implementation is in progress on `feat/service-relationships` after the v0.7.0 baseline; it is not yet in a published release tag.
 
 ## Current capability status
 
@@ -49,7 +49,7 @@ The provider foundation and unified Linux dashboard shipped in `v0.7.0`. The nex
 | Rootlessport forwarding attribution    | Relates visible host forwarding helpers to scoped container port mappings                                              | Released in `v0.7.0`; attribution is limited by process and namespace visibility                      |
 | Nginx and systemd discovery            | Reports Nginx configuration evidence and visible systemd service/socket state separately from observed listeners       | Released in `v0.7.0`; configured state does not prove a live endpoint                                 |
 | Unified service dashboard              | Presents available native listeners, Docker/Podman containers, Nginx, and systemd service records in one Linux TUI     | Released in `v0.7.0`; provider results may be partial or unavailable                                  |
-| Service relationships and dependencies | Evidence-backed observed, configured, or inferred relationships with source, confidence, and freshness                 | Pending; issue #186                                                                                   |
+| Service relationships and dependencies | Evidence-backed observed, configured, or inferred relationships with source, confidence, and freshness                 | Implemented on `feat/service-relationships`; issue #186 pending merge verification                    |
 | TLS certificate inspection             | Strict TLS request validation exists; certificate inventory/details do not                                             | Partial; issue #117 records remaining requirements                                                    |
 | Windows listener discovery             | No implementation found                                                                                                | Deferred; issue #141                                                                                  |
 | Process termination                    | No signals, lifecycle operations, or safe-to-stop verdict                                                              | Not implemented; design issue #144 is pending and any implementation requires explicit owner approval |
@@ -65,7 +65,7 @@ The provider and dashboard sequence is shipped in `v0.7.0`. Continue with issue 
 | 3     | Deduplicate Docker/Podman observations and attribute `rootlessport` forwarding processes                                              | #182, #183       | Released in `v0.7.0`; identity and mapping correlation in #182, scoped process attribution in #183   |
 | 4     | Discover Nginx and systemd services without confusing configured state with live observations                                         | #184, #185       | Released in `v0.7.0`; configured and observed evidence remain distinguishable                        |
 | 5     | Integrate provider results in one Linux service-oriented terminal dashboard                                                           | #187             | Released in `v0.7.0`; provider availability and user permissions limit visible detail                |
-| 6     | Represent evidence-backed service relationships and dependencies                                                                      | #186             | Pending; depends on contracts and provider identities from #180–#185 and dashboard context from #187 |
+| 6     | Represent evidence-backed service relationships and dependencies                                                                      | #186             | In review on `feat/service-relationships`; `discover snapshot`, core correlations, Linux MCP tool    |
 | 7     | Add CPU and memory monitoring by service/project with units, sampling intervals, PID reuse protection, and duplicate-process handling | #112             | Pending; depends on stable service identity                                                          |
 | 8     | Add bounded logs, health checks, and advanced diagnostics                                                                             | #110, #114, #117 | Readiness #114 is released; logs #110 pending; TLS certificate inspection #117 partial               |
 | 9     | Improve agent and MCP integration, including local MCP server and Ollama discovery                                                    | #104–#106, #116  | MCP server #104 is released; discovery/residency work is pending                                     |
@@ -92,13 +92,13 @@ Verified issue-level roadmap completion is **27 of 37 Linux-first capability iss
 
 ## Reconciliation progress
 
-| Phase                                            | Status   | Evidence                                                                                                                                      |
-| ------------------------------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Resolve blockers and synchronize release      | Complete | PR #179 merged with true merge commit `8e80acc`; branch policy, validate, macOS listener, and Node 22 packaged-runtime checks passed          |
-| 2. Audit code, issues, releases, tests, and docs | Complete | Command/test inventory and issue-to-PR/tag audit; docs gaps recorded above                                                                    |
-| 3. Reconcile GitHub issues                       | Complete | 19 verified completions closed; 8 Linux-first issues created; labels/milestones updated                                                       |
-| 4. Documentation alignment                       | Complete | Roadmap, READMEs, development rules, Fumadocs, CLI help, and MCP skill aligned; changelog remains accurate                                    |
-| 5. Quality and stability audit                   | Complete | Workspace and container checks, 6 PTY checks, live Linux listener/project/endpoint flows, Docker inventory, npm install, and MCP pass         |
-| 6. Release reconciliation                        | Complete | Authorized v0.7.0 release verified; PR #201 synchronized with true merge commit `443aeec`; npm install/version and exact-tag workflows passed |
-| 7. Establish revised roadmap                     | Complete | Twelve ordered Linux-first steps and dependencies are recorded above                                                                          |
-| 8. Final report                                  | Complete | At the prior reconciliation: 43 issues, 25 completed, 1 partial, 16 pending, 1 deferred, 0 blocked; release follow-up recorded above          |
+| Phase                                            | Status   | Evidence                                                                                                                                                    |
+| ------------------------------------------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Resolve blockers and synchronize release      | Complete | PR #179 merged with true merge commit `8e80acc`; branch policy, validate, macOS listener, and Node 22 packaged-runtime checks passed                        |
+| 2. Audit code, issues, releases, tests, and docs | Complete | Command/test inventory and issue-to-PR/tag audit; docs gaps recorded above                                                                                  |
+| 3. Reconcile GitHub issues                       | Complete | 19 verified completions closed; 8 Linux-first issues created; labels/milestones updated                                                                     |
+| 4. Documentation alignment                       | Complete | Roadmap, READMEs, development rules, Fumadocs, CLI help, and MCP skill aligned; changelog remains accurate                                                  |
+| 5. Quality and stability audit                   | Complete | Workspace and container checks, 7 PTY checks (Ctrl+C + live project timing fixed 2026-11-26), live Linux flows, Docker inventory, npm install, and MCP pass |
+| 6. Release reconciliation                        | Complete | Authorized v0.7.0 release verified; PR #201 synchronized with true merge commit `443aeec`; npm install/version and exact-tag workflows passed               |
+| 7. Establish revised roadmap                     | Complete | Twelve ordered Linux-first steps and dependencies are recorded above                                                                                        |
+| 8. Final report                                  | Complete | At the prior reconciliation: 43 issues, 25 completed, 1 partial, 16 pending, 1 deferred, 0 blocked; release follow-up recorded above                        |

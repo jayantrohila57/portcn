@@ -20,12 +20,12 @@ describe('Portcn MCP stdio server', () => {
 
   it('initializes and publishes validated read-only tool schemas', async () => {
     const result = await client.listTools();
-    expect(result.tools.map(({ name }) => name).sort()).toEqual([
-      'check_port_availability',
-      'diagnose_port',
-      'list_listeners',
-      'suggest_ports',
-    ]);
+    const toolNames = result.tools.map(({ name }) => name).sort();
+    expect(toolNames).toEqual(
+      process.platform === 'linux'
+        ? ['check_port_availability', 'diagnose_port', 'discovery_snapshot', 'list_listeners', 'suggest_ports']
+        : ['check_port_availability', 'diagnose_port', 'list_listeners', 'suggest_ports'],
+    );
     const diagnosis = result.tools.find(({ name }) => name === 'diagnose_port');
     expect(diagnosis?.inputSchema).toMatchObject({
       type: 'object',

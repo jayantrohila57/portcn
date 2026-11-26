@@ -14,6 +14,7 @@ export {
   type DiscoveryProviderName,
   type DiscoveryProviderRequest,
   type DiscoveryProviderResult,
+  type DiscoveryRelationshipNature,
   type DiscoveryRuntime,
   type DiscoveryScope,
   type DiscoverySnapshot,
@@ -27,3 +28,15 @@ export {
   type UnidentifiedDiscoveryObservation,
 } from './discovery.js';
 export { isValidPortNumber, type PortNumber } from './port-number.js';
+export {
+  buildDiscoveryCorrelations,
+  correlateConfiguredServiceEndpoints,
+  correlateForwardingAttribution,
+  correlateHostEndpointBindings,
+  correlateListenerProcessOwnership,
+  type DiscoveryRelationshipSummary,
+  discoveryBindAddressesEquivalent,
+  scopesCompatible,
+  summarizeDiscoveryRelationships,
+  withRelationshipMetadata,
+} from './service-relationships.js';
