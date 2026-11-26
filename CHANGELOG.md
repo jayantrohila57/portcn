@@ -12,6 +12,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Fixed
 
+- ignore broken pipe when JSON output is truncated <!-- task:fix/cli-stdout-epipe -->
+
 ### Deprecated
 
 ### Removed

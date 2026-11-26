@@ -7,6 +7,7 @@ import { registerCommands } from './commands/index.js';
 import { discoverListeningPorts } from './commands/list.js';
 import { discoverDashboardServices } from './commands/service-dashboard.js';
 import { runTabbedList } from './commands/tabs.js';
+import { installBrokenPipeHandling } from './stdout.js';
 
 export function createProgram(): Command {
   const program = new Command()
@@ -19,6 +20,8 @@ export function createProgram(): Command {
 
   return program;
 }
+
+installBrokenPipeHandling();
 
 const program = createProgram();
 
