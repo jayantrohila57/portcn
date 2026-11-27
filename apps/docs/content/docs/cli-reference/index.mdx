@@ -282,6 +282,26 @@ portcn discover snapshot --json
 portcn discover snapshot --json --full
 ```
 
+### ``discover project`` (Linux)
+
+The nested ``project`` command is registered under ``discover``.
+
+Resolves one Git checkout from the current directory or ``--project <path>`` and reports associated **native** listener owners and same-user processes with inspectable evidence. It reuses listener discovery, Git metadata, and bounded ``/proc`` inspection with before-and-after PID start-time checks. Application labels are inferred from owner working directories under ``apps/`` or ``packages/`` when present; shells and editors with matching checkouts appear as supporting processes. Sibling worktrees, mixed socket ownership, PID reuse during inspection, and hidden owners surface under ``unresolved`` or ``limitations``. Container attribution, live TCP peer graphs, and MCP changes are out of scope. ``discover snapshot`` and MCP contracts are unchanged.
+
+```sh
+portcn discover project
+portcn discover project --project /work/acme
+portcn discover project --json
+```
+
+| Exit status | Meaning |
+| --- | --- |
+| ``0`` | Discovery completed, including partial visibility. |
+| ``1`` | Discovery failed or the platform is unsupported. |
+| ``2`` | Invalid project path or unsupported JSON schema version. |
+
+With ``--json``, stdout emits ``{"schemaVersion":1,"projectDiscovery":{...}}`` with ``schemaVersion`` 1 inside ``projectDiscovery`` describing record shape.
+
 ## ``portcn mcp``
 
 Starts a local read-only MCP server over stdio for coding-agent hosts. Configure the host to run ``portcn`` with the ``mcp`` argument. The server advertises ``list_listeners``, ``diagnose_port``, ``check_port_availability``, and ``suggest_ports``. On Linux it also advertises ``discovery_snapshot`` for bounded relationship summaries from the same coordinator as ``portcn discover snapshot``. Input schemas validate arguments before tool execution. Results are bounded and structured; tool errors use an error object with a stable code and a sanitized message. Stdout carries only MCP protocol messages, and SIGINT, SIGTERM, or client EOF closes the server.

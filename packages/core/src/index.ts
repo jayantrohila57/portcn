@@ -32,6 +32,14 @@ export {
 } from './discovery.js';
 export { isValidPortNumber, type PortNumber } from './port-number.js';
 export {
+  applicationScopeFromCwd,
+  type CheckoutGitEvidence,
+  type CheckoutMatch,
+  type ExpectedCheckout,
+  isSupportingExecutable,
+  matchCheckoutEvidence,
+} from './project-discovery.js';
+export {
   buildDiscoveryCorrelations,
   correlateConfiguredServiceEndpoints,
   correlateForwardingAttribution,
