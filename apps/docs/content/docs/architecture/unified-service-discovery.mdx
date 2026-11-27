@@ -109,7 +109,7 @@ For current Docker mappings, reuse the existing bind/address/protocol matching b
 
 Supported relationship vocabulary includes `same-endpoint`, `published-as`, `forwarded-by`, `owned-by`, `project-of`, `configured-as`, `hosts`, and `depends-on`. Future resource and service-manager adapters can attach observations and relationships without changing the identity of existing listener, process, or container records.
 
-Linux ``portcn discover project`` (outside the unified snapshot JSON contract) applies the same read-only listener and Git checkout evidence to attribute native runtimes for one selected worktree. Container project attribution and live dependency edges remain deferred ([#211](https://github.com/jayantrohila57/portcn/issues/211), [#212](https://github.com/jayantrohila57/portcn/issues/212)).
+Linux ``portcn discover project`` (outside the unified snapshot JSON contract) applies the same read-only listener and Git checkout evidence to attribute native runtimes for one selected worktree. Terminal output is project-focused: unrelated host sockets stay in ``listenerInventory.unrelated`` for JSON consumers, while the default view summarizes visibility and keeps project-relevant ambiguity under ``unresolved``. Container project attribution and live dependency edges remain deferred ([#211](https://github.com/jayantrohila57/portcn/issues/211), [#212](https://github.com/jayantrohila57/portcn/issues/212)).
 
 ## Deterministic contract coverage
 

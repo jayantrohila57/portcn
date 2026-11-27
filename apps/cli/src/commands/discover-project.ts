@@ -1,10 +1,18 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import {
+  type ApplicationGroup,
   applicationScopeFromCwd,
+  buildProjectDiscoverySummary,
   type CheckoutMatch,
+  dedupeEvidenceLines,
+  formatPortSummary,
+  groupRuntimesByApplication,
+  isPortcnInspectionProcess,
   isSupportingExecutable,
+  listenerAttention,
   matchCheckoutEvidence,
+  runtimeDisplayName,
 } from '@portcn/core';
 import type { Command } from 'commander';
 import { readCurrentNamespace } from './diagnose.js';
@@ -19,6 +27,8 @@ import {
   type GitMetadata,
   inspectProjectContext,
   type ProjectContext,
+  readProcessCmdline,
+  readProcessComm,
   readProcessStartTime,
   resolveGitProject,
 } from './project-context.js';
@@ -42,6 +52,7 @@ export interface ProjectRuntimeRecord {
   application: string | null;
   pid: number;
   processName: string | null;
+  executable: string | null;
   startTime: string | null;
   identityStable: boolean;
   checkoutMatch: CheckoutMatch;
@@ -49,11 +60,24 @@ export interface ProjectRuntimeRecord {
   evidence: string[];
 }
 
+export interface ExcludedInspectionProcess {
+  pid: number;
+  processName: string | null;
+  reason: 'portcn-inspection';
+  evidence: string[];
+}
+
+export interface ListenerInventorySection {
+  count: number;
+  bindings: ProjectPortBinding[];
+}
+
 export interface ProjectDiscoveryResult {
   schemaVersion: typeof PROJECT_DISCOVERY_JSON_VERSION;
   status: 'complete' | 'partial';
   observedAt: string;
   visibility: 'full' | 'partial';
+  summary: ReturnType<typeof buildProjectDiscoverySummary>;
   project: {
     root: string;
     gitDir: string;
@@ -67,8 +91,16 @@ export interface ProjectDiscoveryResult {
     pidNamespace: string | null;
     networkNamespace: string | null;
   };
+  applications: ApplicationGroup[];
+  supportingProcesses: ProjectRuntimeRecord[];
   runtimes: ProjectRuntimeRecord[];
+  excluded: ExcludedInspectionProcess[];
+  listenerInventory: {
+    unrelated: ListenerInventorySection;
+    ambiguous: ListenerInventorySection;
+  };
   unresolved: string[];
+  visibilityNotes: string[];
   limitations: string[];
 }
 
@@ -78,10 +110,13 @@ export interface ProjectDiscoveryDependencies {
   discoverListeners?: () => ListeningPort[];
   inspectProject?: (pid: number) => ProjectContext;
   readStartTime?: (pid: number) => string | null;
+  readComm?: (pid: number) => string | null;
+  readCmdline?: (pid: number) => string | null;
   listPids?: () => number[];
   hostname?: () => string;
   now?: () => Date;
   processScanLimit?: number;
+  selfPid?: number;
 }
 
 function worktreeSelected(metadata: GitMetadata): boolean {
@@ -95,6 +130,10 @@ function ownersFor(listener: ListeningPort): number[] {
   }
   if (listener.pid !== null && listener.pid > 0) pids.add(listener.pid);
   return [...pids].sort((left, right) => left - right);
+}
+
+function ownerProcessName(listener: ListeningPort, pid: number): string | null {
+  return listener.owners?.find((owner) => owner.pid === pid)?.processName ?? listener.processName ?? null;
 }
 
 function defaultPidScan(limit: number): number[] {
@@ -121,9 +160,18 @@ function evaluatePid(
   pid: number,
   expected: GitMetadata,
   dependencies: ProjectDiscoveryDependencies,
-): { context: ProjectContext; startTime: string | null; stable: boolean; match: CheckoutMatch } | null {
+): {
+  context: ProjectContext;
+  startTime: string | null;
+  stable: boolean;
+  match: CheckoutMatch;
+  comm: string | null;
+  cmdline: string | null;
+} | null {
   const readStartTime = dependencies.readStartTime ?? readProcessStartTime;
   const inspectProject = dependencies.inspectProject ?? inspectProjectContext;
+  const readComm = dependencies.readComm ?? readProcessComm;
+  const readCmdline = dependencies.readCmdline ?? readProcessCmdline;
   const initial = readStartTime(pid);
   if (initial === null) return null;
   const context = inspectProject(pid);
@@ -131,7 +179,47 @@ function evaluatePid(
   const stable = final !== null && final === initial;
   if (!stable) return null;
   const match = matchCheckoutEvidence(expected, context);
-  return { context, startTime: initial, stable, match };
+  return {
+    context,
+    startTime: initial,
+    stable,
+    match,
+    comm: readComm(pid),
+    cmdline: readCmdline(pid),
+  };
+}
+
+function buildRuntimeRecord(
+  pid: number,
+  evaluated: NonNullable<ReturnType<typeof evaluatePid>>,
+  expected: GitMetadata,
+  ports: ProjectPortBinding[],
+): ProjectRuntimeRecord {
+  const role: ProjectRuntimeRole = ports.length
+    ? 'application-listener'
+    : isSupportingExecutable(evaluated.context.executable, evaluated.comm)
+      ? 'supporting-process'
+      : 'application-process';
+  const application =
+    applicationScopeFromCwd(expected.projectRoot, evaluated.context.cwd) ??
+    applicationScopeFromCwd(
+      expected.projectRoot,
+      evaluated.context.ancestors.find((ancestor) => ancestor.cwd)?.cwd ?? null,
+    );
+  const processName = evaluated.comm ?? evaluated.context.executable?.split('/').pop() ?? null;
+  const checkoutLine = `Checkout match: ${evaluated.match} (${evaluated.context.source ?? 'unknown'} evidence, ${evaluated.context.confidence} confidence).`;
+  return {
+    role,
+    application,
+    pid,
+    processName,
+    executable: evaluated.context.executable,
+    startTime: evaluated.startTime,
+    identityStable: evaluated.stable,
+    checkoutMatch: evaluated.match,
+    ports,
+    evidence: dedupeEvidenceLines([checkoutLine, ...evaluated.context.evidence]),
+  };
 }
 
 export function discoverProjectRuntimes(
@@ -158,14 +246,15 @@ export function discoverProjectRuntimes(
   const scanLimit = dependencies.processScanLimit ?? 64;
   const listenerPids = new Set(listeners.flatMap((listener) => ownersFor(listener)));
   const scannedPids = new Set([...listenerPids, ...(dependencies.listPids ?? (() => defaultPidScan(scanLimit)))()]);
-  const pidEvidence = new Map<
-    number,
-    { context: ProjectContext; startTime: string | null; stable: boolean; match: CheckoutMatch }
-  >();
+  const pidEvidence = new Map<number, NonNullable<ReturnType<typeof evaluatePid>>>();
   for (const pid of [...scannedPids].sort((left, right) => left - right)) {
     const evaluated = evaluatePid(pid, expected, dependencies);
     if (evaluated) pidEvidence.set(pid, evaluated);
   }
+  const selfPid = dependencies.selfPid ?? process.pid;
+  const excluded: ExcludedInspectionProcess[] = [];
+  const unrelatedBindings: ProjectPortBinding[] = [];
+  const ambiguousBindings: ProjectPortBinding[] = [];
   const portsByPid = new Map<number, ProjectPortBinding[]>();
   for (const listener of listeners) {
     const owners = ownersFor(listener);
@@ -183,19 +272,8 @@ export function discoverProjectRuntimes(
     } else if (projectOwners.length) {
       association = 'mixed-ownership';
       evidence = ['Some visible socket owners match the selected checkout; others differ or are unresolved.'];
-      if (unidentified.length)
-        unresolved.push(
-          `TCP/UDP ${listener.protocol} ${listener.address}:${listener.port} has unidentified owner PID(s) ${unidentified.join(', ')}.`,
-        );
-      if (nonProject.length)
-        unresolved.push(
-          `TCP/UDP ${listener.protocol} ${listener.address}:${listener.port} has owner PID(s) outside the selected worktree: ${nonProject.join(', ')}.`,
-        );
     } else if (owners.length) {
       evidence = ['No visible owner matched the selected checkout.'];
-      unresolved.push(
-        `TCP/UDP ${listener.protocol} ${listener.address}:${listener.port} has no owner associated with this checkout.`,
-      );
     }
     const binding: ProjectPortBinding = {
       protocol: listener.protocol,
@@ -206,6 +284,33 @@ export function discoverProjectRuntimes(
       ownerPids: owners,
       evidence,
     };
+    const attention = listenerAttention(binding, association);
+    if (attention === 'unrelated-host') {
+      unrelatedBindings.push(binding);
+    } else if (attention === 'ambiguous-project') {
+      ambiguousBindings.push(binding);
+      if (association === 'mixed-ownership') {
+        if (unidentified.length) {
+          const names = unidentified.map((pid) => ownerProcessName(listener, pid) ?? `pid ${pid}`).join(', ');
+          unresolved.push(
+            `${listener.protocol.toUpperCase()} ${listener.address}:${listener.port} has unidentified owner(s): ${names}.`,
+          );
+        }
+        if (nonProject.length) {
+          unresolved.push(
+            `${listener.protocol.toUpperCase()} ${listener.address}:${listener.port} has owner PID(s) outside the selected worktree: ${nonProject.join(', ')}.`,
+          );
+        }
+      } else if (owners.length && nonProject.length) {
+        unresolved.push(
+          `${listener.protocol.toUpperCase()} ${listener.address}:${listener.port} is owned by non-project process(es): ${nonProject.join(', ')}.`,
+        );
+      } else if (!owners.length) {
+        unresolved.push(
+          `${listener.protocol.toUpperCase()} ${listener.address}:${listener.port} has no identifiable owner in this namespace (may still belong to this checkout).`,
+        );
+      }
+    }
     for (const pid of projectOwners) {
       const existing = portsByPid.get(pid) ?? [];
       existing.push(binding);
@@ -215,40 +320,66 @@ export function discoverProjectRuntimes(
   const runtimes: ProjectRuntimeRecord[] = [];
   for (const [pid, evaluated] of [...pidEvidence.entries()].sort(([left], [right]) => left - right)) {
     if (evaluated.match !== 'matching') continue;
+    if (
+      isPortcnInspectionProcess(evaluated.context.executable, evaluated.cmdline, {
+        pid,
+        selfPid,
+      })
+    ) {
+      excluded.push({
+        pid,
+        processName: evaluated.comm ?? evaluated.context.executable?.split('/').pop() ?? null,
+        reason: 'portcn-inspection',
+        evidence: dedupeEvidenceLines([
+          evaluated.cmdline ? `Command line: ${evaluated.cmdline}` : 'Command line was unavailable.',
+          'Portcn inspection processes are omitted from project runtimes.',
+        ]),
+      });
+      continue;
+    }
     const ports = portsByPid.get(pid) ?? [];
-    const role: ProjectRuntimeRole = ports.length
-      ? 'application-listener'
-      : isSupportingExecutable(evaluated.context.executable, null)
-        ? 'supporting-process'
-        : 'application-process';
-    const application =
-      applicationScopeFromCwd(expected.projectRoot, evaluated.context.cwd) ??
-      applicationScopeFromCwd(
-        expected.projectRoot,
-        evaluated.context.ancestors.find((ancestor) => ancestor.cwd)?.cwd ?? null,
-      );
-    runtimes.push({
-      role,
-      application,
-      pid,
-      processName: evaluated.context.executable?.split('/').pop() ?? null,
-      startTime: evaluated.startTime,
-      identityStable: evaluated.stable,
-      checkoutMatch: evaluated.match,
-      ports,
-      evidence: [
-        `Checkout match: ${evaluated.match} (${evaluated.context.source ?? 'unknown'} evidence, ${evaluated.context.confidence} confidence).`,
-        ...(evaluated.context.evidence.length ? evaluated.context.evidence.slice(0, 3) : []),
-      ],
-    });
+    runtimes.push(buildRuntimeRecord(pid, evaluated, expected, ports));
+  }
+  const supportingProcesses = runtimes.filter((runtime) => runtime.role === 'supporting-process');
+  const applications = groupRuntimesByApplication(runtimes);
+  const summary = buildProjectDiscoverySummary({
+    runtimes,
+    excludedCount: excluded.length,
+    unrelatedHostListeners: unrelatedBindings.length,
+    ambiguousProjectListeners: ambiguousBindings.length,
+  });
+  const visibilityNotes: string[] = [];
+  if (unrelatedBindings.length) {
+    visibilityNotes.push(
+      `${unrelatedBindings.length} listener(s) on this host are unrelated multicast, Docker bridge, or ephemeral UDP sockets. They remain in JSON listenerInventory.unrelated and are hidden from the default terminal view.`,
+    );
+  }
+  if (ambiguousBindings.length) {
+    visibilityNotes.push(
+      `${ambiguousBindings.length} listener(s) may belong to this checkout but have missing, mixed, or non-project owners.`,
+    );
+  }
+  const uninspiable = scannedPids.size - pidEvidence.size;
+  if (uninspiable > 0) {
+    visibilityNotes.push(
+      `${uninspiable} scanned process(es) could not be attributed (exited during inspection, permissions, or PID reuse).`,
+    );
+  }
+  if (excluded.length) {
+    visibilityNotes.push(
+      `${excluded.length} Portcn inspection process(es) were excluded so discovery does not report itself.`,
+    );
   }
   const visibility: ProjectDiscoveryResult['visibility'] =
-    unresolved.length || pidEvidence.size < scannedPids.size ? 'partial' : 'full';
+    unresolved.length || pidEvidence.size < scannedPids.size || unrelatedBindings.length || ambiguousBindings.length
+      ? 'partial'
+      : 'full';
   return {
     schemaVersion: PROJECT_DISCOVERY_JSON_VERSION,
     status: visibility === 'full' ? 'complete' : 'partial',
     observedAt,
     visibility,
+    summary,
     project: {
       root: expected.projectRoot,
       gitDir: expected.gitDir,
@@ -258,29 +389,91 @@ export function discoverProjectRuntimes(
       worktree: worktreeSelected(expected),
     },
     host: { hostId, pidNamespace, networkNamespace },
+    applications,
+    supportingProcesses,
     runtimes,
-    unresolved,
+    excluded,
+    listenerInventory: {
+      unrelated: { count: unrelatedBindings.length, bindings: unrelatedBindings },
+      ambiguous: { count: ambiguousBindings.length, bindings: ambiguousBindings },
+    },
+    unresolved: dedupeEvidenceLines(unresolved),
+    visibilityNotes,
     limitations,
   };
 }
 
-function formatHuman(result: ProjectDiscoveryResult): string {
+function formatHuman(result: ProjectDiscoveryResult, verbose: boolean): string {
+  const commit = result.project.commit ? ` @ ${result.project.commit.slice(0, 7)}` : '';
+  const branch = result.project.branch ? ` on ${result.project.branch}` : '';
   const lines = [
-    `Project ${result.project.root}${result.project.worktree ? `  Worktree ${result.project.root}` : ''}`,
-    `Visibility ${result.visibility}${result.status === 'partial' ? ' (partial)' : ''}`,
+    `Project ${result.project.root}${branch}${commit}`,
+    `Observed ${result.observedAt}  Host ${result.host.hostId}  Visibility ${result.visibility}`,
     '',
-    'Project runtimes',
+    'Summary',
+    `  ${result.summary.applicationGroups} application group(s); ${result.summary.listenerProcesses} listener process(es); ${result.summary.workerProcesses} worker(s); ${result.summary.supportingProcesses} supporting; ${result.summary.projectListenerBindings} project binding(s).`,
+    `  ${result.summary.unrelatedHostListeners} unrelated host listener(s); ${result.summary.ambiguousProjectListeners} ambiguous project listener(s); ${result.summary.excludedInspectionProcesses} excluded inspection process(es).`,
   ];
-  for (const runtime of result.runtimes) {
-    const portSummary = runtime.ports.length
-      ? runtime.ports.map((port) => `${port.protocol.toUpperCase()} ${port.address}:${port.port}`).join(', ')
-      : 'Process only';
-    const label = runtime.application ?? runtime.role;
-    lines.push(`  ${label}  PID ${runtime.pid}  ${portSummary}  ${runtime.evidence[0] ?? ''}`);
+  if (result.visibilityNotes.length) {
+    lines.push('', 'Visibility');
+    for (const note of result.visibilityNotes) lines.push(`  - ${note}`);
+  }
+  const scopedRuntimes = result.runtimes.filter((runtime) => runtime.role !== 'supporting-process');
+  const scopeGroups = new Map<string, ProjectRuntimeRecord[]>();
+  for (const runtime of scopedRuntimes) {
+    const scope = runtime.application ?? '(unscoped)';
+    const group = scopeGroups.get(scope) ?? [];
+    group.push(runtime);
+    scopeGroups.set(scope, group);
+  }
+  if (scopeGroups.size) {
+    lines.push('', 'Applications');
+    for (const [scope, groupRuntimes] of [...scopeGroups.entries()].sort(([left], [right]) =>
+      left.localeCompare(right),
+    )) {
+      lines.push(`  ${scope}`);
+      for (const runtime of groupRuntimes.sort((left, right) => left.pid - right.pid)) {
+        const name = runtimeDisplayName(runtime);
+        const evidence = verbose ? runtime.evidence.join(' ') : '';
+        const ports = runtime.ports.length > 0 ? formatPortSummary(runtime.ports) : 'process only';
+        lines.push(`    ${name}  PID ${runtime.pid}  ${ports}${evidence ? `  ${evidence}` : ''}`);
+      }
+    }
+  } else if (result.runtimes.length) {
+    lines.push('', 'Applications', '  (none with application scope)');
+  }
+  if (result.supportingProcesses.length) {
+    lines.push('', 'Supporting');
+    for (const runtime of result.supportingProcesses) {
+      const name = runtimeDisplayName(runtime);
+      lines.push(`  ${name}  PID ${runtime.pid}${verbose ? `  ${runtime.evidence[0] ?? ''}` : ''}`);
+    }
+  }
+  if (result.excluded.length) {
+    lines.push('', 'Excluded');
+    for (const entry of result.excluded) {
+      lines.push(`  ${entry.processName ?? 'process'}  PID ${entry.pid}  ${entry.reason}`);
+    }
   }
   if (result.unresolved.length) {
-    lines.push('', 'Unresolved');
+    lines.push('', 'Unresolved (project-relevant)');
     for (const item of result.unresolved) lines.push(`  ${item}`);
+  }
+  if (verbose) {
+    if (result.listenerInventory.unrelated.bindings.length) {
+      lines.push('', 'Unrelated host listeners (verbose)');
+      for (const binding of result.listenerInventory.unrelated.bindings) {
+        lines.push(`  ${binding.protocol.toUpperCase()} ${binding.address}:${binding.port}  ${binding.state}`);
+      }
+    }
+    if (result.listenerInventory.ambiguous.bindings.length) {
+      lines.push('', 'Ambiguous listeners (verbose)');
+      for (const binding of result.listenerInventory.ambiguous.bindings) {
+        lines.push(
+          `  ${binding.protocol.toUpperCase()} ${binding.address}:${binding.port}  ${binding.association}  owners ${binding.ownerPids.join(', ') || 'none'}`,
+        );
+      }
+    }
   }
   if (result.limitations.length) {
     lines.push('', 'Limitations');
@@ -294,9 +487,10 @@ export function registerDiscoverProjectCommand(discover: Command): void {
     .command('project')
     .description('Discover native runtimes and listening ports for the current Git checkout (Linux, read-only).')
     .option('--project <path>', 'Git checkout path (defaults to the current working directory)')
+    .option('--verbose', 'Include detailed evidence and full unrelated listener inventory')
     .option('--json', 'Print versioned JSON')
     .option('--json-version <version>', 'JSON schema version when using --json', String(JSON_SCHEMA_VERSION))
-    .action((options: { project?: string; json?: boolean; jsonVersion?: string }) => {
+    .action((options: { project?: string; json?: boolean; jsonVersion?: string; verbose?: boolean }) => {
       if (process.platform !== 'linux') throw new Error('Project discovery is available only on Linux.');
       const directory = options.project ?? process.cwd();
       const result = discoverProjectRuntimes(directory);
@@ -306,6 +500,6 @@ export function registerDiscoverProjectCommand(discover: Command): void {
         process.stdout.write(`${JSON.stringify({ schemaVersion: jsonVersion, projectDiscovery: result }, null, 2)}\n`);
         return;
       }
-      process.stdout.write(formatHuman(result));
+      process.stdout.write(formatHuman(result, Boolean(options.verbose)));
     });
 }

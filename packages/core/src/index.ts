@@ -40,6 +40,23 @@ export {
   matchCheckoutEvidence,
 } from './project-discovery.js';
 export {
+  type ApplicationGroup,
+  buildProjectDiscoverySummary,
+  dedupeEvidenceLines,
+  formatPortSummary,
+  groupRuntimesByApplication,
+  isPortcnInspectionProcess,
+  isUnrelatedHostListener,
+  type ListenerAssociationLike,
+  type ListenerAttention,
+  listenerAttention,
+  type PortBindingLike,
+  type ProjectDiscoverySummary,
+  type ProjectRuntimeRole,
+  type RuntimeRecordLike,
+  runtimeDisplayName,
+} from './project-discovery-presentation.js';
+export {
   buildDiscoveryCorrelations,
   correlateConfiguredServiceEndpoints,
   correlateForwardingAttribution,

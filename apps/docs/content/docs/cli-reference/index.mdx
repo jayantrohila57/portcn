@@ -286,11 +286,12 @@ portcn discover snapshot --json --full
 
 The nested ``project`` command is registered under ``discover``.
 
-Resolves one Git checkout from the current directory or ``--project <path>`` and reports associated **native** listener owners and same-user processes with inspectable evidence. It reuses listener discovery, Git metadata, and bounded ``/proc`` inspection with before-and-after PID start-time checks. Application labels are inferred from owner working directories under ``apps/`` or ``packages/`` when present; shells and editors with matching checkouts appear as supporting processes. Sibling worktrees, mixed socket ownership, PID reuse during inspection, and hidden owners surface under ``unresolved`` or ``limitations``. Container attribution, live TCP peer graphs, and MCP changes are out of scope. ``discover snapshot`` and MCP contracts are unchanged.
+Resolves one Git checkout from the current directory or ``--project <path>`` and reports **native** runtimes for that checkout only. The default terminal view groups processes under inferred application scopes (``apps/<name>`` or ``packages/<name>`` from working directories), shows a short summary and visibility notes, and omits unrelated host listeners such as multicast SSDP/mDNS, Docker bridge UDP, and common system listeners. Mixed ownership, loopback listeners without visible owners, and non-project owners on project-relevant sockets stay under ``Unresolved (project-relevant)``. Portcn's own ``discover``/``mcp`` inspection processes are excluded when identifiable. Use ``--verbose`` for per-process evidence lines and the full unrelated listener inventory. ``--json`` remains additive: ``projectDiscovery.schemaVersion`` stays ``1`` while new fields such as ``summary``, ``applications``, ``excluded``, ``listenerInventory``, and ``visibilityNotes`` carry grouped and raw listener data without removing ``runtimes`` or ``limitations``. Container attribution, live TCP peer graphs, and MCP changes are out of scope ([#211](https://github.com/jayantrohila57/portcn/issues/211), [#212](https://github.com/jayantrohila57/portcn/issues/212)). ``discover snapshot`` and MCP contracts are unchanged.
 
 ```sh
 portcn discover project
 portcn discover project --project /work/acme
+portcn discover project --verbose
 portcn discover project --json
 ```
 
