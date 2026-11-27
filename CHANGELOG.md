@@ -18,6 +18,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Fixed
 
+- preserve snapshots for systemd sockets without network ports ([#221](https://github.com/jayantrohila57/portcn/issues/221)) <!-- task:fix/systemd-snapshot-endpoint -->
+
 - harden attribution scope joins and correlation safety ([#209](https://github.com/jayantrohila57/portcn/issues/209)) <!-- task:fix/discovery-attribution-safety -->
 
 - ignore broken pipe when JSON output is truncated <!-- task:fix/cli-stdout-epipe -->
