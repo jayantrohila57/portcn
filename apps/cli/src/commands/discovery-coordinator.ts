@@ -9,6 +9,7 @@ import {
   type DiscoveryScope,
   type DiscoverySnapshot,
   deduplicateDiscoveryObservations,
+  formatConfiguredEndpointRef,
   type PortNumber,
 } from '@portcn/core';
 
@@ -19,10 +20,24 @@ function stableObservations(observations: AnyDiscoveryObservation[]): DiscoveryO
 }
 
 import { readCurrentNamespace } from './diagnose.js';
-import { type DockerContainer, type DockerInventory, discoverDockerInventory } from './docker.js';
+import {
+  type DockerContainer,
+  type DockerDaemonHostProvenance,
+  type DockerInventory,
+  discoverDockerInventory,
+  readDockerDaemonContext,
+  resolveDockerDaemonHostId,
+} from './docker.js';
 import { discoverListeningPorts, type ListeningPort } from './list.js';
 import { discoverNginxInventory, type NginxInventory } from './nginx.js';
-import { discoverPodmanInventory, type PodmanInventory } from './podman.js';
+import {
+  discoverPodmanInventory,
+  type PodmanContainer,
+  type PodmanDaemonHostProvenance,
+  type PodmanInventory,
+  readPodmanConnectionName,
+  resolvePodmanDaemonHostId,
+} from './podman.js';
 import { readProcessStartTime } from './project-context.js';
 import { discoverSystemdInventory, type SystemdInventory } from './systemd.js';
 
@@ -35,9 +50,28 @@ export interface DiscoveryCoordinatorDependencies {
   podman?: (listeners: ListeningPort[]) => PodmanInventory;
   nginx?: (listeners: ListeningPort[]) => NginxInventory;
   systemd?: (listeners: ListeningPort[]) => SystemdInventory;
+  dockerDaemonContext?: () => string | null;
+  podmanConnectionName?: () => string | null;
+  dockerDaemonHost?: () => { daemonHostId: string; provenance: DockerDaemonHostProvenance };
+  podmanDaemonHost?: () => { daemonHostId: string; provenance: PodmanDaemonHostProvenance };
   now?: () => Date;
   hostId?: string;
   scope?: DiscoveryScope;
+}
+
+function resolveDaemonContext(runtime: 'docker' | 'podman', configured: string | null): string {
+  return configured?.trim() || `unresolved-${runtime}`;
+}
+
+function forwarderSourceRef(
+  runtime: 'docker' | 'podman',
+  containerId: string,
+  protocol: string,
+  hostAddress: string,
+  hostPort: number,
+  containerPort: number,
+): string {
+  return `forwarder:${runtime}:${containerId}:${protocol}:${hostAddress || '*'}:${hostPort}->${containerPort}`;
 }
 
 function defaultScope(hostId: string): DiscoveryScope {
@@ -102,19 +136,25 @@ function nativeProvider(
         scope,
         times,
       ),
-      ...owners.map((owner) =>
-        evidence(
-          `native-sockets:owner:${owner.pid}:${listener.protocol}:${listener.port}`,
-          'native-sockets',
-          'ss --listening --processes',
-          `owner:pid:${owner.pid}`,
-          'listener-owner',
-          'direct',
-          owner.pid ? 'high' : 'unknown',
-          scope,
-          times,
-        ),
-      ),
+      ...owners.flatMap((owner) => {
+        if (!owner.pid) return [];
+        const startTime = readProcessStartTime(owner.pid);
+        const sourceRef = startTime ? `owner:pid:${owner.pid}:ticks:${startTime}` : `owner:pid:${owner.pid}`;
+        return [
+          evidence(
+            `native-sockets:owner:${owner.pid}:${listener.protocol}:${listener.port}`,
+            'native-sockets',
+            'ss --listening --processes',
+            sourceRef,
+            'listener-owner',
+            'direct',
+            startTime ? 'high' : 'medium',
+            scope,
+            times,
+            startTime ? [] : ['Process start time was unavailable when listener ownership was collected.'],
+          ),
+        ];
+      }),
     ];
     observations.push({
       identity: {
@@ -181,13 +221,13 @@ function dockerObservations(
   inventory: DockerInventory,
   scope: DiscoveryScope,
   times: { observedAt: string; validUntil: string },
+  daemonContext: string,
+  daemonHostId: string,
 ): DiscoveryObservation[] {
   if (!inventory.containers.length) return [];
-  const daemonContext = 'default';
-  const daemonHostId = scope.hostId ?? 'unknown-host';
   const networkNamespace = scope.networkNamespace ?? 'unknown-net';
   const observations: DiscoveryObservation[] = [];
-  for (const container of inventory.containers) {
+  for (const container of inventory.containers as Array<DockerContainer | PodmanContainer>) {
     observations.push({
       identity: {
         kind: 'container',
@@ -245,6 +285,15 @@ function dockerObservations(
       });
       for (const binding of port.hostBindings) {
         if (binding.port === null) continue;
+        const podmanBinding =
+          runtime === 'podman' && 'rootlessForwarder' in binding
+            ? (binding as PodmanContainer['ports'][number]['hostBindings'][number])
+            : null;
+        const forwarder =
+          podmanBinding?.rootlessForwarder?.status === 'attributed' ? podmanBinding.rootlessForwarder : null;
+        const forwarderRef = !forwarder?.processIdentity
+          ? null
+          : forwarderSourceRef(runtime, container.id, port.protocol, binding.address, binding.port, port.containerPort);
         observations.push({
           identity: {
             kind: 'published-binding',
@@ -274,8 +323,63 @@ function dockerObservations(
               { ...scope, daemonContext, networkNamespace },
               times,
             ),
+            ...(forwarderRef
+              ? [
+                  evidence(
+                    `${runtime}:forwarded-by:${container.id}:${binding.port}`,
+                    runtime,
+                    'rootlessport attribution',
+                    forwarderRef,
+                    'forwarded-by',
+                    'derived',
+                    'high',
+                    { ...scope, daemonContext, networkNamespace },
+                    times,
+                  ),
+                ]
+              : []),
           ],
         });
+        if (forwarder?.processIdentity && forwarderRef) {
+          const { pid, startTime } = forwarder.processIdentity;
+          observations.push({
+            identity: {
+              kind: 'process',
+              hostId: scope.hostId ?? 'unknown-host',
+              pidNamespace: scope.pidNamespace ?? 'unknown-pid',
+              pid,
+              startTime: `ticks:${startTime}`,
+            },
+            identityStatus: 'stable',
+            state: 'running',
+            displayName: 'rootlessport',
+            observedAt: times.observedAt,
+            evidence: [
+              evidence(
+                `${runtime}:rootlessport:${pid}:${startTime}`,
+                runtime,
+                'rootlessport attribution',
+                forwarderRef,
+                'rootlessport-forwarder',
+                'derived',
+                'high',
+                { ...scope, daemonContext },
+                times,
+              ),
+              evidence(
+                `${runtime}:process:${pid}:${startTime}`,
+                runtime,
+                'stat /proc/pid',
+                `pid:${pid}`,
+                'process-lifetime',
+                'direct',
+                'high',
+                scope,
+                times,
+              ),
+            ],
+          });
+        }
       }
     }
   }
@@ -287,8 +391,32 @@ function runtimeContainerObservations(
   inventory: DockerInventory | PodmanInventory,
   scope: DiscoveryScope,
   times: { observedAt: string; validUntil: string },
+  daemonContext: string,
+  daemonHostId: string,
 ): DiscoveryObservation[] {
-  return dockerObservations(runtime, inventory as DockerInventory, scope, times);
+  return dockerObservations(runtime, inventory as DockerInventory, scope, times, daemonContext, daemonHostId);
+}
+
+function runtimeHostLimitation(
+  runtime: 'docker' | 'podman',
+  provenance: DockerDaemonHostProvenance | PodmanDaemonHostProvenance,
+  daemonHostId: string,
+  localHostId: string,
+): string | null {
+  if (provenance === 'remote-endpoint')
+    return `${runtime} daemon host "${daemonHostId}" differs from the observation host "${localHostId}"; native listener correlation is disabled.`;
+  if (provenance === 'unresolved')
+    return `${runtime} daemon host scope is unresolved; container records are isolated from native listener correlation.`;
+  return null;
+}
+
+function runtimeContextLimitations(dockerContext: string | null, podmanContext: string | null): string[] {
+  const limitations: string[] = [];
+  if (!dockerContext)
+    limitations.push('Docker daemon context name is unresolved; container edges avoid unsafe native joins.');
+  if (!podmanContext)
+    limitations.push('Podman connection name is unresolved; container edges avoid unsafe native joins.');
+  return limitations;
 }
 
 function providerFromInventory(
@@ -337,7 +465,7 @@ function nginxObservations(
         `nginx:${localId}:${listener.address}:${listener.port}`,
         'nginx',
         'nginx configuration parse',
-        `configured:${'tcp'}:${listener.address}:${listener.port}`,
+        formatConfiguredEndpointRef('tcp', listener.address, listener.port),
         listener.state === 'observed' ? 'configured-listener-observed' : 'configured-listener',
         'configured',
         listener.state === 'observed' ? 'medium' : 'low',
@@ -413,7 +541,7 @@ function systemdObservations(
           `systemd:${localId}:socket:${socketIndex}`,
           'systemd',
           'systemctl show Listen',
-          `configured:tcp:${socket.address ?? '*'}:${socket.port ?? 0}`,
+          formatConfiguredEndpointRef('tcp', socket.address, socket.port ?? 0),
           socket.observed ? 'configured-listener-observed' : 'configured-listener',
           'configured',
           socket.observed ? 'medium' : 'low',
@@ -473,6 +601,13 @@ export function collectLinuxDiscoverySnapshot(dependencies: DiscoveryCoordinator
   const hostId = dependencies.hostId ?? hostname();
   const scope = dependencies.scope ?? defaultScope(hostId);
   const listeners = (dependencies.listeners ?? discoverListeningPorts)();
+  const dockerContextName = (dependencies.dockerDaemonContext ?? readDockerDaemonContext)();
+  const podmanContextName = (dependencies.podmanConnectionName ?? readPodmanConnectionName)();
+  const dockerHost = (dependencies.dockerDaemonHost ?? (() => resolveDockerDaemonHostId(hostId)))();
+  const podmanHost = (dependencies.podmanDaemonHost ?? (() => resolvePodmanDaemonHostId(hostId)))();
+  const contextLimitations = runtimeContextLimitations(dockerContextName, podmanContextName);
+  const dockerHostLimitation = runtimeHostLimitation('docker', dockerHost.provenance, dockerHost.daemonHostId, hostId);
+  const podmanHostLimitation = runtimeHostLimitation('podman', podmanHost.provenance, podmanHost.daemonHostId, hostId);
   const providers: DiscoveryProviderResult[] = [nativeProvider(listeners, scope, times)];
   const docker = (dependencies.docker ?? ((ports) => discoverDockerInventory({ discoverListeners: () => ports })))(
     listeners,
@@ -481,8 +616,22 @@ export function collectLinuxDiscoverySnapshot(dependencies: DiscoveryCoordinator
     providerFromInventory(
       'docker-local',
       'docker',
-      docker,
-      runtimeContainerObservations('docker', docker, scope, times),
+      {
+        ...docker,
+        limitations: [
+          ...docker.limitations,
+          ...(!dockerContextName ? [contextLimitations[0]].filter((item): item is string => Boolean(item)) : []),
+          ...(dockerHostLimitation ? [dockerHostLimitation] : []),
+        ],
+      },
+      runtimeContainerObservations(
+        'docker',
+        docker,
+        scope,
+        times,
+        resolveDaemonContext('docker', dockerContextName),
+        dockerHost.daemonHostId,
+      ),
       scope,
       times,
     ),
@@ -494,8 +643,22 @@ export function collectLinuxDiscoverySnapshot(dependencies: DiscoveryCoordinator
     providerFromInventory(
       'podman-local',
       'podman',
-      podman,
-      runtimeContainerObservations('podman', podman, scope, times),
+      {
+        ...podman,
+        limitations: [
+          ...podman.limitations,
+          ...(!podmanContextName ? [contextLimitations[1]].filter((item): item is string => Boolean(item)) : []),
+          ...(podmanHostLimitation ? [podmanHostLimitation] : []),
+        ],
+      },
+      runtimeContainerObservations(
+        'podman',
+        podman,
+        scope,
+        times,
+        resolveDaemonContext('podman', podmanContextName),
+        podmanHost.daemonHostId,
+      ),
       scope,
       times,
     ),

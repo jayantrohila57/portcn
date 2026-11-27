@@ -8,6 +8,7 @@ import {
   formatDockerInventory,
   parseDockerInspect,
   registerDockerCommand,
+  resolveDockerDaemonHostId,
 } from '../src/commands/docker.js';
 import type { ListeningPort } from '../src/commands/list.js';
 
@@ -243,5 +244,22 @@ describe('Docker container inventory', () => {
       limitations: [],
     });
     expect(output).toContain('0.0.0.0:9001 -> 9000/tcp (configured; not active)');
+  });
+});
+
+describe('Docker daemon host scope', () => {
+  it('proves local host from unix endpoints and rejects context names as host identity', () => {
+    const runDocker = vi.fn((args: string[]) =>
+      args.includes('inspect') ? 'unix:///var/run/docker.sock\n' : 'desktop-linux\n',
+    );
+    expect(resolveDockerDaemonHostId('observation-host', { runDocker })).toEqual({
+      daemonHostId: 'observation-host',
+      provenance: 'local-proven',
+    });
+    const remote = resolveDockerDaemonHostId('observation-host', {
+      runDocker: () => 'tcp://builder.example:2375',
+    });
+    expect(remote).toEqual({ daemonHostId: 'builder.example', provenance: 'remote-endpoint' });
+    expect(remote.daemonHostId).not.toBe('desktop-linux');
   });
 });

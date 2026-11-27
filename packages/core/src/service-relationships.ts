@@ -1,3 +1,4 @@
+import { parseConfiguredEndpointRef } from './configured-endpoint.js';
 import {
   type AnyDiscoveryObservation,
   correlateContainerMappings,
@@ -6,10 +7,10 @@ import {
   type DiscoveryEvidence,
   type DiscoveryObservation,
   type DiscoveryRelationshipNature,
-  type DiscoveryScope,
   discoveryIdentityKey,
   type EvidenceFreshness,
   evidenceFreshness,
+  scopesJoinableForCorrelation,
 } from './discovery.js';
 import type { PortNumber } from './port-number.js';
 
@@ -17,16 +18,10 @@ function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-const scopeFields: readonly (keyof DiscoveryScope)[] = [
-  'hostId',
-  'pidNamespace',
-  'networkNamespace',
-  'mountNamespace',
-  'daemonContext',
-];
+export { scopesCompatible, scopesJoinableForCorrelation } from './discovery.js';
 
-export function scopesCompatible(left: DiscoveryScope, right: DiscoveryScope): boolean {
-  return scopeFields.every((field) => left[field] === null || right[field] === null || left[field] === right[field]);
+function evidenceScopesJoinable(evidence: DiscoveryEvidence[]): boolean {
+  return evidence.every((left) => evidence.every((right) => scopesJoinableForCorrelation(left.scope, right.scope)));
 }
 
 function bareAddress(value: string): string {
@@ -104,15 +99,32 @@ function pushCorrelation(
   correlations.push(withRelationshipMetadata(correlation, evidenceById, requestedAt));
 }
 
-function ownerPidFromEvidence(evidence: DiscoveryEvidence[]): number | null {
+interface OwnerPidEvidence {
+  pid: number;
+  startTimeTicks: string | null;
+}
+
+function ownerPidsFromEvidence(evidence: DiscoveryEvidence[]): OwnerPidEvidence[] {
+  const byPid = new Map<number, OwnerPidEvidence>();
   for (const item of evidence) {
-    const match = /^owner:pid:(\d+)$/.exec(item.sourceRef);
-    if (match) {
-      const pid = Number(match[1]);
-      if (Number.isSafeInteger(pid) && pid > 0) return pid;
-    }
+    if (item.claim !== 'listener-owner') continue;
+    const withTicks = /^owner:pid:(\d+):ticks:(\d+)$/.exec(item.sourceRef);
+    const plain = /^owner:pid:(\d+)$/.exec(item.sourceRef);
+    const match = withTicks ?? plain;
+    if (!match) continue;
+    const pid = Number(match[1]);
+    if (!Number.isSafeInteger(pid) || pid <= 0) continue;
+    byPid.set(pid, {
+      pid,
+      startTimeTicks: withTicks?.[2] ?? byPid.get(pid)?.startTimeTicks ?? null,
+    });
   }
-  return null;
+  return [...byPid.values()].sort((left, right) => left.pid - right.pid);
+}
+
+function processLifetimeEvidence(observation: DiscoveryObservation, pid: number): DiscoveryEvidence | null {
+  if (observation.identity?.kind !== 'process' || observation.identity.pid !== pid) return null;
+  return observation.evidence.find(({ claim }) => claim === 'process-lifetime') ?? null;
 }
 
 /** Relate host listeners to published container bindings when protocol, port, and bind rules agree. */
@@ -136,9 +148,11 @@ export function correlateHostEndpointBindings(
         !discoveryBindAddressesEquivalent(binding.hostAddress, listener.bindAddress)
       )
         continue;
+      if (listener.hostId !== binding.daemonHostId) continue;
+      if (listener.networkNamespace !== binding.hostNetworkNamespace) continue;
       const evidence = [...listenerObservation.evidence, ...bindingObservation.evidence];
       if (!evidence.length) continue;
-      if (evidence.some((left) => evidence.some((right) => !scopesCompatible(left.scope, right.scope)))) continue;
+      if (!evidenceScopesJoinable(evidence)) continue;
       const observedAt = [listenerObservation.observedAt, bindingObservation.observedAt].sort(compareText).at(-1);
       const correlationScope = evidence.at(0)?.scope;
       if (!observedAt || !correlationScope) continue;
@@ -175,31 +189,41 @@ export function correlateListenerProcessOwnership(
   for (const listenerObservation of stable) {
     const listener = listenerObservation.identity;
     if (listener.kind !== 'native-listener') continue;
-    const ownerPid = ownerPidFromEvidence(listenerObservation.evidence);
-    if (ownerPid === null) continue;
-    for (const processObservation of processes) {
-      const process = processObservation.identity;
-      if (process.kind !== 'process' || process.pid !== ownerPid) continue;
-      const evidence = [...listenerObservation.evidence, ...processObservation.evidence];
-      if (evidence.some((left) => evidence.some((right) => !scopesCompatible(left.scope, right.scope)))) continue;
-      const observedAt = [listenerObservation.observedAt, processObservation.observedAt].sort(compareText).at(-1);
-      const correlationScope = evidence.at(0)?.scope;
-      if (!observedAt || !correlationScope) continue;
-      pushCorrelation(
-        correlations,
-        seen,
-        {
-          fromIdentityKey: discoveryIdentityKey(process),
-          toIdentityKey: discoveryIdentityKey(listener),
-          type: 'owned-by',
-          confidence: 'high',
-          evidenceIds: [...new Set(evidence.map(({ id }) => id))].sort(compareText),
-          observedAt,
-          scope: correlationScope,
-        },
-        evidenceById,
-        requestedAt,
-      );
+    const ownerPids = ownerPidsFromEvidence(listenerObservation.evidence);
+    if (!ownerPids.length) continue;
+    for (const owner of ownerPids) {
+      for (const processObservation of processes) {
+        const process = processObservation.identity;
+        if (process.kind !== 'process' || process.pid !== owner.pid) continue;
+        const lifetime = processLifetimeEvidence(processObservation, owner.pid);
+        if (!lifetime) continue;
+        if (owner.startTimeTicks) {
+          const identityTicks = process.startTime.startsWith('ticks:')
+            ? process.startTime.slice('ticks:'.length)
+            : null;
+          if (identityTicks === null || identityTicks !== owner.startTimeTicks) continue;
+        }
+        const evidence = [...listenerObservation.evidence, ...processObservation.evidence];
+        if (!evidenceScopesJoinable(evidence)) continue;
+        const observedAt = [listenerObservation.observedAt, processObservation.observedAt].sort(compareText).at(-1);
+        const correlationScope = evidence.at(0)?.scope;
+        if (!observedAt || !correlationScope) continue;
+        pushCorrelation(
+          correlations,
+          seen,
+          {
+            fromIdentityKey: discoveryIdentityKey(process),
+            toIdentityKey: discoveryIdentityKey(listener),
+            type: 'owned-by',
+            confidence: 'high',
+            evidenceIds: [...new Set(evidence.map(({ id }) => id))].sort(compareText),
+            observedAt,
+            scope: correlationScope,
+          },
+          evidenceById,
+          requestedAt,
+        );
+      }
     }
   }
   return correlations;
@@ -225,8 +249,13 @@ export function correlateForwardingAttribution(
       );
       if (!forwardEvidence.length) continue;
       const bindingEvidence = bindingObservation.evidence.filter(({ claim }) => claim.includes('binding'));
-      const evidence = [...forwardEvidence, ...bindingEvidence, ...bindingObservation.evidence];
+      const attributed = bindingObservation.evidence.filter(({ claim }) => claim === 'forwarded-by');
+      const forwardRefs = new Set(forwardEvidence.map(({ sourceRef }) => sourceRef));
       if (!bindingEvidence.length) continue;
+      if (attributed.length && !attributed.some(({ sourceRef }) => forwardRefs.has(sourceRef))) continue;
+      if (!processLifetimeEvidence(processObservation, process.pid)) continue;
+      const evidence = [...forwardEvidence, ...bindingEvidence, ...bindingObservation.evidence];
+      if (!evidenceScopesJoinable(evidence)) continue;
       const observedAt = [bindingObservation.observedAt, processObservation.observedAt].sort(compareText).at(-1);
       const correlationScope = evidence.at(0)?.scope;
       if (!observedAt || !correlationScope) continue;
@@ -254,30 +283,41 @@ export function correlateForwardingAttribution(
   return correlations;
 }
 
-function configuredEndpointFromEvidence(evidence: DiscoveryEvidence[]): {
-  protocol: 'tcp' | 'udp' | null;
-  port: PortNumber | null;
+interface ConfiguredEndpointEvidence {
+  protocol: 'tcp' | 'udp';
+  port: PortNumber;
   address: string | null;
   observed: boolean | null;
-} {
-  let protocol: 'tcp' | 'udp' | null = null;
-  let port: PortNumber | null = null;
-  let address: string | null = null;
-  let observed: boolean | null = null;
+  evidenceIds: string[];
+}
+
+function configuredEndpointsFromEvidence(evidence: DiscoveryEvidence[]): ConfiguredEndpointEvidence[] {
+  const byRef = new Map<string, ConfiguredEndpointEvidence>();
   for (const item of evidence) {
-    const endpoint = /^configured:([^:]+):([^:]+):(\d+)$/.exec(item.sourceRef);
-    if (endpoint) {
-      protocol = endpoint[1] === 'udp' ? 'udp' : 'tcp';
-      address = endpoint[2] === '*' ? null : endpoint[2];
-      port = Number(endpoint[3]) as PortNumber;
-      if (item.claim === 'configured-listener-observed') observed = true;
-      else if (item.claim === 'configured-listener') observed = false;
+    const endpoint = parseConfiguredEndpointRef(item.sourceRef);
+    if (!endpoint) continue;
+    const observed =
+      item.claim === 'configured-listener-observed' ? true : item.claim === 'configured-listener' ? false : null;
+    const existing = byRef.get(item.sourceRef);
+    if (existing) {
+      existing.evidenceIds.push(item.id);
+      if (observed !== null) existing.observed = observed;
       continue;
     }
-    const mainPid = /^mainpid:(\d+)$/.exec(item.sourceRef);
-    if (mainPid) continue;
+    byRef.set(item.sourceRef, {
+      protocol: endpoint.protocol,
+      port: endpoint.port,
+      address: endpoint.address,
+      observed,
+      evidenceIds: [item.id],
+    });
   }
-  return { protocol, port, address, observed };
+  return [...byRef.values()].sort(
+    (left, right) =>
+      compareText(left.protocol, right.protocol) ||
+      compareText(left.address ?? '*', right.address ?? '*') ||
+      left.port - right.port,
+  );
 }
 
 /** Relate configured manager records to listeners, processes, or bindings without inventing activity. */
@@ -293,8 +333,8 @@ export function correlateConfiguredServiceEndpoints(
   for (const serviceObservation of services) {
     const service = serviceObservation.identity;
     if (service.kind !== 'system-service') continue;
-    const configured = configuredEndpointFromEvidence(serviceObservation.evidence);
-    if (configured.port === null || configured.protocol === null) {
+    const configuredEndpoints = configuredEndpointsFromEvidence(serviceObservation.evidence);
+    if (!configuredEndpoints.length) {
       const mainPidEvidence = serviceObservation.evidence.find(({ sourceRef }) => mainPidRef(sourceRef));
       const mainPid = mainPidEvidence ? Number(/^mainpid:(\d+)$/.exec(mainPidEvidence.sourceRef)?.[1]) : null;
       if (mainPid) {
@@ -324,36 +364,40 @@ export function correlateConfiguredServiceEndpoints(
       }
       continue;
     }
-    for (const listenerObservation of stable) {
-      const listener = listenerObservation.identity;
-      if (
-        listener.kind !== 'native-listener' ||
-        listener.protocol !== configured.protocol ||
-        listener.port !== configured.port
-      )
-        continue;
-      if (configured.address && !discoveryBindAddressesEquivalent(configured.address, listener.bindAddress)) continue;
-      const evidence = [...serviceObservation.evidence, ...listenerObservation.evidence];
-      const observedAt = [serviceObservation.observedAt, listenerObservation.observedAt].sort(compareText).at(-1);
-      const correlationScope = evidence.at(0)?.scope;
-      if (!observedAt || !correlationScope) continue;
-      const confidence: DiscoveryConfidence =
-        configured.observed === true ? 'high' : configured.observed === false ? 'low' : 'medium';
-      pushCorrelation(
-        correlations,
-        seen,
-        {
-          fromIdentityKey: discoveryIdentityKey(service),
-          toIdentityKey: discoveryIdentityKey(listener),
-          type: 'configured-as',
-          confidence,
-          evidenceIds: [...new Set(evidence.map(({ id }) => id))].sort(compareText),
-          observedAt,
-          scope: correlationScope,
-        },
-        evidenceById,
-        requestedAt,
-      );
+    for (const configured of configuredEndpoints) {
+      for (const listenerObservation of stable) {
+        const listener = listenerObservation.identity;
+        if (
+          listener.kind !== 'native-listener' ||
+          listener.protocol !== configured.protocol ||
+          listener.port !== configured.port
+        )
+          continue;
+        if (configured.address && !discoveryBindAddressesEquivalent(configured.address, listener.bindAddress)) continue;
+        const endpointEvidence = serviceObservation.evidence.filter(({ id }) => configured.evidenceIds.includes(id));
+        const evidence = [...endpointEvidence, ...listenerObservation.evidence];
+        if (!evidenceScopesJoinable(evidence)) continue;
+        const observedAt = [serviceObservation.observedAt, listenerObservation.observedAt].sort(compareText).at(-1);
+        const correlationScope = evidence.at(0)?.scope;
+        if (!observedAt || !correlationScope) continue;
+        const confidence: DiscoveryConfidence =
+          configured.observed === true ? 'high' : configured.observed === false ? 'low' : 'medium';
+        pushCorrelation(
+          correlations,
+          seen,
+          {
+            fromIdentityKey: discoveryIdentityKey(service),
+            toIdentityKey: discoveryIdentityKey(listener),
+            type: 'configured-as',
+            confidence,
+            evidenceIds: [...new Set(evidence.map(({ id }) => id))].sort(compareText),
+            observedAt,
+            scope: correlationScope,
+          },
+          evidenceById,
+          requestedAt,
+        );
+      }
     }
   }
   return correlations;

@@ -322,8 +322,20 @@ const scopeFields: readonly (keyof DiscoveryScope)[] = [
   'daemonContext',
 ];
 
-function scopesCompatible(left: DiscoveryScope, right: DiscoveryScope): boolean {
+export function scopesCompatible(left: DiscoveryScope, right: DiscoveryScope): boolean {
   return scopeFields.every((field) => left[field] === null || right[field] === null || left[field] === right[field]);
+}
+
+/** Stricter scope checks for cross-provider correlations; unknown boundaries do not imply compatibility. */
+export function scopesJoinableForCorrelation(left: DiscoveryScope, right: DiscoveryScope): boolean {
+  if (!scopesCompatible(left, right)) return false;
+  const leftDaemon = left.daemonContext;
+  const rightDaemon = right.daemonContext;
+  if (leftDaemon === null && rightDaemon === null) return true;
+  if (leftDaemon !== null && rightDaemon !== null) return leftDaemon === rightDaemon;
+  if (left.hostId === null || right.hostId === null) return false;
+  if (left.networkNamespace === null || right.networkNamespace === null) return false;
+  return left.hostId === right.hostId && left.networkNamespace === right.networkNamespace;
 }
 
 function mergeObservationGroup(group: DiscoveryObservation[]): DiscoveryObservation {
@@ -411,7 +423,9 @@ export function correlateContainerMappings(
       const evidence = [...bindingObservation.evidence, ...portObservation.evidence];
       if (
         bindingObservation.evidence.some((bindingEvidence) =>
-          portObservation.evidence.some((portEvidence) => !scopesCompatible(bindingEvidence.scope, portEvidence.scope)),
+          portObservation.evidence.some(
+            (portEvidence) => !scopesJoinableForCorrelation(bindingEvidence.scope, portEvidence.scope),
+          ),
         )
       )
         continue;

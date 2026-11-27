@@ -1,3 +1,4 @@
+export { formatConfiguredEndpointRef, parseConfiguredEndpointRef } from './configured-endpoint.js';
 export {
   type AnyDiscoveryObservation,
   type CorrelationType,
@@ -25,6 +26,8 @@ export {
   evidenceFreshness,
   type ProviderIssue,
   type ProviderResultStatus,
+  scopesCompatible,
+  scopesJoinableForCorrelation,
   type UnidentifiedDiscoveryObservation,
 } from './discovery.js';
 export { isValidPortNumber, type PortNumber } from './port-number.js';
@@ -36,7 +39,6 @@ export {
   correlateListenerProcessOwnership,
   type DiscoveryRelationshipSummary,
   discoveryBindAddressesEquivalent,
-  scopesCompatible,
   summarizeDiscoveryRelationships,
   withRelationshipMetadata,
 } from './service-relationships.js';

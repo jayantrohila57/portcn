@@ -10,6 +10,8 @@ import {
   deduplicateDiscoveryObservations,
   discoveryBindAddressesEquivalent,
   discoveryIdentityKey,
+  formatConfiguredEndpointRef,
+  scopesJoinableForCorrelation,
   withRelationshipMetadata,
 } from '../src/index.js';
 
@@ -44,7 +46,11 @@ function baseEvidence(
   };
 }
 
-function listener(port: number, ownerPid: number | null = 92): DiscoveryObservation {
+function listener(
+  port: number,
+  ownerPid: number | null = 92,
+  overrides: Partial<Extract<DiscoveryObservation['identity'], { kind: 'native-listener' }>> = {},
+): DiscoveryObservation {
   return {
     identity: {
       kind: 'native-listener',
@@ -53,6 +59,7 @@ function listener(port: number, ownerPid: number | null = 92): DiscoveryObservat
       protocol: 'tcp',
       bindAddress: '127.0.0.1',
       port: port as PortNumber,
+      ...overrides,
     },
     identityStatus: 'stable',
     state: 'running',
@@ -65,7 +72,7 @@ function listener(port: number, ownerPid: number | null = 92): DiscoveryObservat
             baseEvidence(
               `native:owner:${port}:${ownerPid}`,
               'native-sockets',
-              `owner:pid:${ownerPid}`,
+              `owner:pid:${ownerPid}:ticks:42`,
               'listener-owner',
             ),
           ]
@@ -98,9 +105,9 @@ function binding(port: number, containerId: string): DiscoveryObservation {
   };
 }
 
-function processObs(pid: number): DiscoveryObservation {
+function processObs(pid: number, startTime = pid === 93 ? '43' : '42'): DiscoveryObservation {
   return {
-    identity: { kind: 'process', hostId: 'host-a', pidNamespace: 'pid:[1]', pid, startTime: 'ticks:42' },
+    identity: { kind: 'process', hostId: 'host-a', pidNamespace: 'pid:[1]', pid, startTime: `ticks:${startTime}` },
     identityStatus: 'stable',
     state: 'running',
     displayName: 'fixture',
@@ -167,12 +174,104 @@ describe('service relationship correlation', () => {
     expect(configured?.nature === 'configured' || configured?.nature === 'incomplete').toBe(true);
   });
 
+  it('emits owned-by edges for every visible listener owner with process lifetime', () => {
+    const shared = listener(43117, null, {});
+    shared.evidence.push(
+      baseEvidence('native:owner:a', 'native-sockets', 'owner:pid:92:ticks:42', 'listener-owner'),
+      baseEvidence('native:owner:b', 'native-sockets', 'owner:pid:93:ticks:43', 'listener-owner'),
+    );
+    const edges = buildDiscoveryCorrelations(
+      deduplicateDiscoveryObservations([shared, processObs(92), processObs(93)]),
+      observedAt,
+    );
+    expect(edges.filter(({ type }) => type === 'owned-by')).toHaveLength(2);
+  });
+
   it('adds owned-by edges when owner pid and process lifetimes agree', () => {
     const edges = buildDiscoveryCorrelations(
       deduplicateDiscoveryObservations([listener(43117, 92), processObs(92)]),
       observedAt,
     );
     expect(edges.some(({ type, nature }) => type === 'owned-by' && nature === 'observed')).toBe(true);
+  });
+
+  it('matches IPv6 configured systemd sockets to native listeners', () => {
+    const service: DiscoveryObservation = {
+      identity: {
+        kind: 'system-service',
+        provider: 'systemd',
+        hostId: 'host-a',
+        mountNamespace: 'mnt:[1]',
+        localId: 'system:web.socket',
+      },
+      identityStatus: 'stable',
+      state: 'configured',
+      displayName: 'fixture',
+      observedAt,
+      evidence: [
+        {
+          ...baseEvidence(
+            'systemd:ipv6',
+            'systemd',
+            formatConfiguredEndpointRef('tcp', '::1', 8443),
+            'configured-listener-observed',
+          ),
+          provenance: 'configured',
+          confidence: 'medium',
+        },
+      ],
+    };
+    const ipv6Listener = listener(8443, null, { bindAddress: '::1' });
+    const edges = buildDiscoveryCorrelations([service, ipv6Listener], observedAt);
+    expect(edges.some(({ type }) => type === 'configured-as')).toBe(true);
+  });
+
+  it('does not join native listeners to bindings on a different daemon host', () => {
+    const remoteBinding = binding(8080, 'container-a');
+    if (remoteBinding.identity?.kind !== 'published-binding') throw new Error('fixture');
+    remoteBinding.identity.daemonHostId = 'remote-host';
+    const evidenceById = new Map(
+      [listener(8080), remoteBinding].flatMap((item) => item.evidence.map((entry) => [entry.id, entry])),
+    );
+    expect(correlateHostEndpointBindings([listener(8080), remoteBinding], evidenceById, observedAt)).toHaveLength(0);
+  });
+
+  it('requires matching host and network scope across daemon and native evidence', () => {
+    expect(
+      scopesJoinableForCorrelation(
+        { ...scope, daemonContext: null },
+        { ...scope, daemonContext: 'docker-local', hostId: 'other-host' },
+      ),
+    ).toBe(false);
+    expect(
+      scopesJoinableForCorrelation(
+        { ...scope, daemonContext: null },
+        { ...scope, daemonContext: 'docker-local', hostId: scope.hostId, networkNamespace: scope.networkNamespace },
+      ),
+    ).toBe(true);
+  });
+
+  it('skips owned-by edges when listener owner ticks disagree with process lifetime', () => {
+    const reused = listener(9001, null);
+    reused.evidence.push(baseEvidence('owner:reused', 'native-sockets', 'owner:pid:92:ticks:1', 'listener-owner'));
+    const edges = buildDiscoveryCorrelations(deduplicateDiscoveryObservations([reused, processObs(92)]), observedAt);
+    expect(edges.filter(({ type }) => type === 'owned-by')).toHaveLength(0);
+  });
+
+  it('matches forwarded-by edges only when forwarder source references agree', () => {
+    const forwarder = processObs(55, '900');
+    forwarder.evidence.push({
+      ...baseEvidence('fwd:bad', 'podman', 'forwarder:podman:x:tcp:*:9000->80', 'rootlessport-forwarder'),
+      provenance: 'derived',
+    });
+    const publishedBinding = binding(9000, 'container-z');
+    if (publishedBinding.identity?.kind !== 'published-binding') throw new Error('fixture');
+    publishedBinding.evidence.push({
+      ...baseEvidence('fwd:binding', 'podman', 'forwarder:podman:z:tcp:*:9000->80', 'forwarded-by'),
+      provenance: 'derived',
+    });
+    const edges = buildDiscoveryCorrelations([forwarder, publishedBinding], observedAt);
+    expect(edges.filter(({ type }) => type === 'forwarded-by')).toHaveLength(0);
   });
 
   it('rejects self-referential and evidence-free snapshot edges deterministically', () => {

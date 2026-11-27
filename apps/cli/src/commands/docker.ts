@@ -359,6 +359,44 @@ export function formatDockerInventory(result: DockerInventory): string {
   ].join('\n');
 }
 
+export type DockerDaemonHostProvenance = 'local-proven' | 'remote-endpoint' | 'unresolved';
+
+/** Resolve daemon host identity from Docker endpoint evidence; never treat the context name as host proof. */
+export function resolveDockerDaemonHostId(
+  localHostId: string,
+  dependencies: DockerDependencies = {},
+): { daemonHostId: string; provenance: DockerDaemonHostProvenance } {
+  const runDocker =
+    dependencies.runDocker ??
+    ((args: string[]) => execFileSync('docker', args, { encoding: 'utf8', timeout: 5_000, maxBuffer: 1024 * 1024 }));
+  try {
+    const endpoint = runDocker(['context', 'inspect', '--format', '{{.Endpoints.docker.Host}}']).trim();
+    if (!endpoint || /^unix:/i.test(endpoint) || /^npipe:/i.test(endpoint))
+      return { daemonHostId: localHostId, provenance: 'local-proven' };
+    const tcp = /^tcp:\/\/\[?([^[\]/:]+)/i.exec(endpoint);
+    const host = tcp?.[1]?.toLowerCase() ?? '';
+    if (!host) return { daemonHostId: 'unresolved-daemon-host', provenance: 'unresolved' };
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1')
+      return { daemonHostId: localHostId, provenance: 'local-proven' };
+    return { daemonHostId: host, provenance: 'remote-endpoint' };
+  } catch {
+    return { daemonHostId: 'unresolved-daemon-host', provenance: 'unresolved' };
+  }
+}
+
+/** Resolve the active Docker CLI context name when the daemon is reachable. */
+export function readDockerDaemonContext(dependencies: DockerDependencies = {}): string | null {
+  const runDocker =
+    dependencies.runDocker ??
+    ((args: string[]) => execFileSync('docker', args, { encoding: 'utf8', timeout: 5_000, maxBuffer: 1024 * 1024 }));
+  try {
+    const name = runDocker(['context', 'show', '--format', '{{.Name}}']).trim();
+    return name || null;
+  } catch {
+    return null;
+  }
+}
+
 export function registerDockerCommand(program: Command, dependencies: DockerDependencies = {}): void {
   program
     .command('docker')
