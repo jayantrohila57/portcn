@@ -250,6 +250,59 @@ export function formatPodmanInventory(result: PodmanInventory): string {
   );
 }
 
+export type PodmanDaemonHostProvenance = 'local-proven' | 'remote-endpoint' | 'unresolved';
+
+/** Resolve daemon host identity from the default connection URI; never treat the connection name as host proof. */
+export function resolvePodmanDaemonHostId(
+  localHostId: string,
+  dependencies: PodmanDependencies = {},
+): { daemonHostId: string; provenance: PodmanDaemonHostProvenance } {
+  const runPodman =
+    dependencies.runPodman ??
+    ((args: string[]) => execFileSync('podman', args, { encoding: 'utf8', timeout: 5_000, maxBuffer: 1024 * 1024 }));
+  try {
+    const table = runPodman(['system', 'connection', 'list', '--format', '{{.Name}}\t{{.URI}}\t{{.Default}}'])
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const line =
+      table.find((row) => row.endsWith('\ttrue') || row.endsWith('\t*'))?.split('\t') ?? table[0]?.split('\t');
+    const uri = line?.[1]?.trim() ?? '';
+    if (!uri || /^unix:/i.test(uri)) return { daemonHostId: localHostId, provenance: 'local-proven' };
+    const ssh = /^ssh:\/\/([^@/]+@)?([^:/]+)/i.exec(uri);
+    if (ssh?.[2]) return { daemonHostId: ssh[2].toLowerCase(), provenance: 'remote-endpoint' };
+    const tcp = /^tcp:\/\/\[?([^[\]/:]+)/i.exec(uri);
+    const host = tcp?.[1]?.toLowerCase() ?? '';
+    if (!host) return { daemonHostId: 'unresolved-daemon-host', provenance: 'unresolved' };
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1')
+      return { daemonHostId: localHostId, provenance: 'local-proven' };
+    return { daemonHostId: host, provenance: 'remote-endpoint' };
+  } catch {
+    return { daemonHostId: 'unresolved-daemon-host', provenance: 'unresolved' };
+  }
+}
+
+/** Resolve the default Podman connection name when the CLI is available. */
+export function readPodmanConnectionName(dependencies: PodmanDependencies = {}): string | null {
+  const runPodman =
+    dependencies.runPodman ??
+    ((args: string[]) => execFileSync('podman', args, { encoding: 'utf8', timeout: 5_000, maxBuffer: 1024 * 1024 }));
+  try {
+    const lines = runPodman(['system', 'connection', 'list', '--format', '{{.Name}}\t{{.Default}}'])
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    for (const line of lines) {
+      const [name, isDefault] = line.split('\t');
+      if (name && (isDefault === 'true' || isDefault === '*')) return name;
+    }
+    const first = lines[0]?.split('\t')[0];
+    return first?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 export function registerPodmanCommand(program: Command, dependencies: PodmanDependencies = {}): void {
   program
     .command('podman')

@@ -76,6 +76,10 @@ describe('linux discovery coordinator', () => {
         observationTime: '2026-11-25T12:00:00.000Z',
       }),
       now: () => new Date('2026-11-25T12:00:00.000Z'),
+      dockerDaemonContext: () => 'docker-local',
+      podmanConnectionName: () => 'podman-local',
+      dockerDaemonHost: () => ({ daemonHostId: 'host-test', provenance: 'local-proven' }),
+      podmanDaemonHost: () => ({ daemonHostId: 'host-test', provenance: 'local-proven' }),
       hostId: 'host-test',
       scope: {
         hostId: 'host-test',
