@@ -11,6 +11,26 @@ const checkout = {
   checkoutCommit: 'deadbeef',
 };
 
+const multicastUdp: ListeningPort = {
+  protocol: 'udp',
+  state: 'UNCONN',
+  address: '239.255.255.250',
+  port: 3702,
+  pid: null,
+  processName: null,
+  owners: [],
+};
+
+const loopbackTcp: ListeningPort = {
+  protocol: 'tcp',
+  state: 'LISTEN',
+  address: '127.0.0.1',
+  port: 8080,
+  pid: null,
+  processName: null,
+  owners: [],
+};
+
 const listeners: ListeningPort[] = [
   {
     protocol: 'tcp',
@@ -33,6 +53,8 @@ const listeners: ListeningPort[] = [
       { pid: 999, processName: 'postgres' },
     ],
   },
+  multicastUdp,
+  loopbackTcp,
 ];
 
 function projectContext(pid: number, cwd: string, gitDir = checkout.gitDir): ProjectContext {
@@ -65,6 +87,7 @@ describe('discover project (Linux)', () => {
       discoverListeners: () => listeners,
       listPids: () => [3182, 3220],
       readStartTime: (pid) => startTimes.get(pid) ?? null,
+      readComm: (pid) => (pid === 3220 ? 'bash' : 'node'),
       inspectProject: (pid) => projectContext(pid, pid === 3220 ? '/work/acme/apps/jobs' : '/work/acme/apps/web'),
       hostname: () => 'host-linux',
       now: () => new Date('2026-11-27T04:45:00.000Z'),
@@ -75,7 +98,12 @@ describe('discover project (Linux)', () => {
     );
     expect(result.runtimes.find((runtime) => runtime.application === 'apps/web')?.ports).toHaveLength(2);
     expect(result.runtimes.find((runtime) => runtime.application === 'apps/jobs')?.role).toBe('supporting-process');
-    expect(result.unresolved.some((item) => item.includes('4000') && item.includes('999'))).toBe(true);
+    expect(result.unresolved.some((item) => item.includes('4000') && item.includes('postgres'))).toBe(true);
+    expect(result.listenerInventory.unrelated.count).toBeGreaterThanOrEqual(1);
+    expect(result.listenerInventory.ambiguous.count).toBe(2);
+    expect(result.unresolved.some((item) => item.includes('8080'))).toBe(true);
+    expect(result.unresolved.some((item) => item.includes('3702'))).toBe(false);
+    expect(result.summary.listenerProcesses).toBe(1);
     expect(result.schemaVersion).toBe(1);
   });
 
@@ -86,6 +114,7 @@ describe('discover project (Linux)', () => {
       discoverListeners: () => [],
       listPids: () => [3300],
       readStartTime: () => '50',
+      readComm: () => 'node',
       inspectProject: () => projectContext(3300, '/work/acme-feature', '/work/acme-feature/.git'),
       hostname: () => 'host-linux',
     });
@@ -103,8 +132,28 @@ describe('discover project (Linux)', () => {
         reads += 1;
         return reads === 1 ? '100' : '101';
       },
+      readComm: () => 'node',
       inspectProject: (pid) => projectContext(pid, '/work/acme/apps/web'),
     });
     expect(result.runtimes).toHaveLength(0);
+  });
+
+  it('excludes Portcn discovery processes from runtimes', () => {
+    const result = discoverProjectRuntimes('/work/acme', {
+      platform: 'linux',
+      resolveProject: () => checkout,
+      discoverListeners: () => [],
+      listPids: () => [5000],
+      readStartTime: () => '100',
+      readComm: () => 'node',
+      readCmdline: () => 'node apps/cli/dist/index.js discover project',
+      inspectProject: () => ({
+        ...projectContext(5000, '/work/acme'),
+        executable: '/usr/bin/node',
+      }),
+    });
+    expect(result.runtimes).toHaveLength(0);
+    expect(result.excluded).toHaveLength(1);
+    expect(result.excluded[0]?.reason).toBe('portcn-inspection');
   });
 });

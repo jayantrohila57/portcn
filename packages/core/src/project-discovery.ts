@@ -15,7 +15,7 @@ export interface ExpectedCheckout {
   gitCommonDir: string;
 }
 
-const SUPPORTING_EXECUTABLES = new Set([
+export const SUPPORTING_EXECUTABLES = new Set([
   'bash',
   'zsh',
   'sh',
@@ -24,6 +24,7 @@ const SUPPORTING_EXECUTABLES = new Set([
   'ksh',
   'code',
   'cursor',
+  'portcn',
   'nvim',
   'vim',
   'emacs',
