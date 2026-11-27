@@ -18,6 +18,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Fixed
 
+- classify project roles and listeners from ownership evidence ([#226](https://github.com/jayantrohila57/portcn/issues/226)) <!-- task:fix/project-role-ownership -->
+
 - retain direct checkout ownership across launcher boundaries ([#225](https://github.com/jayantrohila57/portcn/issues/225)) <!-- task:fix/project-owner-checkout -->
 
 - resolve active context with supported arguments ([#222](https://github.com/jayantrohila57/portcn/issues/222)) <!-- task:fix/docker-context-query -->

@@ -85,32 +85,29 @@ export function classifyProcessRole(input: ProcessClassificationInput): {
   if (comm === 'conmon' || base === 'conmon') {
     return { processRole: 'container-infrastructure', evidence: ['Process name matches conmon.'] };
   }
-  if (comm === 'exe' || base === 'exe' || base === 'pause') {
-    return {
-      processRole: 'container-infrastructure',
-      evidence: ['Generic executable name consistent with container pause/helper processes.'],
-    };
-  }
-  if (comm === 'rootlessport' || base === 'rootlessport' || cmd.includes('rootlessport')) {
+  if (comm === 'rootlessport' || base === 'rootlessport') {
     return {
       processRole: 'network-forwarding',
       evidence: ['Process name or command line matches rootlessport forwarding.'],
     };
   }
   if (comm === 'nginx' || base === 'nginx') {
-    if (scoped) {
+    if (input.projectListenerBindings > 0 && input.checkoutMatch === 'matching') {
       return {
-        processRole: input.projectListenerBindings > 0 ? 'application-server' : 'application-worker',
-        evidence: ['nginx with working directory under an application path.'],
+        processRole: 'application-server',
+        evidence: ['Project-associated nginx owns a listening endpoint.'],
       };
     }
-    return { processRole: 'unknown', evidence: ['nginx without application scope under the selected checkout.'] };
+    return {
+      processRole: 'unknown',
+      evidence: ['No direct project listener establishes the role of this nginx process.'],
+    };
   }
   if (comm === 'node_repl' || cmd.includes(' node_repl') || cmd.endsWith('repl')) {
     return { processRole: 'development-tooling', evidence: ['Process name indicates an interactive Node REPL.'] };
   }
   if (comm === 'biome' || base === 'biome' || cmd.includes(' biome ')) {
-    return { processRole: 'task-orchestrator', evidence: ['Process name matches Biome.'] };
+    return { processRole: 'development-tooling', evidence: ['Process name matches Biome.'] };
   }
   if (comm === 'cursor' || base === 'cursor' || comm === 'code' || base === 'code') {
     return { processRole: 'editor', evidence: ['Process name matches an editor executable.'] };
@@ -120,12 +117,6 @@ export function classifyProcessRole(input: ProcessClassificationInput): {
   }
   const isNode = comm === 'node' || comm.startsWith('node') || base === 'node';
   if (isNode) {
-    if (input.projectListenerBindings > 0 && scoped) {
-      return {
-        processRole: 'application-server',
-        evidence: ['Node process owns a project-attributed listener with application scope.'],
-      };
-    }
     if (
       scoped &&
       (cmd.includes(' next') || cmd.includes('next dev') || cmd.includes('next-server') || cmd.includes('next start'))
@@ -153,16 +144,10 @@ export function classifyProcessRole(input: ProcessClassificationInput): {
         evidence: ['Command line references build/watch tooling in application scope.'],
       };
     }
-    if (scoped) {
-      return {
-        processRole: 'development-tooling',
-        evidence: ['Application scope present without listener or explicit application runtime command evidence.'],
-      };
+    if (input.projectListenerBindings > 0 && input.checkoutMatch === 'matching') {
+      return { processRole: 'application-server', evidence: ['Node owns a directly project-associated listener.'] };
     }
-    return {
-      processRole: 'development-tooling',
-      evidence: ['Node process lacks application scope and project listener ownership evidence.'],
-    };
+    return { processRole: 'unknown', evidence: ['Node identity alone does not establish a process role.'] };
   }
   if (comm === 'turbo' || base === 'turbo') {
     return { processRole: 'task-orchestrator', evidence: ['Process name matches turbo task orchestrator.'] };
@@ -203,7 +188,7 @@ export interface PortBindingLike {
   state: string;
 }
 
-export type SocketAssociation = 'project-owner' | 'mixed-ownership' | 'unidentified-owner';
+export type SocketAssociation = 'project-owner' | 'mixed-ownership' | 'unidentified-owner' | 'other-checkout-owner';
 
 /**
  * Classifies listener visibility without treating unknown ownership as unrelated or ownerless loopback as project-relevant.
@@ -211,30 +196,13 @@ export type SocketAssociation = 'project-owner' | 'mixed-ownership' | 'unidentif
 export function listenerAttention(binding: PortBindingLike, association: SocketAssociation): ListenerAttention {
   if (association === 'project-owner') return 'project';
   if (association === 'mixed-ownership') return 'non-project-owner';
-  if (association === 'unidentified-owner') {
-    if (isPositiveUnrelatedHostListener(binding)) return 'unrelated-host';
-    return 'unknown-ownership';
-  }
-  if (isPositiveUnrelatedHostListener(binding)) return 'unrelated-host';
-  return 'non-project-owner';
+  if (isPositiveUnrelatedHostListener(binding, association)) return 'unrelated-host';
+  return 'unknown-ownership';
 }
 
-/** Positive evidence that a listener is host-wide noise, not merely unowned. */
-export function isPositiveUnrelatedHostListener(binding: PortBindingLike): boolean {
-  const { protocol, address, port, state } = binding;
-  if (protocol === 'tcp' && state === 'LISTEN') {
-    if (port === 22 || port === 631) return true;
-    if ((address === '0.0.0.0' || address === '::' || address === '*') && (port === 80 || port === 443)) return true;
-  }
-  if (protocol === 'udp') {
-    if (port === 3702 || port === 5353 || port === 1900) return true;
-    if (address.startsWith('224.') || address.startsWith('239.') || address === '224.0.0.251') return true;
-    if (address.startsWith('[ff') || address.includes('%') || address.startsWith('[fe80:')) return true;
-    if (/^172\.(1[89]|2\d|3[01])\.\d+\.\d+$/.test(address)) return true;
-    if ((address === '*' || address === '0.0.0.0' || address === '::') && port >= 32768) return true;
-  }
-  if (protocol === 'tcp' && /^172\.(1[89]|2\d|3[01])\.\d+\.\d+$/.test(address)) return true;
-  return false;
+/** Only direct ownership evidence can place a listener outside the checkout. */
+export function isPositiveUnrelatedHostListener(_binding: PortBindingLike, association?: SocketAssociation): boolean {
+  return association === 'other-checkout-owner';
 }
 
 export interface DisplaySummaryInput {
@@ -273,7 +241,7 @@ export function buildDiscoveryDisplaySummary(
     input.runtimes
       .filter((runtime) => runtime.processRole === 'application-server' || runtime.processRole === 'application-worker')
       .map((runtime) => runtime.association.applicationScope)
-      .filter((scope): scope is string => Boolean(scope?.startsWith('apps/') || scope?.startsWith('packages/'))),
+      .map((scope) => scope ?? '(unscoped)'),
   ).size;
   const applicationServers = input.runtimes.filter((runtime) => runtime.processRole === 'application-server').length;
   const applicationWorkers = input.runtimes.filter((runtime) => runtime.processRole === 'application-worker').length;
@@ -281,9 +249,15 @@ export function buildDiscoveryDisplaySummary(
     (runtime) => runtime.runtimeState === 'listening' || runtime.runtimeState === 'forwarding',
   ).length;
   const supportingProcesses = input.runtimes.filter((runtime) =>
-    ['editor', 'shell', 'development-tooling', 'task-orchestrator', 'container-infrastructure', 'unknown'].includes(
-      runtime.processRole,
-    ),
+    [
+      'editor',
+      'shell',
+      'development-tooling',
+      'task-orchestrator',
+      'container-infrastructure',
+      'network-forwarding',
+      'unknown',
+    ].includes(runtime.processRole),
   ).length;
   const workerProcesses = applicationWorkers;
   return {
