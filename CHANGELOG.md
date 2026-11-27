@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- separate discover project role semantics ([#217](https://github.com/jayantrohila57/portcn/issues/217)) <!-- task:feat/discover-project-semantics -->
+
 - focus discover project output and grouping ([#217](https://github.com/jayantrohila57/portcn/issues/217)) <!-- task:feat/discover-project-focus -->
 
 - add Linux portcn discover project command ([#210](https://github.com/jayantrohila57/portcn/issues/210)) <!-- task:feat/discover-project -->

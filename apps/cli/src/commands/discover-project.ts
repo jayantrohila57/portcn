@@ -5,14 +5,16 @@ import {
   applicationScopeFromCwd,
   buildProjectDiscoverySummary,
   type CheckoutMatch,
+  classifyProjectProcess,
   dedupeEvidenceLines,
   formatPortSummary,
   groupRuntimesByApplication,
   isPortcnInspectionProcess,
-  isSupportingExecutable,
   listenerAttention,
   matchCheckoutEvidence,
-  runtimeDisplayName,
+  PROCESS_ROLE_DISPLAY_ORDER,
+  type ProcessRole,
+  type RuntimeState,
 } from '@portcn/core';
 import type { Command } from 'commander';
 import { readCurrentNamespace } from './diagnose.js';
@@ -49,6 +51,8 @@ export interface ProjectPortBinding {
 
 export interface ProjectRuntimeRecord {
   role: ProjectRuntimeRole;
+  processRole: ProcessRole;
+  runtimeState: RuntimeState;
   application: string | null;
   pid: number;
   processName: string | null;
@@ -98,6 +102,7 @@ export interface ProjectDiscoveryResult {
   listenerInventory: {
     unrelated: ListenerInventorySection;
     ambiguous: ListenerInventorySection;
+    unknownOwnership: ListenerInventorySection;
   };
   unresolved: string[];
   visibilityNotes: string[];
@@ -195,11 +200,6 @@ function buildRuntimeRecord(
   expected: GitMetadata,
   ports: ProjectPortBinding[],
 ): ProjectRuntimeRecord {
-  const role: ProjectRuntimeRole = ports.length
-    ? 'application-listener'
-    : isSupportingExecutable(evaluated.context.executable, evaluated.comm)
-      ? 'supporting-process'
-      : 'application-process';
   const application =
     applicationScopeFromCwd(expected.projectRoot, evaluated.context.cwd) ??
     applicationScopeFromCwd(
@@ -208,8 +208,18 @@ function buildRuntimeRecord(
     );
   const processName = evaluated.comm ?? evaluated.context.executable?.split('/').pop() ?? null;
   const checkoutLine = `Checkout match: ${evaluated.match} (${evaluated.context.source ?? 'unknown'} evidence, ${evaluated.context.confidence} confidence).`;
+  const classification = classifyProjectProcess({
+    comm: evaluated.comm,
+    executable: evaluated.context.executable,
+    cmdline: evaluated.cmdline,
+    applicationScope: application,
+    checkoutMatch: evaluated.match,
+    projectListenerBindings: ports.length,
+  });
   return {
-    role,
+    role: classification.role,
+    processRole: classification.processRole,
+    runtimeState: classification.runtimeState,
     application,
     pid,
     processName,
@@ -218,7 +228,11 @@ function buildRuntimeRecord(
     identityStable: evaluated.stable,
     checkoutMatch: evaluated.match,
     ports,
-    evidence: dedupeEvidenceLines([checkoutLine, ...evaluated.context.evidence]),
+    evidence: dedupeEvidenceLines([
+      checkoutLine,
+      ...classification.evidence,
+      ...evaluated.context.evidence.slice(0, 2),
+    ]),
   };
 }
 
@@ -255,6 +269,7 @@ export function discoverProjectRuntimes(
   const excluded: ExcludedInspectionProcess[] = [];
   const unrelatedBindings: ProjectPortBinding[] = [];
   const ambiguousBindings: ProjectPortBinding[] = [];
+  const unknownOwnershipBindings: ProjectPortBinding[] = [];
   const portsByPid = new Map<number, ProjectPortBinding[]>();
   for (const listener of listeners) {
     const owners = ownersFor(listener);
@@ -287,9 +302,11 @@ export function discoverProjectRuntimes(
     const attention = listenerAttention(binding, association);
     if (attention === 'unrelated-host') {
       unrelatedBindings.push(binding);
-    } else if (attention === 'ambiguous-project') {
+    } else if (attention === 'unknown-ownership') {
+      unknownOwnershipBindings.push(binding);
+    } else if (attention === 'non-project-owner') {
       ambiguousBindings.push(binding);
-      if (association === 'mixed-ownership') {
+      if (association === 'mixed-ownership' && projectOwners.length) {
         if (unidentified.length) {
           const names = unidentified.map((pid) => ownerProcessName(listener, pid) ?? `pid ${pid}`).join(', ');
           unresolved.push(
@@ -301,13 +318,9 @@ export function discoverProjectRuntimes(
             `${listener.protocol.toUpperCase()} ${listener.address}:${listener.port} has owner PID(s) outside the selected worktree: ${nonProject.join(', ')}.`,
           );
         }
-      } else if (owners.length && nonProject.length) {
+      } else if (projectOwners.length === 0 && owners.length && nonProject.length) {
         unresolved.push(
-          `${listener.protocol.toUpperCase()} ${listener.address}:${listener.port} is owned by non-project process(es): ${nonProject.join(', ')}.`,
-        );
-      } else if (!owners.length) {
-        unresolved.push(
-          `${listener.protocol.toUpperCase()} ${listener.address}:${listener.port} has no identifiable owner in this namespace (may still belong to this checkout).`,
+          `${listener.protocol.toUpperCase()} ${listener.address}:${listener.port} is owned only by non-project process(es): ${nonProject.join(', ')}.`,
         );
       }
     }
@@ -340,13 +353,27 @@ export function discoverProjectRuntimes(
     const ports = portsByPid.get(pid) ?? [];
     runtimes.push(buildRuntimeRecord(pid, evaluated, expected, ports));
   }
-  const supportingProcesses = runtimes.filter((runtime) => runtime.role === 'supporting-process');
-  const applications = groupRuntimesByApplication(runtimes);
+  const supportingProcesses = runtimes.filter(
+    (runtime) =>
+      runtime.processRole === 'editor' ||
+      runtime.processRole === 'shell' ||
+      runtime.processRole === 'development-tooling',
+  );
+  const applications = groupRuntimesByApplication(
+    runtimes.filter((runtime) => ['application-server', 'application-worker'].includes(runtime.processRole)),
+  );
+  const projectListenerBindings = runtimes.reduce((count, runtime) => count + runtime.ports.length, 0);
   const summary = buildProjectDiscoverySummary({
-    runtimes,
+    runtimes: runtimes.map((runtime) => ({
+      processRole: runtime.processRole,
+      runtimeState: runtime.runtimeState,
+      association: { checkoutMatch: runtime.checkoutMatch, applicationScope: runtime.application },
+    })),
     excludedCount: excluded.length,
     unrelatedHostListeners: unrelatedBindings.length,
-    ambiguousProjectListeners: ambiguousBindings.length,
+    unknownOwnershipListeners: unknownOwnershipBindings.length,
+    projectRelevantListeners: ambiguousBindings.length,
+    projectListenerBindings,
   });
   const visibilityNotes: string[] = [];
   if (unrelatedBindings.length) {
@@ -354,9 +381,14 @@ export function discoverProjectRuntimes(
       `${unrelatedBindings.length} listener(s) on this host are unrelated multicast, Docker bridge, or ephemeral UDP sockets. They remain in JSON listenerInventory.unrelated and are hidden from the default terminal view.`,
     );
   }
+  if (unknownOwnershipBindings.length) {
+    visibilityNotes.push(
+      `${unknownOwnershipBindings.length} listener(s) have no visible owner; they are not treated as project runtimes without association evidence (see listenerInventory.unknownOwnership).`,
+    );
+  }
   if (ambiguousBindings.length) {
     visibilityNotes.push(
-      `${ambiguousBindings.length} listener(s) may belong to this checkout but have missing, mixed, or non-project owners.`,
+      `${ambiguousBindings.length} listener(s) have mixed or non-project owners with enough context to investigate (see unresolved).`,
     );
   }
   const uninspiable = scannedPids.size - pidEvidence.size;
@@ -371,7 +403,11 @@ export function discoverProjectRuntimes(
     );
   }
   const visibility: ProjectDiscoveryResult['visibility'] =
-    unresolved.length || pidEvidence.size < scannedPids.size || unrelatedBindings.length || ambiguousBindings.length
+    unresolved.length ||
+    pidEvidence.size < scannedPids.size ||
+    unrelatedBindings.length ||
+    ambiguousBindings.length ||
+    unknownOwnershipBindings.length
       ? 'partial'
       : 'full';
   return {
@@ -396,6 +432,7 @@ export function discoverProjectRuntimes(
     listenerInventory: {
       unrelated: { count: unrelatedBindings.length, bindings: unrelatedBindings },
       ambiguous: { count: ambiguousBindings.length, bindings: ambiguousBindings },
+      unknownOwnership: { count: unknownOwnershipBindings.length, bindings: unknownOwnershipBindings },
     },
     unresolved: dedupeEvidenceLines(unresolved),
     visibilityNotes,
@@ -403,50 +440,70 @@ export function discoverProjectRuntimes(
   };
 }
 
+function formatProcessRoleLabel(role: ProcessRole): string {
+  return role.replace(/-/g, ' ');
+}
+
 function formatHuman(result: ProjectDiscoveryResult, verbose: boolean): string {
   const commit = result.project.commit ? ` @ ${result.project.commit.slice(0, 7)}` : '';
   const branch = result.project.branch ? ` on ${result.project.branch}` : '';
+  const displayedApplicationGroups = result.applications.length;
   const lines = [
     `Project ${result.project.root}${branch}${commit}`,
     `Observed ${result.observedAt}  Host ${result.host.hostId}  Visibility ${result.visibility}`,
     '',
     'Summary',
-    `  ${result.summary.applicationGroups} application group(s); ${result.summary.listenerProcesses} listener process(es); ${result.summary.workerProcesses} worker(s); ${result.summary.supportingProcesses} supporting; ${result.summary.projectListenerBindings} project binding(s).`,
-    `  ${result.summary.unrelatedHostListeners} unrelated host listener(s); ${result.summary.ambiguousProjectListeners} ambiguous project listener(s); ${result.summary.excludedInspectionProcesses} excluded inspection process(es).`,
+    `  ${displayedApplicationGroups} application scope(s); ${result.summary.applicationServers} server(s); ${result.summary.applicationWorkers} worker(s); ${result.summary.supportingProcesses} supporting/tooling; ${result.summary.projectListenerBindings} project binding(s).`,
+    `  ${result.summary.unrelatedHostListeners} unrelated (positive evidence); ${result.summary.unknownOwnershipListeners} unknown ownership; ${result.summary.ambiguousProjectListeners} mixed/non-project socket(s); ${result.summary.excludedInspectionProcesses} excluded inspection process(es).`,
   ];
   if (result.visibilityNotes.length) {
     lines.push('', 'Visibility');
     for (const note of result.visibilityNotes) lines.push(`  - ${note}`);
   }
-  const scopedRuntimes = result.runtimes.filter((runtime) => runtime.role !== 'supporting-process');
-  const scopeGroups = new Map<string, ProjectRuntimeRecord[]>();
-  for (const runtime of scopedRuntimes) {
-    const scope = runtime.application ?? '(unscoped)';
-    const group = scopeGroups.get(scope) ?? [];
-    group.push(runtime);
-    scopeGroups.set(scope, group);
-  }
-  if (scopeGroups.size) {
-    lines.push('', 'Applications');
-    for (const [scope, groupRuntimes] of [...scopeGroups.entries()].sort(([left], [right]) =>
-      left.localeCompare(right),
-    )) {
-      lines.push(`  ${scope}`);
-      for (const runtime of groupRuntimes.sort((left, right) => left.pid - right.pid)) {
-        const name = runtimeDisplayName(runtime);
-        const evidence = verbose ? runtime.evidence.join(' ') : '';
-        const ports = runtime.ports.length > 0 ? formatPortSummary(runtime.ports) : 'process only';
-        lines.push(`    ${name}  PID ${runtime.pid}  ${ports}${evidence ? `  ${evidence}` : ''}`);
+  if (result.applications.length) {
+    lines.push('', 'Application scopes');
+    for (const group of result.applications) {
+      lines.push(`  ${group.scope}`);
+      for (const stub of [...group.listeners, ...group.workers].sort((left, right) => left.pid - right.pid)) {
+        const runtime = result.runtimes.find((entry) => entry.pid === stub.pid);
+        if (!runtime) continue;
+        const ports = runtime.ports.length ? formatPortSummary(runtime.ports) : 'process only';
+        lines.push(
+          `    ${runtime.processName ?? 'process'}  PID ${runtime.pid}  ${formatProcessRoleLabel(runtime.processRole)}  ${ports}${verbose ? `  ${runtime.evidence[0] ?? ''}` : ''}`,
+        );
       }
     }
-  } else if (result.runtimes.length) {
-    lines.push('', 'Applications', '  (none with application scope)');
   }
-  if (result.supportingProcesses.length) {
-    lines.push('', 'Supporting');
-    for (const runtime of result.supportingProcesses) {
-      const name = runtimeDisplayName(runtime);
-      lines.push(`  ${name}  PID ${runtime.pid}${verbose ? `  ${runtime.evidence[0] ?? ''}` : ''}`);
+  const infrastructureRoles = new Set<ProcessRole>([
+    'development-tooling',
+    'task-orchestrator',
+    'container-infrastructure',
+    'network-forwarding',
+    'unknown',
+  ]);
+  const infrastructure = result.runtimes.filter((runtime) => infrastructureRoles.has(runtime.processRole));
+  if (infrastructure.length) {
+    lines.push('', 'Tooling and infrastructure');
+    for (const role of PROCESS_ROLE_DISPLAY_ORDER) {
+      const bucket = infrastructure.filter((runtime) => runtime.processRole === role);
+      if (!bucket.length) continue;
+      for (const runtime of bucket.sort((left, right) => left.pid - right.pid)) {
+        const ports = runtime.ports.length ? formatPortSummary(runtime.ports) : 'process only';
+        lines.push(
+          `  ${runtime.processName ?? 'process'}  PID ${runtime.pid}  ${formatProcessRoleLabel(role)}  ${ports}${verbose ? `  ${runtime.evidence[0] ?? ''}` : ''}`,
+        );
+      }
+    }
+  }
+  const editors = result.runtimes.filter(
+    (runtime) => runtime.processRole === 'editor' || runtime.processRole === 'shell',
+  );
+  if (editors.length) {
+    lines.push('', 'Editors and shells');
+    for (const runtime of editors.sort((left, right) => left.pid - right.pid)) {
+      lines.push(
+        `  ${runtime.processName ?? 'process'}  PID ${runtime.pid}  ${formatProcessRoleLabel(runtime.processRole)}${verbose ? `  ${runtime.evidence[0] ?? ''}` : ''}`,
+      );
     }
   }
   if (result.excluded.length) {
@@ -467,11 +524,17 @@ function formatHuman(result: ProjectDiscoveryResult, verbose: boolean): string {
       }
     }
     if (result.listenerInventory.ambiguous.bindings.length) {
-      lines.push('', 'Ambiguous listeners (verbose)');
+      lines.push('', 'Mixed or non-project listeners (verbose)');
       for (const binding of result.listenerInventory.ambiguous.bindings) {
         lines.push(
           `  ${binding.protocol.toUpperCase()} ${binding.address}:${binding.port}  ${binding.association}  owners ${binding.ownerPids.join(', ') || 'none'}`,
         );
+      }
+    }
+    if (result.listenerInventory.unknownOwnership.bindings.length) {
+      lines.push('', 'Unknown ownership listeners (verbose)');
+      for (const binding of result.listenerInventory.unknownOwnership.bindings) {
+        lines.push(`  ${binding.protocol.toUpperCase()} ${binding.address}:${binding.port}  ${binding.state}`);
       }
     }
   }
