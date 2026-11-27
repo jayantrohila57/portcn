@@ -22,7 +22,7 @@ describe('project discovery semantics', () => {
         checkoutMatch: 'matching',
         projectListenerBindings: 0,
       }).processRole,
-    ).toBe('task-orchestrator');
+    ).toBe('development-tooling');
     expect(
       classifyProcessRole({
         comm: 'cursor',
@@ -62,7 +62,7 @@ describe('project discovery semantics', () => {
         checkoutMatch: 'matching',
         projectListenerBindings: 0,
       }).processRole,
-    ).toBe('container-infrastructure');
+    ).toBe('unknown');
     expect(
       classifyProcessRole({
         comm: 'nginx',
@@ -72,7 +72,7 @@ describe('project discovery semantics', () => {
         checkoutMatch: 'matching',
         projectListenerBindings: 0,
       }).processRole,
-    ).toBe('application-worker');
+    ).toBe('unknown');
   });
 
   it('treats Next.js under apps/docs as application server when listening', () => {
@@ -120,6 +120,6 @@ describe('project discovery semantics', () => {
         { protocol: 'udp', address: '239.255.255.250', port: 3702, state: 'UNCONN' },
         'unidentified-owner',
       ),
-    ).toBe('unrelated-host');
+    ).toBe('unknown-ownership');
   });
 });

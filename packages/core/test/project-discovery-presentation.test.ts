@@ -7,24 +7,24 @@ import {
 } from '../src/project-discovery-presentation.js';
 
 describe('project discovery presentation', () => {
-  it('treats SSDP and mDNS UDP as unrelated host listeners with positive evidence', () => {
+  it('keeps ownerless multicast and bridge sockets unresolved', () => {
     expect(isUnrelatedHostListener({ protocol: 'udp', address: '239.255.255.250', port: 3702, state: 'UNCONN' })).toBe(
-      true,
+      false,
     );
     expect(isUnrelatedHostListener({ protocol: 'udp', address: '224.0.0.251', port: 5353, state: 'UNCONN' })).toBe(
-      true,
+      false,
     );
     expect(
       listenerAttention({ protocol: 'udp', address: '172.18.0.1', port: 3702, state: 'UNCONN' }, 'unidentified-owner'),
-    ).toBe('unrelated-host');
+    ).toBe('unknown-ownership');
   });
 
-  it('treats common system listeners without project owners as unrelated host noise', () => {
+  it('keeps unknown owners on common service ports unresolved', () => {
     expect(
       listenerAttention({ protocol: 'tcp', address: '0.0.0.0', port: 22, state: 'LISTEN' }, 'unidentified-owner'),
-    ).toBe('unrelated-host');
+    ).toBe('unknown-ownership');
     expect(listenerAttention({ protocol: 'tcp', address: '*', port: 80, state: 'LISTEN' }, 'unidentified-owner')).toBe(
-      'unrelated-host',
+      'unknown-ownership',
     );
   });
 
@@ -34,14 +34,14 @@ describe('project discovery presentation', () => {
     ).toBe('unknown-ownership');
   });
 
-  it('detects Portcn inspection command lines', () => {
+  it('excludes the inspecting PID and preserves lookalike command lines', () => {
     expect(
       isPortcnInspectionProcess('/usr/bin/node', 'node apps/cli/dist/index.js discover project', {
         pid: 42,
-        selfPid: 1,
+        selfPid: 42,
       }),
     ).toBe(true);
-    expect(isPortcnInspectionProcess('/usr/local/bin/portcn', 'portcn list', { pid: 7 })).toBe(true);
+    expect(isPortcnInspectionProcess('/usr/local/bin/portcn', 'portcn list', { pid: 7 })).toBe(false);
     expect(isPortcnInspectionProcess('/usr/bin/node', 'node server.js', { pid: 7 })).toBe(false);
   });
 

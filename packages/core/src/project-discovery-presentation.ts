@@ -36,20 +36,11 @@ export interface RuntimeRecordLike {
 }
 
 export function isPortcnInspectionProcess(
-  executable: string | null,
-  cmdline: string | null,
+  _executable: string | null,
+  _cmdline: string | null,
   options: { pid: number; selfPid?: number } = { pid: 0 },
 ): boolean {
-  if (options.selfPid !== undefined && options.pid === options.selfPid) return true;
-  const base = executable?.split('/').pop()?.toLowerCase() ?? '';
-  if (base === 'portcn') return true;
-  const normalized = cmdline?.replace(/\0/g, ' ').replace(/\s+/g, ' ').trim() ?? '';
-  if (!normalized) return false;
-  if (/\bportcn\b/i.test(normalized) && /\bdiscover\b/i.test(normalized)) return true;
-  if (/\bportcn\b/i.test(normalized) && /\bmcp\b/i.test(normalized)) return true;
-  if (/apps\/cli\/dist\/index\.js/i.test(normalized) && /\bdiscover\b/i.test(normalized)) return true;
-  if (/packages\/cli\/dist\/index\.js/i.test(normalized) && /\bdiscover\b/i.test(normalized)) return true;
-  return false;
+  return options.selfPid !== undefined && options.pid === options.selfPid;
 }
 
 export function runtimeDisplayName(runtime: RuntimeRecordLike): string {

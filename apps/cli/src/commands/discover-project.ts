@@ -44,7 +44,7 @@ export interface ProjectPortBinding {
   address: string;
   port: number;
   state: string;
-  association: 'project-owner' | 'mixed-ownership' | 'unidentified-owner';
+  association: 'project-owner' | 'mixed-ownership' | 'unidentified-owner' | 'other-checkout-owner';
   ownerPids: number[];
   evidence: string[];
 }
@@ -284,7 +284,9 @@ export function discoverProjectRuntimes(
     const unidentified = owners.filter((pid) => !pidEvidence.has(pid));
     const nonProject = owners.filter((pid) => {
       const match = pidEvidence.get(pid)?.match;
-      return match !== undefined && match !== 'matching';
+      return (
+        pidEvidence.get(pid)?.context.source === 'owner' && (match === 'different' || match === 'sibling-worktree')
+      );
     });
     let association: ProjectPortBinding['association'] = 'unidentified-owner';
     let evidence: string[] = [];
@@ -294,6 +296,9 @@ export function discoverProjectRuntimes(
     } else if (projectOwners.length) {
       association = 'mixed-ownership';
       evidence = ['Some visible socket owners match the selected checkout; others differ or are unresolved.'];
+    } else if (owners.length && nonProject.length === owners.length) {
+      association = 'other-checkout-owner';
+      evidence = ['Every visible owner has direct evidence for a different checkout.'];
     } else if (owners.length) {
       evidence = ['No visible owner matched the selected checkout.'];
     }
@@ -370,15 +375,12 @@ export function discoverProjectRuntimes(
     runtimes.push(buildRuntimeRecord(pid, evaluated, expected, ports));
   }
   const supportingProcesses = runtimes.filter(
-    (runtime) =>
-      runtime.processRole === 'editor' ||
-      runtime.processRole === 'shell' ||
-      runtime.processRole === 'development-tooling',
+    (runtime) => runtime.processRole !== 'application-server' && runtime.processRole !== 'application-worker',
   );
   const applications = groupRuntimesByApplication(
     runtimes.filter((runtime) => ['application-server', 'application-worker'].includes(runtime.processRole)),
   );
-  const projectListenerBindings = runtimes.reduce((count, runtime) => count + runtime.ports.length, 0);
+  const projectListenerBindings = new Set(runtimes.flatMap((runtime) => runtime.ports)).size;
   const summary = buildProjectDiscoverySummary({
     runtimes: runtimes.map((runtime) => ({
       processRole: runtime.processRole,
@@ -394,12 +396,12 @@ export function discoverProjectRuntimes(
   const visibilityNotes: string[] = [];
   if (unrelatedBindings.length) {
     visibilityNotes.push(
-      `${unrelatedBindings.length} listener(s) on this host are unrelated multicast, Docker bridge, or ephemeral UDP sockets. They remain in JSON listenerInventory.unrelated and are hidden from the default terminal view.`,
+      `${unrelatedBindings.length} listener(s) on this host have direct owner evidence for other checkouts. They remain in JSON listenerInventory.unrelated and are hidden from the default terminal view.`,
     );
   }
   if (unknownOwnershipBindings.length) {
     visibilityNotes.push(
-      `${unknownOwnershipBindings.length} listener(s) have no visible owner; they are not treated as project runtimes without association evidence (see listenerInventory.unknownOwnership).`,
+      `${unknownOwnershipBindings.length} listener(s) lack conclusive checkout ownership; they are not treated as project runtimes without association evidence (see listenerInventory.unknownOwnership).`,
     );
   }
   if (ambiguousBindings.length) {

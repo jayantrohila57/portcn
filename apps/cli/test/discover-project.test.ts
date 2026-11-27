@@ -111,8 +111,8 @@ describe('discover project (Linux)', () => {
     const jobs = result.runtimes.find((runtime) => runtime.application === 'apps/jobs');
     expect(jobs?.processRole).toBe('shell');
     expect(result.unresolved.some((item) => item.includes('4000') && item.includes('postgres'))).toBe(true);
-    expect(result.listenerInventory.unrelated.count).toBeGreaterThanOrEqual(1);
-    expect(result.listenerInventory.unknownOwnership.count).toBe(1);
+    expect(result.listenerInventory.unrelated.count).toBe(0);
+    expect(result.listenerInventory.unknownOwnership.count).toBe(2);
     expect(result.unresolved.some((item) => item.includes('8080'))).toBe(false);
     expect(result.applications.length).toBe(result.summary.applicationGroups);
     expect(result.schemaVersion).toBe(1);
@@ -155,6 +155,7 @@ describe('discover project (Linux)', () => {
           ? projectContext(4100, '/work/acme/apps/web', checkout.gitDir, checkout.projectRoot)
           : projectContext(4200, '/work/other/apps/api', otherCheckout.gitDir, otherCheckout.projectRoot),
     });
+    expect(acme.listenerInventory.unrelated.bindings.map((binding) => binding.port)).toEqual([4444]);
     expect(acme.runtimes.map((runtime) => runtime.pid)).toEqual([4100]);
     expect(acme.runtimes[0]?.application).toBe('apps/web');
     expect(acme.runtimes[0]?.processRole).toBe('application-server');
@@ -242,6 +243,7 @@ describe('discover project (Linux)', () => {
       resolveProject: () => checkout,
       discoverListeners: () => [],
       listPids: () => [5000],
+      selfPid: 5000,
       readStartTime: () => '100',
       readComm: () => 'node',
       readCmdline: () => 'node apps/cli/dist/index.js discover project',
