@@ -48,7 +48,6 @@ export {
   isPortcnInspectionProcess,
   isUnrelatedHostListener,
   type ListenerAssociationLike,
-  type ListenerAttention,
   listenerAttention,
   type PortBindingLike,
   type ProjectDiscoverySummary,
@@ -56,6 +55,20 @@ export {
   type RuntimeRecordLike,
   runtimeDisplayName,
 } from './project-discovery-presentation.js';
+export {
+  buildDiscoveryDisplaySummary,
+  classifyProcessRole,
+  classifyProjectProcess,
+  classifyRuntimeState,
+  type ListenerAttention,
+  PROCESS_ROLE_DISPLAY_ORDER,
+  type ProcessAssociation,
+  type ProcessClassification,
+  type ProcessIdentity,
+  type ProcessRole,
+  type RuntimeState,
+  type SocketAssociation,
+} from './project-discovery-semantics.js';
 export {
   buildDiscoveryCorrelations,
   correlateConfiguredServiceEndpoints,

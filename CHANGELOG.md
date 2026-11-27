@@ -14,6 +14,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Changed
 
+- refine discover project role semantics and listener ownership classification ([#217](https://github.com/jayantrohila57/portcn/issues/217)) <!-- task:feat/discover-project-focus -->
+
 ### Fixed
 
 - harden attribution scope joins and correlation safety ([#209](https://github.com/jayantrohila57/portcn/issues/209)) <!-- task:fix/discovery-attribution-safety -->
