@@ -1,5 +1,6 @@
 import { summarizeDiscoveryRelationships } from '@portcn/core';
 import type { Command } from 'commander';
+import { registerDiscoverProjectCommand } from './discover-project.js';
 import { collectLinuxDiscoverySnapshot } from './discovery-coordinator.js';
 import { JSON_SCHEMA_VERSION, jsonSchemaIsSupported, UnsupportedJsonVersionError } from './json.js';
 
@@ -11,6 +12,7 @@ function formatCorrelationLine(
 
 export function registerDiscoverCommand(program: Command): void {
   const discover = program.command('discover').description('Collect unified Linux discovery snapshots (read-only).');
+  registerDiscoverProjectCommand(discover);
   discover
     .command('snapshot')
     .description('Collect provider observations and evidence-backed service relationships.')

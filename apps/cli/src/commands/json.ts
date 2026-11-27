@@ -38,6 +38,13 @@ export class InvalidProcessAssessmentInputError extends Error {
   }
 }
 
+export class InvalidProjectDiscoveryInputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidProjectDiscoveryInputError';
+  }
+}
+
 export function versionedJsonError(error: unknown, port?: string): VersionedJsonError {
   const message = error instanceof Error ? error.message : String(error);
   const code: JsonErrorCode =
@@ -45,7 +52,7 @@ export function versionedJsonError(error: unknown, port?: string): VersionedJson
       ? 'INVALID_PORT'
       : error instanceof InvalidAvailabilityInputError
         ? 'INVALID_INPUT'
-        : error instanceof InvalidProcessAssessmentInputError
+        : error instanceof InvalidProcessAssessmentInputError || error instanceof InvalidProjectDiscoveryInputError
           ? 'INVALID_INPUT'
           : error instanceof UnsupportedJsonVersionError
             ? 'UNSUPPORTED_JSON_VERSION'
