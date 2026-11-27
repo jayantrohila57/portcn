@@ -98,8 +98,10 @@ export interface ProjectDiscoveryResult {
   applications: ApplicationGroup[];
   supportingProcesses: ProjectRuntimeRecord[];
   runtimes: ProjectRuntimeRecord[];
+  tentativeProcesses: Array<{ pid: number; processName: string | null; startTime: string | null }>;
   excluded: ExcludedInspectionProcess[];
   listenerInventory: {
+    tentative: ListenerInventorySection;
     unrelated: ListenerInventorySection;
     ambiguous: ListenerInventorySection;
     unknownOwnership: ListenerInventorySection;
@@ -180,17 +182,22 @@ function evaluatePid(
   const initial = readStartTime(pid);
   if (initial === null) return null;
   const context = inspectProject(pid);
+  const comm = readComm(pid);
+  const cmdline = readCmdline(pid);
   const final = readStartTime(pid);
   const stable = final !== null && final === initial;
   if (!stable) return null;
-  const match = matchCheckoutEvidence(expected, context);
+  // A parent launcher may belong to another checkout. The context reader
+  // selects the owner's Git metadata first and retains the conflicting ancestry.
+  const ownerCheckout = context.status === 'ambiguous' && context.source === 'owner';
+  const match = matchCheckoutEvidence(expected, ownerCheckout ? { ...context, status: 'identified' } : context);
   return {
     context,
     startTime: initial,
     stable,
     match,
-    comm: readComm(pid),
-    cmdline: readCmdline(pid),
+    comm,
+    cmdline,
   };
 }
 
@@ -228,11 +235,7 @@ function buildRuntimeRecord(
     identityStable: evaluated.stable,
     checkoutMatch: evaluated.match,
     ports,
-    evidence: dedupeEvidenceLines([
-      checkoutLine,
-      ...classification.evidence,
-      ...evaluated.context.evidence.slice(0, 2),
-    ]),
+    evidence: dedupeEvidenceLines([checkoutLine, ...classification.evidence, ...evaluated.context.evidence]),
   };
 }
 
@@ -267,13 +270,17 @@ export function discoverProjectRuntimes(
   }
   const selfPid = dependencies.selfPid ?? process.pid;
   const excluded: ExcludedInspectionProcess[] = [];
+  const tentativeProcesses: ProjectDiscoveryResult['tentativeProcesses'] = [];
+  const tentativeBindings: ProjectPortBinding[] = [];
   const unrelatedBindings: ProjectPortBinding[] = [];
   const ambiguousBindings: ProjectPortBinding[] = [];
   const unknownOwnershipBindings: ProjectPortBinding[] = [];
   const portsByPid = new Map<number, ProjectPortBinding[]>();
   for (const listener of listeners) {
     const owners = ownersFor(listener);
-    const projectOwners = owners.filter((pid) => pidEvidence.get(pid)?.match === 'matching');
+    const matchingOwners = owners.filter((pid) => pidEvidence.get(pid)?.match === 'matching');
+    const projectOwners = matchingOwners.filter((pid) => pidEvidence.get(pid)?.context.source === 'owner');
+    const tentativeOnly = matchingOwners.length > 0 && projectOwners.length === 0;
     const unidentified = owners.filter((pid) => !pidEvidence.has(pid));
     const nonProject = owners.filter((pid) => {
       const match = pidEvidence.get(pid)?.match;
@@ -299,6 +306,11 @@ export function discoverProjectRuntimes(
       ownerPids: owners,
       evidence,
     };
+    if (tentativeOnly) {
+      binding.evidence = ['A visible owner has matching ancestor evidence, without direct checkout ownership.'];
+      tentativeBindings.push(binding);
+      continue;
+    }
     const attention = listenerAttention(binding, association);
     if (attention === 'unrelated-host') {
       unrelatedBindings.push(binding);
@@ -344,10 +356,14 @@ export function discoverProjectRuntimes(
         processName: evaluated.comm ?? evaluated.context.executable?.split('/').pop() ?? null,
         reason: 'portcn-inspection',
         evidence: dedupeEvidenceLines([
-          evaluated.cmdline ? `Command line: ${evaluated.cmdline}` : 'Command line was unavailable.',
+          'Inspection identity was checked against the current process.',
           'Portcn inspection processes are omitted from project runtimes.',
         ]),
       });
+      continue;
+    }
+    if (evaluated.context.source === 'ancestor') {
+      tentativeProcesses.push({ pid, processName: evaluated.comm, startTime: evaluated.startTime });
       continue;
     }
     const ports = portsByPid.get(pid) ?? [];
@@ -403,6 +419,7 @@ export function discoverProjectRuntimes(
     );
   }
   const visibility: ProjectDiscoveryResult['visibility'] =
+    tentativeProcesses.length ||
     unresolved.length ||
     pidEvidence.size < scannedPids.size ||
     unrelatedBindings.length ||
@@ -427,9 +444,11 @@ export function discoverProjectRuntimes(
     host: { hostId, pidNamespace, networkNamespace },
     applications,
     supportingProcesses,
+    tentativeProcesses,
     runtimes,
     excluded,
     listenerInventory: {
+      tentative: { count: tentativeBindings.length, bindings: tentativeBindings },
       unrelated: { count: unrelatedBindings.length, bindings: unrelatedBindings },
       ambiguous: { count: ambiguousBindings.length, bindings: ambiguousBindings },
       unknownOwnership: { count: unknownOwnershipBindings.length, bindings: unknownOwnershipBindings },
@@ -456,6 +475,11 @@ function formatHuman(result: ProjectDiscoveryResult, verbose: boolean): string {
     `  ${displayedApplicationGroups} application scope(s); ${result.summary.applicationServers} server(s); ${result.summary.applicationWorkers} worker(s); ${result.summary.supportingProcesses} supporting/tooling; ${result.summary.projectListenerBindings} project binding(s).`,
     `  ${result.summary.unrelatedHostListeners} unrelated (positive evidence); ${result.summary.unknownOwnershipListeners} unknown ownership; ${result.summary.ambiguousProjectListeners} mixed/non-project socket(s); ${result.summary.excludedInspectionProcesses} excluded inspection process(es).`,
   ];
+  if (result.summary.applicationServers === 0) lines.push('  No associated application server was observed.');
+  if (result.tentativeProcesses.length)
+    lines.push(
+      `  ${result.tentativeProcesses.length} process(es) associated only through ancestry; ${result.listenerInventory.tentative.count} tentative listener(s).`,
+    );
   if (result.visibilityNotes.length) {
     lines.push('', 'Visibility');
     for (const note of result.visibilityNotes) lines.push(`  - ${note}`);
