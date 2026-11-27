@@ -179,6 +179,46 @@ describe('discover project (Linux)', () => {
     expect(other.runtimes[0]?.application).toBe('apps/api');
   });
 
+  it('uses direct owner checkout evidence even when launcher ancestry conflicts', () => {
+    const result = discoverProjectRuntimes('/work/acme', {
+      platform: 'linux',
+      resolveProject: () => checkout,
+      discoverListeners: () => listeners.slice(0, 1),
+      listPids: () => [],
+      readStartTime: () => '50',
+      readComm: () => 'node',
+      readCmdline: () => 'node server.js',
+      inspectProject: (pid) => ({
+        ...projectContext(pid, '/work/acme/apps/web'),
+        status: 'ambiguous',
+        confidence: 'low',
+        evidence: ['Owner and ancestor working directories resolve to different Git projects.'],
+      }),
+    });
+    expect(result.runtimes.map((runtime) => runtime.pid)).toEqual([3182]);
+    expect(result.runtimes[0]?.ports.map((binding) => binding.port)).toEqual([3000]);
+    expect(result.runtimes[0]?.evidence).toContain(
+      'Owner and ancestor working directories resolve to different Git projects.',
+    );
+  });
+
+  it('keeps an ancestor-only process and its listener outside direct checkout counts', () => {
+    const result = discoverProjectRuntimes('/work/acme', {
+      platform: 'linux',
+      resolveProject: () => checkout,
+      discoverListeners: () => listeners.slice(0, 1),
+      listPids: () => [],
+      readStartTime: () => '50',
+      readComm: () => 'node',
+      readCmdline: () => 'node app.js',
+      inspectProject: (pid) => ({ ...projectContext(pid, '/tmp'), source: 'ancestor', confidence: 'medium' }),
+    });
+    expect(result.tentativeProcesses.map((process) => process.pid)).toEqual([3182]);
+    expect(result.listenerInventory.tentative.bindings.map((binding) => binding.port)).toEqual([3000]);
+    expect(result.summary.projectListenerBindings).toBe(0);
+    expect(result.runtimes).toHaveLength(0);
+  });
+
   it('discards evidence when PID start time changes during inspection', () => {
     let reads = 0;
     const result = discoverProjectRuntimes('/work/acme', {
