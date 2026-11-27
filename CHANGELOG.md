@@ -6,6 +6,8 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- separate discover project role semantics ([#217](https://github.com/jayantrohila57/portcn/issues/217)) <!-- task:feat/discover-project-semantics -->
+
 - focus discover project output and grouping ([#217](https://github.com/jayantrohila57/portcn/issues/217)) <!-- task:feat/discover-project-focus -->
 
 - add Linux portcn discover project command ([#210](https://github.com/jayantrohila57/portcn/issues/210)) <!-- task:feat/discover-project -->
@@ -13,8 +15,6 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 - model service relationships and dependencies ([#186](https://github.com/jayantrohila57/portcn/issues/186)) <!-- task:feat/service-relationships -->
 
 ### Changed
-
-- refine discover project role semantics and listener ownership classification ([#217](https://github.com/jayantrohila57/portcn/issues/217)) <!-- task:feat/discover-project-focus -->
 
 ### Fixed
 
