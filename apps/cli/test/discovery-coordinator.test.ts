@@ -71,7 +71,19 @@ describe('linux discovery coordinator', () => {
         schemaVersion: 1,
         availability: 'available',
         managers: { user: { status: 'available' }, system: { status: 'available' } },
-        units: [],
+        units: [
+          {
+            name: 'journal.socket',
+            type: 'socket',
+            scope: 'system',
+            active: 'active',
+            load: 'loaded',
+            sub: 'listening',
+            mainPid: null,
+            processListenerPorts: [],
+            configuredSockets: [{ address: null, port: null, observed: null }],
+          },
+        ],
         limitations: [],
         observationTime: '2026-11-25T12:00:00.000Z',
       }),
@@ -96,6 +108,11 @@ describe('linux discovery coordinator', () => {
       'podman-local',
       'systemd-local',
     ]);
+    const unit = snapshot.providers
+      .flatMap((provider) => provider.observations)
+      .find((item) => item.displayName === 'journal.socket');
+    expect(unit?.evidence.map((item) => item.sourceRef)).toContain('unit:journal.socket:socket:0');
+    expect(unit?.evidence.some((item) => item.sourceRef.startsWith('configured:'))).toBe(false);
     expect(snapshot.correlations.some(({ type }) => type === 'same-endpoint' || type === 'published-as')).toBe(true);
   });
 });

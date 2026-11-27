@@ -541,7 +541,9 @@ function systemdObservations(
           `systemd:${localId}:socket:${socketIndex}`,
           'systemd',
           'systemctl show Listen',
-          formatConfiguredEndpointRef('tcp', socket.address, socket.port ?? 0),
+          socket.port === null
+            ? `unit:${unit.name}:socket:${socketIndex}`
+            : formatConfiguredEndpointRef('tcp', socket.address, socket.port),
           socket.observed ? 'configured-listener-observed' : 'configured-listener',
           'configured',
           socket.observed ? 'medium' : 'low',
