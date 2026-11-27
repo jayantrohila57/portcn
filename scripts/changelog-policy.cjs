@@ -124,6 +124,7 @@ function isReleaseExcludedMaintenance(files) {
           file === 'AGENTS.md' ||
           architectureContractFiles.has(file) ||
           file.startsWith('.github/') ||
+          file.startsWith('.agents/') ||
           file.startsWith('scripts/') ||
           /^apps\/docs\/content\/docs\/.*\.mdx$/.test(file) ||
           /^apps\/docs\/content\/docs\/.*\/_meta\.json$/.test(file) ||

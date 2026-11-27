@@ -112,4 +112,6 @@ pnpm build
 node --test scripts/dashboard-pty.test.mjs
 ```
 
+GitHub Actions `validate` runs the same PTY matrix on `ubuntu-latest` immediately after `pnpm build`. Failures surface in the workflow log without hanging workers.
+
 The PTY matrix checks 40×12, 80×24, and 140×40 layouts, resize into a 40×12 viewport, normal quit, Ctrl+C restoration, Unicode search input, and monochrome selection. Keep tests for JSON and non-interactive output alongside dashboard changes.
