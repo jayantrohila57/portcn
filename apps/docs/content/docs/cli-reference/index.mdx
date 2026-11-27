@@ -274,7 +274,7 @@ The JSON result has ``schemaVersion``, ``port``, ``namespace``, ``listeners``, `
 
 ## ``portcn discover`` (`discover` / `snapshot`)
 
-Linux-only. The ``discover`` command group includes ``snapshot``, which collects a unified discovery snapshot from native listeners, Docker, Podman, Nginx configuration, and systemd units through the shared coordinator. Output is additive: existing ``docker``, ``podman``, ``nginx``, and ``systemd`` command JSON is unchanged. Each relationship edge includes ``type``, ``confidence``, ``nature`` (`observed`, `configured`, `inferred`, `incomplete`, or `unavailable`), ``freshness``, evidence IDs, and scope. Use ``--full`` with ``--json`` to include provider observations. A systemd socket without a parsed network port retains unit-scoped configuration evidence and contributes no network endpoint relationship.
+Linux-only. The ``discover`` command group includes ``snapshot``, which collects a unified discovery snapshot from native listeners, Docker, Podman, Nginx configuration, and systemd units through the shared coordinator. Output is additive: existing ``docker``, ``podman``, ``nginx``, and ``systemd`` command JSON is unchanged. Each relationship edge includes ``type``, ``confidence``, ``nature`` (`observed`, `configured`, `inferred`, `incomplete`, or `unavailable`), ``freshness``, evidence IDs, and scope. Docker context names come from `docker context show`. The snapshot resolves daemon host identity separately and reports missing endpoint evidence as unresolved. Use ``--full`` with ``--json`` to include provider observations. A systemd socket without a parsed network port retains unit-scoped configuration evidence and contributes no network endpoint relationship.
 
 ```sh
 portcn discover snapshot

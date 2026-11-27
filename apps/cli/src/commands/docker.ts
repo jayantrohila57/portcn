@@ -371,10 +371,12 @@ export function resolveDockerDaemonHostId(
     ((args: string[]) => execFileSync('docker', args, { encoding: 'utf8', timeout: 5_000, maxBuffer: 1024 * 1024 }));
   try {
     const endpoint = runDocker(['context', 'inspect', '--format', '{{.Endpoints.docker.Host}}']).trim();
-    if (!endpoint || /^unix:/i.test(endpoint) || /^npipe:/i.test(endpoint))
+    if (/^unix:\/\/\//i.test(endpoint) || /^npipe:\/\/\/\//i.test(endpoint))
       return { daemonHostId: localHostId, provenance: 'local-proven' };
-    const tcp = /^tcp:\/\/\[?([^[\]/:]+)/i.exec(endpoint);
-    const host = tcp?.[1]?.toLowerCase() ?? '';
+    const address = new URL(endpoint);
+    if (address.protocol !== 'tcp:' && address.protocol !== 'ssh:')
+      return { daemonHostId: 'unresolved-daemon-host', provenance: 'unresolved' };
+    const host = address.hostname.replace(/^\[|\]$/g, '').toLowerCase();
     if (!host) return { daemonHostId: 'unresolved-daemon-host', provenance: 'unresolved' };
     if (host === 'localhost' || host === '127.0.0.1' || host === '::1')
       return { daemonHostId: localHostId, provenance: 'local-proven' };
@@ -390,7 +392,7 @@ export function readDockerDaemonContext(dependencies: DockerDependencies = {}): 
     dependencies.runDocker ??
     ((args: string[]) => execFileSync('docker', args, { encoding: 'utf8', timeout: 5_000, maxBuffer: 1024 * 1024 }));
   try {
-    const name = runDocker(['context', 'show', '--format', '{{.Name}}']).trim();
+    const name = runDocker(['context', 'show']).trim();
     return name || null;
   } catch {
     return null;
