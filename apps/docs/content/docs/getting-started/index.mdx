@@ -5,8 +5,10 @@ description: Install Portcn or build the source workspace and discover local ser
 
 This guide covers both the published CLI and a source checkout.
 
-<Callout title="Current capabilities" type="info">
-The published `v0.6.0` package requires Node.js 22 or later. Linux discovery requires `ss` from `iproute2`; Docker commands additionally require the user's Docker CLI and daemon permissions. The package includes limited macOS listener support for `list`, `inspect`, and `diagnose` through `lsof`. macOS does not provide Portcn's Linux process command lines, user IDs, project context, or agent markers. Windows discovery and process/service management are not implemented.
+<Callout title="Published vs integration branch" type="info">
+The latest **published** npm release is `portcn@0.7.0` (Node.js 22 or later). It includes unified Linux provider commands, the service dashboard, and four read-only MCP tools. The **`dev` integration branch** additionally ships `portcn discover snapshot` and the Linux MCP `discovery_snapshot` tool until the next tagged release; do not assume those surfaces on npm `0.7.0` alone.
+
+Linux discovery requires `ss` from `iproute2`; Docker and Podman commands require the respective CLI and caller permissions. macOS supports `list`, `inspect`, and `diagnose` through `lsof` without Linux process/project fields. Windows listener discovery and process/service management are not implemented.
 </Callout>
 
 ## Requirements

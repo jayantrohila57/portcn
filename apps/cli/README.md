@@ -48,7 +48,7 @@ Portcn reports a point-in-time view of sockets visible in its current network na
 
 Linux diagnosis can include bounded process ancestry, Git project/worktree evidence, and opt-in `PORTCN_AGENT_SESSION_ID` / `PORTCN_AGENT_NAME` markers. Markers are user-supplied evidence, not verified identities. Project paths describe the current filesystem and do not prove which code a process loaded. A possible leftover is never a safe-to-stop decision.
 
-The MCP server exposes bounded read-only listener, diagnosis, availability, and suggestion tools. It does not expose a shell or process-control operation. Local probes are explicit, bounded, and do not follow redirects or disable TLS validation.
+The MCP server exposes bounded read-only listener, diagnosis, availability, and suggestion tools on all supported platforms. On Linux it also exposes `discovery_snapshot` (same coordinator as `discover snapshot`) after the current integration branch; published `portcn@0.7.0` on npm includes four tools only until the next release. It does not expose a shell or process-control operation. Local probes are explicit, bounded, and do not follow redirects or disable TLS validation.
 
 ## Development
 
