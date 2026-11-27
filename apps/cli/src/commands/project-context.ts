@@ -84,6 +84,26 @@ export function readProcessStartTime(
   }
 }
 
+export function readProcessComm(
+  pid: number,
+  read: (path: string, encoding: BufferEncoding) => string = readFile,
+): string | null {
+  return processName(pid, read);
+}
+
+export function readProcessCmdline(
+  pid: number,
+  read: (path: string, encoding: BufferEncoding) => string = readFile,
+): string | null {
+  try {
+    const raw = read(`/proc/${pid}/cmdline`, 'utf8');
+    const normalized = raw.replace(/\0/g, ' ').replace(/\s+/g, ' ').trim();
+    return normalized || null;
+  } catch {
+    return null;
+  }
+}
+
 function processName(pid: number, read: typeof readFile): string | null {
   try {
     return /^Name:\s*(.+)$/m.exec(read(`/proc/${pid}/status`, 'utf8'))?.[1]?.trim() ?? null;

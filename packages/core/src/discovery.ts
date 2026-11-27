@@ -221,6 +221,40 @@ function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
+function relationshipNatureFromEvidence(evidence: DiscoveryEvidence[]): DiscoveryRelationshipNature {
+  if (!evidence.length) return 'unavailable';
+  const provenances = new Set(evidence.map(({ provenance }) => provenance));
+  if (provenances.size > 1) {
+    if (provenances.has('configured') && (provenances.has('direct') || provenances.has('derived'))) return 'incomplete';
+    return 'incomplete';
+  }
+  const provenance = evidence[0]?.provenance;
+  if (provenance === 'configured') return 'configured';
+  if (provenance === 'inferred') return 'inferred';
+  if (provenance === 'direct' || provenance === 'derived') return 'observed';
+  return 'unavailable';
+}
+
+function relationshipFreshnessFromEvidence(evidence: DiscoveryEvidence[], requestedAt: string): EvidenceFreshness {
+  if (!evidence.length) return 'unknown';
+  const outcomes = evidence.map((item) => evidenceFreshness(item, requestedAt));
+  if (outcomes.includes('unknown')) return 'unknown';
+  if (outcomes.includes('stale')) return 'stale';
+  return 'fresh';
+}
+
+function withRelationshipMetadata(
+  correlation: Omit<DiscoveryCorrelation, 'nature' | 'freshness'>,
+  evidence: DiscoveryEvidence[],
+  requestedAt: string,
+): DiscoveryCorrelation {
+  return {
+    ...correlation,
+    nature: relationshipNatureFromEvidence(evidence),
+    freshness: relationshipFreshnessFromEvidence(evidence, requestedAt),
+  };
+}
+
 export type ProviderResultStatus = 'complete' | 'partial' | 'permission-denied' | 'unavailable' | 'failed';
 
 export interface ProviderIssue {
@@ -265,6 +299,8 @@ export type CorrelationType =
   | 'hosts'
   | 'depends-on';
 
+export type DiscoveryRelationshipNature = 'observed' | 'configured' | 'inferred' | 'incomplete' | 'unavailable';
+
 /** A correlation is a sourced claim between distinct identities; it does not merge either record. */
 export interface DiscoveryCorrelation {
   fromIdentityKey: string;
@@ -274,6 +310,8 @@ export interface DiscoveryCorrelation {
   evidenceIds: string[];
   observedAt: string;
   scope: DiscoveryScope;
+  nature: DiscoveryRelationshipNature;
+  freshness: EvidenceFreshness;
 }
 
 const scopeFields: readonly (keyof DiscoveryScope)[] = [
@@ -284,8 +322,20 @@ const scopeFields: readonly (keyof DiscoveryScope)[] = [
   'daemonContext',
 ];
 
-function scopesCompatible(left: DiscoveryScope, right: DiscoveryScope): boolean {
+export function scopesCompatible(left: DiscoveryScope, right: DiscoveryScope): boolean {
   return scopeFields.every((field) => left[field] === null || right[field] === null || left[field] === right[field]);
+}
+
+/** Stricter scope checks for cross-provider correlations; unknown boundaries do not imply compatibility. */
+export function scopesJoinableForCorrelation(left: DiscoveryScope, right: DiscoveryScope): boolean {
+  if (!scopesCompatible(left, right)) return false;
+  const leftDaemon = left.daemonContext;
+  const rightDaemon = right.daemonContext;
+  if (leftDaemon === null && rightDaemon === null) return true;
+  if (leftDaemon !== null && rightDaemon !== null) return leftDaemon === rightDaemon;
+  if (left.hostId === null || right.hostId === null) return false;
+  if (left.networkNamespace === null || right.networkNamespace === null) return false;
+  return left.hostId === right.hostId && left.networkNamespace === right.networkNamespace;
 }
 
 function mergeObservationGroup(group: DiscoveryObservation[]): DiscoveryObservation {
@@ -346,7 +396,10 @@ export function deduplicateDiscoveryObservations(observations: AnyDiscoveryObser
 }
 
 /** Add published-as edges only when runtime, daemon, container, protocol, and target port all agree. */
-export function correlateContainerMappings(observations: AnyDiscoveryObservation[]): DiscoveryCorrelation[] {
+export function correlateContainerMappings(
+  observations: AnyDiscoveryObservation[],
+  requestedAt = new Date(0).toISOString(),
+): DiscoveryCorrelation[] {
   const stable = observations.filter(
     (item): item is DiscoveryObservation => item.identity !== null && item.identityStatus === 'stable',
   );
@@ -370,22 +423,30 @@ export function correlateContainerMappings(observations: AnyDiscoveryObservation
       const evidence = [...bindingObservation.evidence, ...portObservation.evidence];
       if (
         bindingObservation.evidence.some((bindingEvidence) =>
-          portObservation.evidence.some((portEvidence) => !scopesCompatible(bindingEvidence.scope, portEvidence.scope)),
+          portObservation.evidence.some(
+            (portEvidence) => !scopesJoinableForCorrelation(bindingEvidence.scope, portEvidence.scope),
+          ),
         )
       )
         continue;
       const observedAt = [bindingObservation.observedAt, portObservation.observedAt].sort(compareText).at(-1);
       const correlationScope = evidence.at(0)?.scope;
       if (!observedAt || !correlationScope) continue;
-      correlations.push({
-        fromIdentityKey: discoveryIdentityKey(binding),
-        toIdentityKey: discoveryIdentityKey(port),
-        type: 'published-as',
-        confidence: 'high',
-        evidenceIds: [...new Set(evidence.map(({ id }) => id))].sort(compareText),
-        observedAt,
-        scope: correlationScope,
-      });
+      correlations.push(
+        withRelationshipMetadata(
+          {
+            fromIdentityKey: discoveryIdentityKey(binding),
+            toIdentityKey: discoveryIdentityKey(port),
+            type: 'published-as',
+            confidence: 'high',
+            evidenceIds: [...new Set(evidence.map(({ id }) => id))].sort(compareText),
+            observedAt,
+            scope: correlationScope,
+          },
+          evidence,
+          requestedAt,
+        ),
+      );
     }
   }
   return correlations.sort(

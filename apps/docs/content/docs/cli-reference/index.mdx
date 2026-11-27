@@ -3,7 +3,7 @@ title: CLI reference
 description: Portcn port listing, inspection, conflict diagnosis, ownership evidence, output, and exit codes.
 ---
 
-The published ``v0.6.1`` CLI package requires Node.js 22 or newer; the source workspace and build require Node.js 24 or newer. Linux is the primary supported platform. The package also includes limited macOS ``list``, ``inspect``, and ``diagnose`` support through ``lsof``. On macOS, process command lines, user IDs, project context, and agent markers are unavailable. Windows listener discovery is not implemented. The macOS CI integration verifies real listener discovery; other command families are supported on Linux unless stated otherwise.
+The published ``v0.7.0`` CLI package requires Node.js 22 or newer; the source workspace and build require Node.js 24 or newer. Linux is the primary supported platform. The package also includes limited macOS ``list``, ``inspect``, and ``diagnose`` support through ``lsof``. On macOS, process command lines, user IDs, project context, and agent markers are unavailable. Windows listener discovery is not implemented. The macOS CI integration verifies real listener discovery; other command families are supported on Linux unless stated otherwise.
 
 | Platform | Verified CLI support | Requirements and limits |
 | --- | --- | --- |
@@ -11,7 +11,7 @@ The published ``v0.6.1`` CLI package requires Node.js 22 or newer; the source wo
 | macOS | `list`, `inspect`, and `diagnose` listener discovery | System `lsof`; visible PID/process names only. The live macOS CI check covers listener discovery. Linux `/proc`, project, and agent-marker details are unavailable. |
 | Windows | Help and version output | Listener/service discovery is unsupported. |
 
-Registered top-level commands include `list`, `inspect`, `diagnose`, `wait`, `check`, `suggest`, `assess`, `verify`, `config`, `endpoint`, `open`, `readiness`, `connection`, `docker`, `podman`, `exposure`, and `mcp`. Configuration subcommands include `add`, `edit`, `remove`, `group`, and `recover`.
+Registered top-level commands include `list`, `inspect`, `diagnose`, `wait`, `check`, `suggest`, `assess`, `verify`, `config`, `endpoint`, `open`, `readiness`, `connection`, `docker`, `podman`, `nginx`, `systemd`, `exposure`, `discover`, and `mcp`. Configuration subcommands include `add`, `edit`, `remove`, `group`, and `recover`.
 
 ## ``portcn config``
 
@@ -272,9 +272,40 @@ Both commands return status ``0`` when a check completes, including an ``unknown
 
 The JSON result has ``schemaVersion``, ``port``, ``namespace``, ``listeners``, ``messages``, and ``limitations`` fields. Each listener includes ``protocol``, ``state``, ``bindAddress``, ``addressFamily``, and ``owners``. Owner fields include ``pid``, ``processName``, ``command``, ``user``, and ``detailsStatus`` (``available``, ``permission-denied``, ``process-exited``, or ``unavailable``), plus ``projectContext`` with ``status``, evidence ``confidence`` (``high`` for owner cwd, ``medium`` for ancestor cwd, ``low`` when projects conflict, otherwise ``none``), ``source``, visible owner ``cwd``/``executable``, ``projectRoot``, ``gitDir``, ``gitCommonDir``, ``checkoutBranch``, ``checkoutCommit``, ``worktree``, bounded ``ancestors``, and evidence notes. The additive ``agentAttribution`` object includes ``status``, ``confidence``, opt-in ``agentName``/``sessionId``, source PID and relationship, ``leftoverAssessment``, UTC ``observedAt``, and evidence notes. Project context status is ``identified``, ``ambiguous``, ``not-found``, ``permission-denied``, ``process-exited``, or ``unavailable``. Sensitive command-line options, secret-like environment assignments, and URL passwords are redacted from process command details. When no process ID is visible, the listener's ``owners`` array is empty and the messages explain that permissions or namespace boundaries can hide ownership.
 
+## ``portcn discover`` (`discover` / `snapshot`)
+
+Linux-only. The ``discover`` command group includes ``snapshot``, which collects a unified discovery snapshot from native listeners, Docker, Podman, Nginx configuration, and systemd units through the shared coordinator. Output is additive: existing ``docker``, ``podman``, ``nginx``, and ``systemd`` command JSON is unchanged. Each relationship edge includes ``type``, ``confidence``, ``nature`` (`observed`, `configured`, `inferred`, `incomplete`, or `unavailable`), ``freshness``, evidence IDs, and scope. Docker context names come from `docker context show`. The snapshot resolves daemon host identity separately and reports missing endpoint evidence as unresolved. Use ``--full`` with ``--json`` to include provider observations. A systemd socket without a parsed network port retains unit-scoped configuration evidence and contributes no network endpoint relationship.
+
+```sh
+portcn discover snapshot
+portcn discover snapshot --json
+portcn discover snapshot --json --full
+```
+
+### ``discover project`` (Linux)
+
+The nested ``project`` command is registered under ``discover``.
+
+Resolves one Git checkout from the current directory or ``--project <path>`` and reports **native** runtimes for that checkout only. The default terminal view groups processes under inferred application scopes (``apps/<name>`` or ``packages/<name>`` from working directories), shows a short summary and visibility notes, and omits unrelated and unknown host inventory. A listener is classified as unrelated only when all visible owners have direct checkout evidence elsewhere. Multicast, bridge addresses, ephemeral ports and common service ports do not identify an owner. Mixed ownership and non-project owners on sockets that involve this checkout stay under ``Unresolved (project-relevant)``. Ownerless loopback listeners remain in ``listenerInventory.unknownOwnership`` and are not treated as confirmed project runtimes. Unknown ownership is distinct from positively classified unrelated host listeners. The current inspection PID is excluded. Biome is development tooling. Generic executable names and Node processes without role evidence retain an unknown role. Use ``--verbose`` for per-process evidence lines and the full unrelated listener inventory. ``--json`` remains additive: ``projectDiscovery.schemaVersion`` stays ``1`` while new fields such as ``summary``, ``applications``, ``excluded``, ``listenerInventory``, and ``visibilityNotes`` carry grouped and raw listener data without removing ``runtimes`` or ``limitations``. Container attribution, live TCP peer graphs, and MCP changes are out of scope ([#211](https://github.com/jayantrohila57/portcn/issues/211), [#212](https://github.com/jayantrohila57/portcn/issues/212)). ``discover snapshot`` and MCP contracts are unchanged.
+
+```sh
+portcn discover project
+portcn discover project --project /work/acme
+portcn discover project --verbose
+portcn discover project --json
+```
+
+| Exit status | Meaning |
+| --- | --- |
+| ``0`` | Discovery completed, including partial visibility. |
+| ``1`` | Discovery failed or the platform is unsupported. |
+| ``2`` | Invalid project path or unsupported JSON schema version. |
+
+With ``--json``, stdout emits ``{"schemaVersion":1,"projectDiscovery":{...}}`` with ``schemaVersion`` 1 inside ``projectDiscovery`` describing record shape.
+
 ## ``portcn mcp``
 
-Starts a local read-only MCP server over stdio for coding-agent hosts. Configure the host to run ``portcn`` with the ``mcp`` argument. The server advertises ``list_listeners``, ``diagnose_port``, ``check_port_availability``, and ``suggest_ports``. Input schemas validate arguments before tool execution. Results are bounded and structured; tool errors use an error object with a stable code and a sanitized message. Stdout carries only MCP protocol messages, and SIGINT, SIGTERM, or client EOF closes the server.
+Starts a local read-only MCP server over stdio for coding-agent hosts. Configure the host to run ``portcn`` with the ``mcp`` argument. The server advertises ``list_listeners``, ``diagnose_port``, ``check_port_availability``, and ``suggest_ports``. On Linux it also advertises ``discovery_snapshot`` for bounded relationship summaries from the same coordinator as ``portcn discover snapshot``. Input schemas validate arguments before tool execution. Results are bounded and structured; tool errors use an error object with a stable code and a sanitized message. Stdout carries only MCP protocol messages, and SIGINT, SIGTERM, or client EOF closes the server.
 
 The server reuses the CLI's Linux listener, process, project, and availability contracts. It does not execute arbitrary shell commands, inspect remote namespaces, start an HTTP endpoint, or change processes or ports. Diagnosis returns visible PID/process name and selected Git project fields, but omits process command lines, user identifiers, agent names, session IDs, and environment values. Port results are point-in-time snapshots, not reservations. See [MCP server for coding agents](/docs/guides/mcp) for tool bounds and client setup.
 
@@ -309,3 +340,5 @@ node apps/cli/dist/index.js --version
 Running `portcn` without a subcommand in an interactive terminal opens the listener dashboard. The dashboard uses the same tabbed, paginated view as `portcn list --interactive`; use `/` to search, `j`/`k` or arrow keys to select, `Enter` for process details, `s` to cycle sorting, and `:` for the command palette (`r` refreshes, `a` toggles five-second auto-refresh). Narrow terminals hide lower-priority columns rather than wrapping borders. In a non-interactive terminal, the command prints help instead.
 
 See [Getting Started](/docs/getting-started) for local development.
+
+For project discovery, a stable process whose own working directory resolves to the selected Git checkout retains its direct association when a parent launcher belongs to another checkout. Detailed evidence retains the ancestry conflict. Ancestor-only matches appear in `tentativeProcesses` and `listenerInventory.tentative`, outside the direct project counts.

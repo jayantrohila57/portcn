@@ -1,6 +1,6 @@
 # portcn
 
-Know what's running. Portcn is a Linux-first CLI for inspecting local development services. Runtime discovery is read-only; the published package is `portcn@0.6.0` and requires Node.js 22 or later. Process termination and service lifecycle management are not implemented.
+Know what's running. Portcn is a Linux-first CLI for inspecting local development services. Runtime discovery is read-only; the published package is `portcn@0.7.0` and requires Node.js 22 or later. Process termination and service lifecycle management are not implemented.
 
 ## Install
 
@@ -36,7 +36,8 @@ portcn readiness list          # saved services and current listener state
 portcn connection check tcp://127.0.0.1:3000 --json
 portcn docker --json           # read-only container inventory
 portcn exposure --json         # bind scope and potential exposure
-portcn mcp                     # read-only stdio MCP server
+portcn discover snapshot --json # unified Linux discovery relationships (additive)
+portcn mcp                     # read-only stdio MCP server (includes discovery_snapshot on Linux)
 ```
 
 The CLI also supports `config edit`, `config remove`, `config group`, and `config recover`. See the [CLI reference](https://jayantrohila57.github.io/portcn/docs/cli-reference) for bounds, JSON schemas, exit codes, and limitations.
@@ -47,7 +48,7 @@ Portcn reports a point-in-time view of sockets visible in its current network na
 
 Linux diagnosis can include bounded process ancestry, Git project/worktree evidence, and opt-in `PORTCN_AGENT_SESSION_ID` / `PORTCN_AGENT_NAME` markers. Markers are user-supplied evidence, not verified identities. Project paths describe the current filesystem and do not prove which code a process loaded. A possible leftover is never a safe-to-stop decision.
 
-The MCP server exposes bounded read-only listener, diagnosis, availability, and suggestion tools. It does not expose a shell or process-control operation. Local probes are explicit, bounded, and do not follow redirects or disable TLS validation.
+The MCP server exposes bounded read-only listener, diagnosis, availability, and suggestion tools on all supported platforms. On Linux it also exposes `discovery_snapshot` (same coordinator as `discover snapshot`) after the current integration branch; published `portcn@0.7.0` on npm includes four tools only until the next release. It does not expose a shell or process-control operation. Local probes are explicit, bounded, and do not follow redirects or disable TLS validation.
 
 ## Development
 

@@ -1,3 +1,4 @@
+export { formatConfiguredEndpointRef, parseConfiguredEndpointRef } from './configured-endpoint.js';
 export {
   type AnyDiscoveryObservation,
   type CorrelationType,
@@ -14,6 +15,7 @@ export {
   type DiscoveryProviderName,
   type DiscoveryProviderRequest,
   type DiscoveryProviderResult,
+  type DiscoveryRelationshipNature,
   type DiscoveryRuntime,
   type DiscoveryScope,
   type DiscoverySnapshot,
@@ -24,6 +26,57 @@ export {
   evidenceFreshness,
   type ProviderIssue,
   type ProviderResultStatus,
+  scopesCompatible,
+  scopesJoinableForCorrelation,
   type UnidentifiedDiscoveryObservation,
 } from './discovery.js';
 export { isValidPortNumber, type PortNumber } from './port-number.js';
+export {
+  applicationScopeFromCwd,
+  type CheckoutGitEvidence,
+  type CheckoutMatch,
+  type ExpectedCheckout,
+  isSupportingExecutable,
+  matchCheckoutEvidence,
+} from './project-discovery.js';
+export {
+  type ApplicationGroup,
+  buildProjectDiscoverySummary,
+  dedupeEvidenceLines,
+  formatPortSummary,
+  groupRuntimesByApplication,
+  isPortcnInspectionProcess,
+  isUnrelatedHostListener,
+  type ListenerAssociationLike,
+  listenerAttention,
+  type PortBindingLike,
+  type ProjectDiscoverySummary,
+  type ProjectRuntimeRole,
+  type RuntimeRecordLike,
+  runtimeDisplayName,
+} from './project-discovery-presentation.js';
+export {
+  buildDiscoveryDisplaySummary,
+  classifyProcessRole,
+  classifyProjectProcess,
+  classifyRuntimeState,
+  type ListenerAttention,
+  PROCESS_ROLE_DISPLAY_ORDER,
+  type ProcessAssociation,
+  type ProcessClassification,
+  type ProcessIdentity,
+  type ProcessRole,
+  type RuntimeState,
+  type SocketAssociation,
+} from './project-discovery-semantics.js';
+export {
+  buildDiscoveryCorrelations,
+  correlateConfiguredServiceEndpoints,
+  correlateForwardingAttribution,
+  correlateHostEndpointBindings,
+  correlateListenerProcessOwnership,
+  type DiscoveryRelationshipSummary,
+  discoveryBindAddressesEquivalent,
+  summarizeDiscoveryRelationships,
+  withRelationshipMetadata,
+} from './service-relationships.js';

@@ -6,11 +6,19 @@ An open-source, developer-first CLI for understanding local development services
 
 ## Current release
 
-Portcn `v0.6.0` is published on npm. It is a Linux-first CLI for discovering local listeners and understanding the processes and services behind them. Runtime discovery is read-only; process and service lifecycle management are not implemented.
+The latest **published** npm release is **`portcn@0.7.0`**. Runtime discovery is read-only; process and service lifecycle management are not implemented.
 
-The Linux CLI includes TCP/UDP listing and diagnosis, process/project evidence, versioned JSON, an interactive terminal dashboard, saved service groups, read-only Docker inventory and bind-scope reports, local endpoint/readiness/connectivity checks, bounded port waiting, and a read-only stdio MCP server. Port observations are scoped to the current namespace; Docker metadata follows the selected CLI context and may describe another host.
+| Surface                                                         | `v0.7.0` on npm | `dev` integration branch (unreleased)                  |
+| --------------------------------------------------------------- | --------------- | ------------------------------------------------------ |
+| Listener list/inspect/diagnose, JSON, dashboard                 | Yes             | Yes                                                    |
+| Docker, Podman, Nginx, systemd, exposure, unified services tab  | Yes (Linux)     | Yes                                                    |
+| Read-only MCP: listeners, diagnose, availability, suggest       | Yes             | Yes                                                    |
+| `portcn discover snapshot` and MCP `discovery_snapshot` (Linux) | No              | Yes (merged via #204; targets `v0.8.0` promotion #206) |
+| JSON broken-pipe handling fix (#207)                            | No              | Yes                                                    |
 
-The published package also includes limited macOS `list`, `inspect`, and `diagnose` support through `lsof`. Process command lines, user IDs, project paths, and agent markers are unavailable on macOS. Windows listener discovery is not implemented. See the [platform and capability roadmap](PRODUCT-ROADMAP.md) for verified status and deferred work.
+The Linux CLI includes TCP/UDP listing and diagnosis, process/project evidence, versioned JSON, an interactive terminal dashboard, saved service groups, read-only container inventory and bind-scope reports, local endpoint/readiness/connectivity checks, bounded port waiting, and a read-only stdio MCP server. Port observations are scoped to the current namespace; container metadata follows the caller's runtime context and may describe another host.
+
+The published package includes limited macOS `list`, `inspect`, and `diagnose` support through `lsof`. Process command lines, user IDs, project paths, and agent markers are unavailable on macOS. Windows listener discovery is not implemented. See the [platform and capability roadmap](PRODUCT-ROADMAP.md) for verified status and deferred work.
 
 ## Requirements and platform
 
@@ -30,24 +38,12 @@ pnpm build
 node apps/cli/dist/index.js --help
 pnpm test
 node apps/cli/dist/index.js list  # Linux, requires iproute2
-node apps/cli/dist/index.js inspect 3000  # Linux, read-only
-node apps/cli/dist/index.js list --interactive  # header, tabs, paginated table, and footer navigation
-node apps/cli/dist/index.js diagnose 3000 --json # visible listeners and diagnostic limits
-node apps/cli/dist/index.js list --json-version 1 # stable versioned JSON
-node apps/cli/dist/index.js check 3000            # read-only listener overlap check
-node apps/cli/dist/index.js wait 3000             # bounded wait; does not reserve the port
-node apps/cli/dist/index.js suggest               # bounded port suggestions
-node apps/cli/dist/index.js assess 1234 --project "$PWD" # read-only ownership evidence
-node apps/cli/dist/index.js verify 127.0.0.1:3000 --project "$PWD" # local endpoint/project evidence
-node apps/cli/dist/index.js config add tcp 127.0.0.1 3000 --favorite --alias web --group local # saved details
-node apps/cli/dist/index.js docker --json         # read-only container inventory
-node apps/cli/dist/index.js exposure --json       # bind scope and potential exposure
-node apps/cli/dist/index.js readiness list        # current listener and saved-service state
-node apps/cli/dist/index.js connection check tcp://127.0.0.1:3000 --json
-node apps/cli/dist/index.js mcp                   # read-only stdio MCP server
+node apps/cli/dist/index.js diagnose 3000 --json-version 1
+node apps/cli/dist/index.js discover snapshot --json  # Linux; integration branch only until next npm release
+node apps/cli/dist/index.js mcp                     # read-only stdio MCP server
 ```
 
-Optional Docker Compose commands build and run the packaged CLI image. For example, `pnpm docker:cli --version` rebuilds the current artifact before running it. Unit tests and package checks run with the regular pnpm scripts.
+Optional Docker Compose commands build and run the packaged CLI image. For example, `pnpm docker:cli --version` rebuilds the current artifact before running it. Unit tests and package checks run with the regular pnpm scripts. CI `validate` also runs the dashboard PTY matrix after `pnpm build`.
 
 Containers use their normal PID, network, and mount namespaces. The CLI can initially observe only the processes and ports in its own container; host discovery is not enabled. No service uses privileged mode, host networking, host PID, or a Docker socket mount.
 
@@ -75,6 +71,7 @@ pnpm format:check
 pnpm check-types
 pnpm test
 pnpm build
+node --test scripts/dashboard-pty.test.mjs
 pnpm package:check
 pnpm boundaries:check
 pnpm release:check

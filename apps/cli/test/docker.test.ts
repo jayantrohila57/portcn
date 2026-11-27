@@ -7,7 +7,9 @@ import {
   discoverDockerInventory,
   formatDockerInventory,
   parseDockerInspect,
+  readDockerDaemonContext,
   registerDockerCommand,
+  resolveDockerDaemonHostId,
 } from '../src/commands/docker.js';
 import type { ListeningPort } from '../src/commands/list.js';
 
@@ -243,5 +245,36 @@ describe('Docker container inventory', () => {
       limitations: [],
     });
     expect(output).toContain('0.0.0.0:9001 -> 9000/tcp (configured; not active)');
+  });
+});
+
+describe('Docker daemon host scope', () => {
+  it('reads the active context using the supported Docker command', () => {
+    const runDocker = vi.fn(() => 'default\n');
+    expect(readDockerDaemonContext({ runDocker })).toBe('default');
+    expect(runDocker).toHaveBeenCalledWith(['context', 'show']);
+  });
+
+  it('retains uncertainty on empty output and parses bracketed remote IPv6 hosts', () => {
+    expect(resolveDockerDaemonHostId('local', { runDocker: () => '' }).provenance).toBe('unresolved');
+    expect(resolveDockerDaemonHostId('local', { runDocker: () => 'tcp://[2001:db8::2]:2376' })).toEqual({
+      daemonHostId: '2001:db8::2',
+      provenance: 'remote-endpoint',
+    });
+  });
+
+  it('proves local host from unix endpoints and rejects context names as host identity', () => {
+    const runDocker = vi.fn((args: string[]) =>
+      args.includes('inspect') ? 'unix:///var/run/docker.sock\n' : 'desktop-linux\n',
+    );
+    expect(resolveDockerDaemonHostId('observation-host', { runDocker })).toEqual({
+      daemonHostId: 'observation-host',
+      provenance: 'local-proven',
+    });
+    const remote = resolveDockerDaemonHostId('observation-host', {
+      runDocker: () => 'tcp://builder.example:2375',
+    });
+    expect(remote).toEqual({ daemonHostId: 'builder.example', provenance: 'remote-endpoint' });
+    expect(remote.daemonHostId).not.toBe('desktop-linux');
   });
 });

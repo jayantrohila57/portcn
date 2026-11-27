@@ -90,6 +90,8 @@ jobs:
       - run: pnpm check-types
       - run: pnpm test
       - run: pnpm build
+      - name: Run dashboard PTY matrix
+        run: node --test scripts/dashboard-pty.test.mjs
       - run: pnpm package:check
       - name: Pack CLI for Node 22 runtime validation
         run: mkdir -p "$RUNNER_TEMP/portcn-package" && npm pack --pack-destination "$RUNNER_TEMP/portcn-package"
@@ -147,6 +149,7 @@ jobs:
             assert.deepEqual(tools.map(({ name }) => name).sort(), [
               'check_port_availability',
               'diagnose_port',
+              'discovery_snapshot',
               'list_listeners',
               'suggest_ports',
             ]);

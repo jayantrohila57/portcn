@@ -6,9 +6,29 @@ All notable changes to Portcn are documented here. Dates use India Standard Time
 
 ### Added
 
+- separate discover project role semantics ([#217](https://github.com/jayantrohila57/portcn/issues/217)) <!-- task:feat/discover-project-semantics -->
+
+- focus discover project output and grouping ([#217](https://github.com/jayantrohila57/portcn/issues/217)) <!-- task:feat/discover-project-focus -->
+
+- add Linux portcn discover project command ([#210](https://github.com/jayantrohila57/portcn/issues/210)) <!-- task:feat/discover-project -->
+
+- model service relationships and dependencies ([#186](https://github.com/jayantrohila57/portcn/issues/186)) <!-- task:feat/service-relationships -->
+
 ### Changed
 
 ### Fixed
+
+- classify project roles and listeners from ownership evidence ([#226](https://github.com/jayantrohila57/portcn/issues/226)) <!-- task:fix/project-role-ownership -->
+
+- retain direct checkout ownership across launcher boundaries ([#225](https://github.com/jayantrohila57/portcn/issues/225)) <!-- task:fix/project-owner-checkout -->
+
+- resolve active context with supported arguments ([#222](https://github.com/jayantrohila57/portcn/issues/222)) <!-- task:fix/docker-context-query -->
+
+- preserve snapshots for systemd sockets without network ports ([#221](https://github.com/jayantrohila57/portcn/issues/221)) <!-- task:fix/systemd-snapshot-endpoint -->
+
+- harden attribution scope joins and correlation safety ([#209](https://github.com/jayantrohila57/portcn/issues/209)) <!-- task:fix/discovery-attribution-safety -->
+
+- ignore broken pipe when JSON output is truncated <!-- task:fix/cli-stdout-epipe -->
 
 ### Deprecated
 

@@ -3,6 +3,7 @@ import { registerAvailabilityCommands } from './availability.js';
 import { registerConfigCommand } from './config.js';
 import { registerConnectionCommands } from './connection.js';
 import { registerDiagnoseCommand } from './diagnose.js';
+import { registerDiscoverCommand } from './discover.js';
 import { registerDockerCommand } from './docker.js';
 import { registerEndpointVerificationCommand } from './endpoint-verification.js';
 import { registerEndpointCommands } from './endpoints.js';
@@ -21,6 +22,7 @@ export function registerCommands(program: Command): void {
   registerListCommand(program);
   registerInspectCommand(program);
   registerDiagnoseCommand(program);
+  registerDiscoverCommand(program);
   registerAvailabilityCommands(program);
   registerProcessAssessmentCommand(program);
   registerEndpointVerificationCommand(program);

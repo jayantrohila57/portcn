@@ -30,6 +30,7 @@ For a source checkout, build the workspace and set the command to `node` with ar
 | `diagnose_port` | Report listener owners, namespace limits, and selected Git project evidence. | One port; up to 100 listeners and 20 owners per listener. |
 | `check_port_availability` | Check observed overlap for one protocol and bind address. | One port and a local IP address. |
 | `suggest_ports` | Return candidates with no observed overlap. | Maximum range 1024 ports and 20 suggestions. |
+| `discovery_snapshot` (Linux) | Return a bounded unified discovery relationship summary. | Same coordinator as `portcn discover snapshot`; optional full provider payload; default 100 edges. |
 
 Tool schemas are advertised through MCP and invalid arguments are rejected before execution. Linux discovery uses `ss`; macOS listener discovery uses `lsof`. Both use a 10-second process timeout. Tool failures return structured MCP errors; stdio stdout is reserved for protocol messages.
 
@@ -41,4 +42,4 @@ An available result means Portcn observed no conflicting listener at that moment
 
 Portcn only sees sockets visible to its current Linux namespace or macOS host view. Process/project evidence may be incomplete because of permissions, process exits, or Linux PID namespace boundaries; macOS process command lines, user IDs, project context, and agent markers are unavailable. Project checkout details on Linux describe the current filesystem, not necessarily the code loaded by a running process. MCP diagnosis deliberately omits command lines, user identifiers, agent labels, session identifiers, and environment values.
 
-The MCP server and its four read-only tools are available in the published package. The reusable [Portcn agent skill](https://github.com/jayantrohila57/portcn/tree/main/.agents/skills/portcn-agent) provides usage guidance for coding agents.
+The MCP server and its read-only tools are available in the published package. Linux hosts also receive `discovery_snapshot` for relationship summaries without replacing per-command JSON. The reusable [Portcn agent skill](https://github.com/jayantrohila57/portcn/tree/main/.agents/skills/portcn-agent) provides usage guidance for coding agents.
